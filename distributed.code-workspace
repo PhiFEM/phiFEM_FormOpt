@@ -1,0 +1,18 @@
+{
+	"folders": [
+		{
+			"path": "code"
+		},
+		{
+			"path": "tex"
+		}
+	],
+	"settings": {
+		"editor.minimap.enabled": false,
+		"cSpell.words": [
+			"Bashforth",
+			"mathbb",
+			"mathcal"
+		]
+	}
+}

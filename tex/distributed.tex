@@ -1,0 +1,263 @@
+\documentclass{article}
+\usepackage{amsfonts}
+\usepackage{fullpage}
+\usepackage{amsmath}  % for mathematical symbols and equations
+\usepackage{graphicx}  % for including graphics
+\usepackage{multicol}
+
+
+
+\title{A FEniCSx toolbox for level set-based shape and topology optimization supporting parallel computing}
+\author{
+	Josu\'{e} D. D\'{i}az-Avalos\thanks{Email: \texttt{josue.diazavalos@uni-due.de}} \qquad
+	Antoine Laurain\thanks{Email: \texttt{antoine.laurain@uni-due.de}} \\
+	\\
+	Fakultät für Mathematik, Universität Duisburg-Essen
+}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+We present a toolbox for shape and topology optimization using the software package FEniCSx.
+The optimization is based on the distributed shape derivative.
+The numerical shape modeling uses a standard level set method.
+The implementation supports parallel computing in two different modes.
+On one hand, the built-in features of FEniCSx for parallelizing the mesh are used.
+On the other hand, we also implement a parallelization of the source terms in the underlying partial differential equations. The user can then conveniently use a combination of the two modes for parallel computing.
+\end{abstract}
+
+\begin{multicols}{2}
+
+\section{Introduction}
+Here we emphasize the following points:
+\begin{itemize}
+    \item Literature review: there are many papers to cite. Many recents eductional codes available. \cite{Wegert2025}
+\item The paper is a continuation of \cite{MR3843884}.
+\item The goal is to provide a toolbox that is easy to use and allows to test some shape optimization problems in a fast way. Suited for students and practitioners. The main work for someone using the toolbox is to write an appropriate model (geometry and PDE) and compute $S_1,S_0$.
+\item There are many eductional papers and implementations for structural optimization and topology optimization, but they usually focus on the SIMP method, or an approximation of the level set method (clarify). Here we provide an implementation based on the distributed shape derivative. 
+\item On one hand, the  distributed shape derivative has practical advantages: accuracy and ease of implementation. From the educational point of view, it is a way to learn about shape sensitivity analysis.
+\item Unlike similar papers on the topic, we focus here mainly on inverse problems, which benefit greatly from the parralelization of the sources.
+\item We also want to explain how the parralelization works, in a pedagogical way.
+\end{itemize}    
+
+General problem
+\begin{equation}
+	\min_{\Omega\subset\mathcal{D}} J(\Omega)
+	\quad \text{subject to} \quad C(\Omega) = \boldsymbol{1}
+\end{equation}
+
+%%%%%%%%%%%%%%%%%%%%%%%
+\section{Shape derivatives}
+%%%%%%%%%%%%%%%%%%%%%%%
+This will be similar to \cite[Section 2]{MR3843884},
+recalling definitions of distributed and boundary expression of shape derivative.
+
+%%%%%%%%%%%%%%%%%%%%%%%
+\section{Shape derivative for a model problem}
+%%%%%%%%%%%%%%%%%%%%%%%
+
+Here one could show the calculation of the distributed shape derivative for a model problem. 
+One should choose a different problem from \cite[Section 3]{MR3843884},
+for instance the inverse problem in elasticity. One could add another subsection with another model problem, for instance heat equation, where one would just show the result with the tensors $S_1,S_0$.
+\begin{equation} \label{eq:velocity}
+	\mathcal{B} (\theta, \xi) =
+	- \int_{\mathcal{D}} S_0\cdot\xi + S_1 : D\xi \quad\forall \; \xi \in \mathbb{H}(\Omega)
+\end{equation}
+
+%%%%%%%%%%%%%%%%%%%%%%%
+\section{Numerical implementation}
+%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Toolbox structure}
+%%%%%%%%%%%%%%%%%%%%%%%
+
+Here explain how the toolbox is organized.
+The folder ``Models'' will contain the files for each model. One for inverse problem in elasticity, one for heat equation, etc ... For each model, what changes is the PDEs, the geometric configuration such as boundary conditions and domain, and the tensors $S_1,S_0$.
+
+The folder ``Shape'' (?) will contain the files for the shape optimization, this includes in particular the file for the level set method.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Parallelization}
+%%%%%%%%%%%%%%%%%%%%%%%
+
+Here we explain the two modes of parallelization, the mesh and the sources, and how the user can play with that. Explain the splitting and the colors.
+
+Cite some parts of the codes to explain that.
+
+Data parallelism, Task parallelism, and Mix parallelism (a mix of previous ones)  
+
+%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Augmented Lagrangian}
+%%%%%%%%%%%%%%%%%%%%%%%
+
+Here explain how the augmented Lagrangian works for volume constraints 
+
+\begin{equation} \label{eq:lagrangian}
+\begin{aligned}
+	L(\Omega, z, \lambda, \mu) =\,
+	& J(\Omega) + \langle \lambda, C(\Omega) -  \boldsymbol{1} \rangle + \langle \mu, z \rangle \\
+	& + \frac{\alpha}{2} \Vert z \Vert^2 + \frac{\beta}{2} \Vert \lambda - \mu \Vert^2
+\end{aligned}
+\end{equation}
+
+$S_0$ and $S_1$ in \eqref{eq:velocity} given by
+\[
+	S_0 = S_0^{J} + \lambda^{i} S_0^{C}, \quad S_1 = S_1^{J} + \lambda^{i} S_1^{C} 
+\]
+where $\lambda^{i}$ is updated following the algorithm
+proposed in \cite{MR4589221}: given 
+$r\in(0,1)$,
+$\alpha\in(1,\infty)$, $\beta\in(0,1)$, 
+$\delta^{0}\in(0,1]$, and 
+$(z^{0},\lambda^{0},\mu^{0})$
+do
+\begin{equation} \label{eq:lag_method}
+	\begin{aligned}
+		\mu^{i+1} & = \mu^{i}+\delta^{i}(\lambda^{i}-\mu^{i})(\left\Vert \lambda^{i}-\mu^{i} \right\Vert^{2} + 1)^{-1}\\
+		\lambda^{i+1} & = \mu^{i+1} + \alpha (1+\alpha \beta)^{-1}(C(\Omega^{i+1})- \boldsymbol{1})\\
+		z^{i+1} & = \alpha^{-1}(\lambda^{i+1}-\mu^{i+1})\\
+		\delta^{i+1} & =r\delta^{i}
+	\end{aligned}
+\end{equation}
+for $i=0,1,2,\dots$. Recall that $\Omega^{i+1}$ is obtained in (?).
+For all tests we used
+$r = 0.999$, $\delta^{0} = 0.5$,
+$\alpha = 2000$, $\beta = 0.5$,
+$z^{0} = 0$, $\lambda^{0} = 0$, and $\lambda^{0} = 0$.
+
+%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Level set method}
+%%%%%%%%%%%%%%%%%%%%%%%
+
+Explain how the level set method is implemented, cite the code.
+We solve the transport problem
+\begin{equation} \label{eq:transport}
+	\phi_{t} + \theta \cdot \nabla_{x} \phi  = 0 \quad x\in \mathcal{D},\, t\in(0, T]
+\end{equation}
+We choose $\phi^{i+1}(x) = \phi(T,x)$.
+The Petrov-Galerkin method \cite{MR1640142} with the Crank-Nicolson method yields
+\begin{align} \label{eq:weak_transport}
+	& \int_{\mathcal{D}} \left( \phi(t+\Delta t,\cdot) + \frac{\Delta t}{2} \theta \cdot \nabla \phi(t+\Delta t,\cdot) \right) \hat{\psi} = \nonumber \\
+	& \int_{\mathcal{D}} \left( \phi(t,\cdot) - \frac{\Delta t}{2} \theta \cdot \nabla \phi(t,\cdot) \right) \hat{\psi}
+	\quad \forall \, \psi\in H^1(\mathcal{D})
+\end{align}
+where $\hat{\psi}=\psi+\tau^{-1}\theta\cdot\nabla\psi$ with 
+\begin{equation}
+	\tau(x) = 2\left(\frac{1}{\Delta t^2}  + \frac{|\theta(x)|^2}{h^2}\right)^{1/2}
+\end{equation}
+
+$h$ is the diameter associated to the mesh.
+Note that the boundary condition is weakly imposed.
+Alternatively, we add a diffusion term of the form
+$h\nabla^2 \phi$ to \eqref{eq:transport}.
+
+%with boundary condition $\phi(0, \cdot) = \phi^{i}(\cdot)$ on the inflow boundary
+%$\Gamma_{-} = \left\{x\in\partial\mathcal{D} \mid \theta \cdot n < 0 \right\}$.
+
+%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Other implementation aspects}
+%%%%%%%%%%%%%%%%%%%%%%%
+
+This could be the less important implementation aspects,
+such as line search, reinitialization of level set, stopping criterion,  etc ...
+
+We seek a solution to Eikonal equation with fictitious time derivative
+\begin{equation} \label{eq:Eikonal}
+	\varphi_{t} + S(\phi)(|\nabla \varphi| - 1)= 0 \quad x\in \mathcal{D},\, t\in(0, T]
+\end{equation}
+
+We write \eqref{eq:Eikonal} in the form of the Hamilton-Jacobi equation
+\begin{equation}
+	\varphi_{t} + H(\nabla \varphi)= S(\phi) \quad x\in \mathcal{D},\, t\in(0, T]
+\end{equation}
+where $H(p) = S(\phi) |\nabla p|$. Note that  $H$ satisfies $H(p) = \nabla H (p) \cdot p$
+The Petrov-Galerkin method \cite{MR1640142} with
+the two-step Adams-Bashforth method yields
+\begin{equation}
+	\int_{\mathcal{D}}  \varphi(t + \Delta t, \cdot)
+	=
+	\int_{\mathcal{D}} \varphi(t, \cdot) + {\Delta t} S(\phi) +
+	\frac{\Delta t}{2} (H(\nabla \varphi(t - \Delta t, \cdot)) - 3H(\nabla \varphi(t, \cdot))) 
+\end{equation}
+
+% Reinitialization of level set (part I)
+
+% Smooth $L^2$-projection
+% \begin{equation}
+% 	\int_{\mathcal{D}} \phi^{\mathrm{new}} \psi + h^2 \nabla \phi^{\mathrm{new}} \cdot  \nabla \psi 
+% 	= \int_{\mathcal{D}} F(\phi) \psi
+% 	\quad \forall \psi \in H^1(\mathcal{D})
+% \end{equation}
+% where
+% \begin{equation}
+% 	F(\phi)(x) =
+% 	\begin{cases}
+% 		\phi(x)/|\nabla \phi(x)| & \mathrm{if}\;|\phi(x)| < h\\
+% 		\phi(x)  & \mathrm{otherwise}
+% 	\end{cases}
+% \end{equation}
+
+% Reinitialization of level set (part 2)
+
+% We apply Ralston's method
+% \begin{equation}
+% \begin{aligned}
+% 	\int_{\mathcal{D}} k_1\psi & = \int_{\mathcal{D}} F(\varphi(t, \cdot))\psi \\
+% 	\int_{\mathcal{D}} k_2\psi & = \int_{\mathcal{D}} F\left(\varphi(t, \cdot) + \Delta t \frac{2k_1}{3}\right)\psi \\
+% 	\int_{\mathcal{D}} \varphi(t + \Delta t, \cdot) \psi &
+% 	= \int_{\mathcal{D}} \left(\varphi(t, \cdot) + \Delta t \left(\frac{k_1}{4} + \frac{3k_2}{4}\right)\right)\psi \\
+% 	& \qquad\qquad\qquad\qquad \forall \psi \in H^1(\mathcal{D})	
+% \end{aligned}
+% \end{equation}
+% where
+% \begin{equation}
+% 	F(v) = S(\phi)(1 - |\nabla v|)
+% \end{equation}
+
+%%%%%%%%%%%%%%%%%%%%%%%
+\section{Numerical results}
+%%%%%%%%%%%%%%%%%%%%%%%
+
+Here we need to decide which examples we want to show. Inverse elasticity 2D or 3D, Compliance 2D or 3D? Heat equation?
+
+\subsection{Compliance}
+
+\subsection{Inverse Elasticity}
+
+\subsection{Heat Conduction}
+
+%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Performance investigation}
+%%%%%%%%%%%%%%%%%%%%%%%
+
+Here we should discuss some performance data of the code. Show that the code is extremely fast in 2D. Show what size of 3D problems we can consider using a server (also large amount of sources).
+Also maybe show weak scalabilty tests for parallel computing, as in \cite{Jia2024}.
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%
+\section{Conclusion}
+%%%%%%%%%%%%%%%%%%%%%%%
+
+In the conclusion we discuss possible future extensions of this toolbox. Here are some ideas.
+\begin{itemize}
+\item higher-order tensors such as biLaplacian problems
+\item Boundary terms for surface problems.
+\item automatic differentiation?
+\end{itemize}    
+
+
+\end{multicols} 
+
+\bibliographystyle{plain}
+\bibliography{distributed}
+
+
+\end{document}
+
