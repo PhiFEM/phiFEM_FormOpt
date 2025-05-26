@@ -2,8 +2,6 @@ import sys
 import numpy as np
 
 from plots import (
-	plot_cost, plot_level_T,
-	plot_results, 
 	plot_basic,
 	see_initial_guess
 )
@@ -158,7 +156,9 @@ def test_12():
 
 def test_13():
 	print("\n\tHeat conduction problem")
-	name_test = "../results/t13/"
+	test_path = Path("../results/t13/")
+
+	plot_basic(test_path)
 
 def test_14():
 	print("\n\tSymmetric cantilever")

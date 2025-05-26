@@ -1520,7 +1520,7 @@ def test_09():
 
 def test_10():
     """
-    Run: mpirun -np <nbr of processes> python test.py 09
+    Run: mpirun -np <nbr of processes> python test.py 10
     """
 
     test_name = "Heat conduction (Data Parallelism)"
@@ -1894,6 +1894,101 @@ def test_12():
     )
 
 
+def test_13():
+    """
+    Run: mpirun -np <nbr of processes> python test.py 13
+    """
+
+    test_name = "Heat conduction (Data Parallelism)"
+    test_path = Path("../results/t13/")
+    dim = 2
+    rank_dim = 1
+    mesh_size = 5e-3
+
+    vertices = np.array([
+        [0.0, 0.0],
+        [1.0, 0.0],
+        [1.0, 1.0],
+        [0.0, 1.0]
+    ])
+
+    dir1_idx, dir1_mkr = [1], 1
+    dir2_idx, dir2_mkr = [2], 2
+    dir3_idx, dir3_mkr = [3], 3
+    dir4_idx, dir4_mkr = [4], 4
+    
+    boundary_parts = [
+        (dir1_idx, dir1_mkr, "dir1"),
+        (dir2_idx, dir2_mkr, "dir2"),
+        (dir3_idx, dir3_mkr, "dir3"),
+        (dir4_idx, dir4_mkr, "dir4")
+    ]
+
+    # Create gmsh domain for Data Parallelism
+    output = dib.create_domain_2d_DP(
+        vertices, boundary_parts, mesh_size,
+        path = test_path,
+        plot = True
+    )
+
+    domain, nbr_tri, boundary_tags = output
+
+    if rank == 0:
+        print("\n\t" + test_name + "\n")
+        print(f"> Path = {test_path}")
+        print(f"> Nbr of triangles = {nbr_tri}")
+
+    # Space
+    space = dib.create_space(domain, "CG", rank_dim)
+    # Dirichlet conditions
+    dirichlet_bcs = dib.homogeneus_boundary(
+        domain, space, dim, rank_dim
+    )
+    area = 0.5
+    # Create the model
+    md = Heat(
+        dim, domain, space, dirichlet_bcs, area, "1Load"
+    )
+
+    # @dib.region_of(domain)
+    # def sub_domain(x):
+    #     return (0.1**2 - (0.5 - x[0])**2 - (0.5 - x[1])**2, )
+    
+    # md.sub = [sub_domain.expression()]
+    centers = []
+    centers += [(0.1, i*0.2 + 0.1) for i in range(5)]
+    centers += [(0.3, i*0.2 + 0.1) for i in range(5)]
+    centers += [(0.5, i*0.2 + 0.1) for i in range(5) if i != 2]
+    centers += [(0.7, i*0.2 + 0.1) for i in range(5)]
+    centers += [(0.9, i*0.2 + 0.1) for i in range(5)]
+    centers += [(0.0, i*0.2) for i in range(6)]
+    centers += [(0.2, i*0.2) for i in range(6)]
+    centers += [(0.4, i*0.2) for i in range(6) if i not in (2, 3)]
+    centers += [(0.6, i*0.2) for i in range(6) if i not in (2, 3)]
+    centers += [(0.8, i*0.2) for i in range(6)]
+    centers += [(1.0, i*0.2) for i in range(6)]
+    
+    
+    centers = np.array(centers)
+    radii = np.repeat(0.05, centers.shape[0])
+
+    dib.save_initial(
+        comm, (centers, radii),
+        domain, test_path / "initial.xdmf"
+    )
+    
+    dib.runDP(
+        model = md,
+        initial_guess = (centers, radii),
+        save_path = test_path,
+        niter = 200,
+        dfactor = 1.0,
+        ctrn_tol = 1e-3,
+        lgrn_tol = 5e-2,
+        lv_iter = (10, 18),
+        smooth = True
+    )
+
 #========================
 def test_13425772():
     """
@@ -2066,7 +2161,7 @@ def test_13425772():
         lgrn_tol = 1e-3
     )
 
-def test_13():
+def test_13Cantiliever():
         
     test_name = "Cantilever"
     test_path = "../results/t02/"
@@ -3082,7 +3177,8 @@ test_functions = {
     "09": test_09,
     "10": test_10,
     "11": test_11,
-    "12": test_12
+    "12": test_12,
+    "13": test_13,
 }
 
 def main():

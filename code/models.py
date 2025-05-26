@@ -399,13 +399,14 @@ class InverseElasticty(Model):
 
 class Heat(Model):
 	
-	def __init__(self, dim, domain, space, dir_bcs, vol):
+	def __init__(self, dim, domain, space, dir_bcs, vol, sc_type = "Uniform"):
 		
 		self.dim = dim
 		self.domain = domain
 		self.space = space
 
 		self.dx = Measure("dx", domain = domain)
+		self.ds = Measure("ds", domain = domain)
 		self.bc = dir_bcs
 		self.vol = vol
 		self.sub = []
@@ -415,25 +416,34 @@ class Heat(Model):
 
 		self.A = lambda w: conditional(lt(w, 0.0), 1.0, 1e-2)
 		self.chi = lambda w: conditional(lt(w, 0.0), 1.0, 0.0)
-
-	def f(self, x0, y0, A, epsilon):
-		x = SpatialCoordinate(self.domain)
-		r = sqrt((x[0] - x0)**2 + (x[1] - y0)**2)
-		delta_expr = conditional(
-			lt(r, epsilon),
-			(1.0 + cos(pi * r / epsilon)) / A,
-			0.0
-		)
-		return delta_expr
+		
+		self.sc_type = sc_type
+		self.f = self.source()
+	
+	def source(self):
+		if self.sc_type == "Uniform":
+			return 1.0
+		elif self.sc_type == "1Load":
+			x0, y0 = 0.5, 0.5
+			max_value, epsilon = 50.0,  0.1
+			x = SpatialCoordinate(self.domain)
+			r = sqrt((x[0] - x0)**2 + (x[1] - y0)**2)
+			delta_expr = conditional(
+				lt(r, epsilon),
+				max_value*(1.0 + cos(pi*r/epsilon))/2.0,
+				0.0
+			)
+			return delta_expr
 
 	def pde(self, phi):
 
 		u = TrialFunction(self.space)
 		v = TestFunction(self.space)
 
-		W = self.A(phi)*dot(grad(u), grad(v))*self.dx - v*self.dx
+		W = self.A(phi)*dot(grad(u), grad(v))*self.dx
+		W -= self.f*v*self.dx
 		
-		return [[W, self.bc]]
+		return [(W, self.bc)]
 	
 	def adjoint(self, phi, U):
 		return []
@@ -441,7 +451,7 @@ class Heat(Model):
 	def cost(self, phi, U):
 		
 		u = U[0]
-		J = u*self.dx
+		J = self.f*u*self.dx
 		
 		return J
 	
@@ -455,25 +465,36 @@ class Heat(Model):
 		
 		u = U[0]
 
-		S0_J = self.zero_vec
-		S1_J = (2.0*u - self.A(phi)*dot(grad(u), grad(u)))*self.Id
+		if self.sc_type == "Uniform":
+			S0_J = self.zero_vec
+		elif self.sc_type == "1Load":
+			S0_J = 2.0*u*grad(self.f)
+		
+		S1_J = (2.0*u*self.f - self.A(phi)*dot(grad(u), grad(u)))*self.Id
 		S1_J += 2.0*self.A(phi)*outer(grad(u), grad(u))
 		
 		S0_C = self.zero_vec
 		S1_C = (1.0/self.vol)*self.chi(phi)*self.Id
 		
-		S0 = [S0_J, [S0_C]]
-		S1 = [S1_J, [S1_C]]
+		S0 = (S0_J, [S0_C])
+		S1 = (S1_J, [S1_C])
 		
 		return S0, S1
 	
 	def bilinear_form(self, th, xi):
-
+		
 		B = inner(grad(th), grad(xi))*self.dx
 		for sb in self.sub:
 			B += 1e4*sb*dot(th, xi)*self.dx
-			
-		return B, True
+		
+		bc = True
+		
+		if self.sc_type == "1Load":
+			nv = FacetNormal(self.domain)
+			B += 1e4*dot(th, nv)*dot(xi, nv)*self.ds
+			bc = False
+		
+		return B, bc
 
 
 class HeatPlus(Model):

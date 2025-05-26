@@ -44,11 +44,11 @@ Here we emphasize the following points:
 \end{itemize}    
 
 General problem
-\begin{equation}
+\begin{equation} \label{eq:problem}
 	\min_{\Omega\subset\mathcal{D}} J(\Omega)
 	\quad \text{subject to} \quad C(\Omega) = \boldsymbol{1}
 \end{equation}
-
+$J$ is the cost functional, $C$ is the vector-valued constraint function
 %%%%%%%%%%%%%%%%%%%%%%%
 \section{Shape derivatives}
 %%%%%%%%%%%%%%%%%%%%%%%
@@ -62,11 +62,17 @@ recalling definitions of distributed and boundary expression of shape derivative
 Here one could show the calculation of the distributed shape derivative for a model problem. 
 One should choose a different problem from \cite[Section 3]{MR3843884},
 for instance the inverse problem in elasticity. One could add another subsection with another model problem, for instance heat equation, where one would just show the result with the tensors $S_1,S_0$.
+
+The problem reads
+
+
+
+velocity equation
 \begin{equation} \label{eq:velocity}
 	\mathcal{B} (\theta, \xi) =
 	- \int_{\mathcal{D}} S_0\cdot\xi + S_1 : D\xi \quad\forall \; \xi \in \mathbb{H}(\Omega)
 \end{equation}
-
+with possibly homogeneous Dirichlet boundary condition.
 %%%%%%%%%%%%%%%%%%%%%%%
 \section{Numerical implementation}
 %%%%%%%%%%%%%%%%%%%%%%%
@@ -172,18 +178,18 @@ We seek a solution to Eikonal equation with fictitious time derivative
 \end{equation}
 
 We write \eqref{eq:Eikonal} in the form of the Hamilton-Jacobi equation
-\begin{equation}
+\begin{equation} \label{eq:HJ}
 	\varphi_{t} + H(\nabla \varphi)= S(\phi) \quad x\in \mathcal{D},\, t\in(0, T]
 \end{equation}
 where $H(p) = S(\phi) |\nabla p|$. Note that  $H$ satisfies $H(p) = \nabla H (p) \cdot p$
 The Petrov-Galerkin method \cite{MR1640142} with
 the two-step Adams-Bashforth method yields
-\begin{equation}
-	\int_{\mathcal{D}}  \varphi(t + \Delta t, \cdot)
-	=
-	\int_{\mathcal{D}} \varphi(t, \cdot) + {\Delta t} S(\phi) +
-	\frac{\Delta t}{2} (H(\nabla \varphi(t - \Delta t, \cdot)) - 3H(\nabla \varphi(t, \cdot))) 
-\end{equation}
+\begin{align} \label{eq:weak_HJ}
+	& \int_{\mathcal{D}}  \varphi(t + \Delta t, \cdot) \hat{\psi} = 
+	\int_{\mathcal{D}} (\varphi(t, \cdot) + {\Delta t} S(\phi)) \hat{\psi} \, +  \nonumber \\
+	& \int_{\mathcal{D}} \Delta t \left(\frac{1}{2}H(\nabla \varphi(t - \Delta t, \cdot)) - \frac{3}{2}H(\nabla \varphi(t, \cdot))\right) \hat{\psi} \nonumber \\
+	& \qquad \qquad \qquad \qquad \qquad \qquad \forall \, \psi\in H^1(\mathcal{D})
+\end{align}
 
 % Reinitialization of level set (part I)
 
