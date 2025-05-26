@@ -3,7 +3,7 @@ import distributed as dib
 from models import (
     Compliance, 
     CompliancePlus,
-    InverseElasticty,
+    InverseElasticity,
     Heat,
     HeatPlus,
     HeatMultiple
@@ -676,7 +676,7 @@ def test_06():
 
     # Instance for data generation
     # We need the method pde0
-    md0 = InverseElasticty(
+    md0 = InverseElasticity(
         dim, domain0, space0,
         forces, ds_forces, ds1,
         dirbc_partial, dirbc_total
@@ -780,7 +780,7 @@ def test_06():
         (1.0, -1.0)
     ]
     # Create the model
-    md = InverseElasticty(
+    md = InverseElasticity(
         dim, domain, space,
         forces, ds_forces, ds1,
         dirbc_partial, dirbc_total
@@ -964,7 +964,7 @@ def test_07():
         ds_forces = [ds_parts[1], ds_parts[2], ds_parts[3]] 
         ds1 = sum(ds_parts[1:], start = ds_parts[0])
 
-        md0 = InverseElasticty(
+        md0 = InverseElasticity(
             dim, domain0, space0,
             forces, ds_forces, ds1,
             dirbc_partial, dirbc_total
@@ -1062,7 +1062,7 @@ def test_07():
     ]
 
     # Create the model
-    md = InverseElasticty(
+    md = InverseElasticity(
         dim, domain, space,
         forces, ds_forces, ds1,
         dirbc_partial, dirbc_total
@@ -1258,7 +1258,7 @@ def test_08():
         ds_forces = [ds_parts[1], ds_parts[2], ds_parts[3]] 
         ds1 = sum(ds_parts[1:], start = ds_parts[0])
 
-        md0 = InverseElasticty(
+        md0 = InverseElasticity(
             dim, domain0, space0,
             forces, ds_forces, ds1,
             dirbc_partial, dirbc_total
@@ -1357,7 +1357,7 @@ def test_08():
         (1.0, -1.0)
     ]
     # Create the model
-    md = InverseElasticty(
+    md = InverseElasticity(
         dim, domain, space,
         forces, ds_forces, ds1,
         dirbc_partial, dirbc_total
@@ -2452,7 +2452,7 @@ def test_120():
     ds_forces = [ds_parts[1], ds_parts[2], ds_parts[3]] 
     ds1 = ds_parts[0] + ds_parts[1] + ds_parts[2] + ds_parts[3] + ds_parts[4] 
 
-    IE = InverseElasticty(
+    IE = InverseElasticity(
         dim, domain, space, forces, ds_forces, ds1, dirbc_partial, dirbc_total
     )
 

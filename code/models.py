@@ -227,7 +227,7 @@ class CompliancePlus(Model):
 		return B, False
 
 
-class InverseElasticty(Model):
+class InverseElasticity(Model):
 
 	def __init__(self, dim, domain, space, forces, ds_forces, ds1, dirbc_partial, dirbc_total):
 
@@ -252,8 +252,8 @@ class InverseElasticty(Model):
 		self.epsilon = lambda w: sym(grad(w))
 		self.sigma = lambda w: lmbda*nabla_div(w)*self.Id + 2.0*mu*self.epsilon(w)
 		self.A = lambda w: conditional(lt(w, 0.0), 10.0, 1.0)
-		self.alpha = 1.
-		self.beta = 1.
+		self.alpha = 1.0
+		self.beta = 1.0
 		self.phi = None
 
 	def f_prob(self, u, w, phi, f, df):
