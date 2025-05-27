@@ -4,6 +4,8 @@
 \usepackage{amsmath}  % for mathematical symbols and equations
 \usepackage{graphicx}  % for including graphics
 \usepackage{multicol}
+\usepackage{mathtools}
+
 
 
 
@@ -55,6 +57,13 @@ $J$ is the cost functional, $C$ is the vector-valued constraint function
 This will be similar to \cite[Section 2]{MR3843884},
 recalling definitions of distributed and boundary expression of shape derivative.
 
+\begin{equation}
+	dJ(\Omega) \theta = \int_{\mathcal{D}} S_0^J \cdot \theta + S_1^J : D\theta 
+\end{equation}
+\begin{equation}
+	dC(\Omega) \theta = \int_{\mathcal{D}} S_0^C \cdot \theta + S_1^C : D\theta 
+\end{equation}
+
 %%%%%%%%%%%%%%%%%%%%%%%
 \section{Shape derivative for a model problem}
 %%%%%%%%%%%%%%%%%%%%%%%
@@ -63,16 +72,87 @@ Here one could show the calculation of the distributed shape derivative for a mo
 One should choose a different problem from \cite[Section 3]{MR3843884},
 for instance the inverse problem in elasticity. One could add another subsection with another model problem, for instance heat equation, where one would just show the result with the tensors $S_1,S_0$.
 
+Inverse Elasticity. Let $\Gamma_0$, $\Gamma_1$ subsets of $\Gamma$. 
 The problem reads
+\begin{equation}
+	\min_{\Omega \subset \mathcal{D}}
+	\frac{\alpha}{2}\int_{\mathcal{D}}\left|u-v\right|^{2} + 
+	\frac{\beta}{2}\int_{\Gamma_{1}}\left|u-v\right|^{2}
+\end{equation}
+where $u$ and $v$ are the solutions to
+\begin{equation} \label{eq:f-prob}
+	\begin{array}{rcl}
+    -\mathrm{div} A_{\Omega} \sigma(u) = 0 & \text{in} & \mathcal{D} \\
+                                u = 0 & \text{on} & \Gamma_{0} \\
+                 A_{\Omega} \sigma(u)n = f & \text{on} & \Gamma_{1} \\
+                 A_{\Omega} \sigma(u)n = 0 & \text{on} & \Gamma \setminus (\Gamma_{1} \cup \Gamma_{1})                     
+	\end{array}	
+\end{equation}
+and
+\begin{equation} \label{eq:g-prob}
+	\begin{array}{rcl}
+    -\mathrm{div} A_{\Omega} \sigma(v) = 0 & \text{in} & \mathcal{D} \\
+                                v = 0 & \text{on} & \Gamma_{0} \\
+                                v = g & \text{on} & \Gamma_{1} \\
+            A_{\Omega} \sigma(v)n = 0 & \text{on} & \Gamma \setminus (\Gamma_{1} \cup \Gamma_{1})    
+	\end{array}
+\end{equation}
+respectively. The weak formulation of \eqref{eq:f-prob} reads as:
+Find $u \in  H^1_{\Gamma_0}(\mathcal{D})^d$ such that
+\begin{equation}
+	\int_{\mathcal{D}} A_{\Omega}\sigma(u):e(w) =
+	\int_{\Gamma_1} f \cdot w
+	\quad
+	\forall \, w \in  H^1_{\Gamma_0}(\mathcal{D})^d
+\end{equation}
+By extending $g$ to the whole domain,
+the weak formulation of \eqref{eq:g-prob}
+is written in such a way that we seek a solution
+in $H^1_{\Gamma_0}(\mathcal{D})^d$:
+Find $v \in  H^1_{\Gamma_0}(\mathcal{D})^d$ such that
+\begin{equation}
+	\int_{\mathcal{D}} A_{\Omega}\sigma(v + g):e(w) = 0
+	\quad
+	\forall \, w \in  H^1_{\Gamma_0}(\mathcal{D})^d
+\end{equation}
+Lagrangian functional
+\begingroup
+\small
+\begin{align} \label{eq:elastic_lag}
+    L(\Omega,\varphi, \psi, \rho, \varrho) & \coloneqq 
+    \frac{\alpha}{2}\int_{\mathcal{D}}\left|\varphi-\psi-g\right|^{2} +
+    \frac{\beta}{2}\int_{\Gamma_{1}}\left|\varphi-g\right|^{2} \nonumber \\
+    & +\int_{\mathcal{D}}A_{\Omega}\sigma(\varphi):e(\rho) - \int_{\Gamma_{1}}f \cdot \rho\\
+    & +\int_{\mathcal{D}}A_{\Omega}\sigma(\psi + g):e(\varrho) \nonumber
+\end{align}
+\endgroup
+Adjoint equations
+\begin{align} \label{eq:f-adj}
+		\int_{\mathcal{D}} A_{\Omega}\sigma(p):e(r) & = -\alpha \int_{\mathcal{D}} (u-v-g) \cdot r \\
+		& -\beta \int_{\Gamma_1} (u - g) \cdot r \quad
+		\forall \, r \in  H^1_{\Gamma_0}(\mathcal{D})^d	\nonumber
+\end{align}
+\begin{align} \label{eq:g-adj}
+	\int_{\mathcal{D}} A_{\Omega}\sigma(q):e(r) & = \alpha \int_{\mathcal{D}} (u-v-g) \cdot r \nonumber \\
+		& \qquad \qquad \forall \, r \in  H^1_0(\mathcal{D})^d
+\end{align}
+
+\begin{align*}
+	& G\left(t,\varphi,\psi,\rho,\varrho\right) \coloneqq\\
+	& L\left(\Omega_{t},\varphi\circ T_{t}^{-1},\psi\circ T_{t}^{-1},\rho\circ T_{t}^{-1},\varrho\circ T_{t}^{-1}\right)
+\end{align*}
+
+\begin{equation}
+	dJ(\Omega; \theta) = \partial_{t}G(0, u, v, p, q)
+\end{equation}
 
 
-
-velocity equation
+Velocity equation
 \begin{equation} \label{eq:velocity}
 	\mathcal{B} (\theta, \xi) =
-	- \int_{\mathcal{D}} S_0\cdot\xi + S_1 : D\xi \quad\forall \; \xi \in \mathbb{H}(\Omega)
+	- \int_{\mathcal{D}} S_0\cdot\xi + S_1 : D\xi \quad\forall \; \xi \in \mathbb{H}
 \end{equation}
-with possibly homogeneous Dirichlet boundary condition.
+with $\mathbb{H} = H^1(\mathcal{D}, \mathbb{R}^d)$ or $\mathbb{H} = H_0^1(\mathcal{D}, \mathbb{R}^d)$
 %%%%%%%%%%%%%%%%%%%%%%%
 \section{Numerical implementation}
 %%%%%%%%%%%%%%%%%%%%%%%
