@@ -49,7 +49,7 @@ size = comm.size
 comm_self = MPI.COMM_SELF
 
 dom_name = "domain"
-
+dat_name = "data"
 
 class Model(ABC):
     """
@@ -131,6 +131,115 @@ class Model(ABC):
         pass
 
 
+class Subdomain:
+    """
+    Creates an ufl conditional from a
+    list o inequalities of the form
+    	"expresion of x > 0",
+    which represents a subdomain
+    of almost zero velocity.
+    """
+
+    def __init__(self, domain, cond_func):
+        self.domain = domain
+        self.cond_func = cond_func
+
+    def expression(self):
+        x = SpatialCoordinate(self.domain)
+        conditions = self.cond_func(x)
+        chi = 1.0
+        for cond in conditions:
+            chi *= conditional(gt(cond, 0.0), 1.0, 0.0)
+        return chi
+    
+def region_of(domain):
+    def wrapper(func):
+        return Subdomain(domain, func)
+    return wrapper
+
+class Save:
+    """
+    Class to save "scalar" numerical
+    results: cost values, derivative norms,
+    Lagrange multipliers, etc.
+    """
+
+    def __init__(self):
+        
+        self.cost = []
+        self.nder = []
+        self.ppl_obj = None
+            
+    def add(self, cost, nder):
+        
+        self.cost.append(cost)
+        self.nder.append(nder)
+    
+    def add_times(self, assembly, resolution):
+        self.times = [assembly, resolution]
+    
+    def add_ppl(self, ppl_obj):
+        self.ppl_obj = ppl_obj
+
+    def save(self, path):
+        if self.ppl_obj is None:
+            np.savez(
+                path / f"{dat_name}.npz",
+                cost = np.array(self.cost),
+                nder = np.array(self.nder),
+                times = self.times
+            )
+        else:
+            np.savez(
+                path / f"{dat_name}.npz",
+                cost = np.array(self.cost),
+                ctrs = np.array(self.ppl_obj.list_ct),
+                nder = np.array(self.nder),
+                Lg = np.array(self.ppl_obj.list_Lg),
+                lm = np.array(self.ppl_obj.list_lm),
+                mu = np.array(self.ppl_obj.list_mu),
+                z = np.array(self.ppl_obj.list_zs),
+                delta = np.array(self.ppl_obj.list_dl),
+                alpha = np.array(self.ppl_obj.alpha),
+                beta = np.array(self.ppl_obj.beta),
+                rho = np.array(self.ppl_obj.rho),
+                r = np.array(self.ppl_obj.r),
+                times = self.times
+            )
+
+
+class InitialLevel:
+    """
+    Creates the initial level set function
+    whith holes determined by centers and radii.
+    """
+
+    def __init__(self, centers, radii, factor = 1.0):
+        """
+        Arguments
+        ---------
+        centers :
+            Narray of shape (N, 2) or (N, 3) .
+        radii :
+            Narray of shape (N,).
+        factor :
+            Float number.
+        """
+        self.centers = centers
+        self.radii = radii
+        self.dim = self.centers.shape[1]
+        self.factor = factor
+    
+    def func(self, x):
+        
+        xT = (x[:self.dim].T)[None, :, :]
+        comps = (self.centers[:, None, :] - xT)**2
+        norms = np.sqrt(np.sum(comps, axis = 2))
+        dists = self.radii[:, None] - norms
+
+        return self.factor*np.max(dists, axis = 0)
+
+
 def get_funcs_from(space, values):
     """
     Returns a list of functions of the given
@@ -157,24 +266,6 @@ def space_interpolation(from_space, funcs, to_space):
     
     return new_funcs
 
-class SubdomainCharacteristic:
-
-    def __init__(self, domain, condition_function):
-        self.domain = domain
-        self.condition_function = condition_function
-
-    def expression(self):
-        x = SpatialCoordinate(self.domain)
-        conditions = self.condition_function(x)
-        chi = 1.0
-        for cond in conditions:
-            chi *= conditional(gt(cond, 0), 1.0, 0.0)
-        return chi
-    
-def region_of(domain):
-    def wrapper(condition_function):
-        return SubdomainCharacteristic(domain, condition_function)
-    return wrapper
 
 def all_connectivities(domain):
     """
@@ -255,53 +346,6 @@ def dirichlet_extension(domain, space, funcs):
         )
 
     return extensions
-
-
-class Save:
-
-    def __init__(self):
-        
-        self.cost = []
-        self.nder = []
-        self.ppl_obj = None
-            
-    def add(self, cost, nder):
-        
-        self.cost.append(cost)
-        self.nder.append(nder)
-    
-    def add_times(self, assembly, resolution):
-        self.times = [assembly, resolution]
-    
-    def add_ppl(self, ppl_obj):
-        self.ppl_obj = ppl_obj
-
-    def save(self, path):
-        if self.ppl_obj is None:
-            np.savez(
-                path/"data.npz",
-                cost = np.array(self.cost),
-                nder = np.array(self.nder),
-                times = self.times
-            )
-        else:
-            np.savez(
-                path/"data.npz",
-                cost = np.array(self.cost),
-                ctrs = np.array(self.ppl_obj.list_ct),
-                nder = np.array(self.nder),
-                Lg = np.array(self.ppl_obj.list_Lg),
-                lm = np.array(self.ppl_obj.list_lm),
-                mu = np.array(self.ppl_obj.list_mu),
-                z = np.array(self.ppl_obj.list_zs),
-                delta = np.array(self.ppl_obj.list_dl),
-                alpha = np.array(self.ppl_obj.alpha),
-                beta = np.array(self.ppl_obj.beta),
-                rho = np.array(self.ppl_obj.rho),
-                r = np.array(self.ppl_obj.r),
-                times = self.times
-            )
-
 
 
 def build_gmsh_model_2d(
@@ -840,34 +884,6 @@ class Velocity:
         
         self.solver.solve(L, theta.x.petsc_vec)
         theta.x.scatter_forward()
-
-
-class InitialLevel:
-
-    def __init__(self, centers, radii, ftr = 1.0):
-        """
-        Arguments
-        ---------
-        centers :
-            Narray of shape (N, 2) or (N, 3) of centers.
-        radii :
-            Narray of shape (N,) of radii.
-        ftr :
-            Factor.
-        """
-        self.centers = centers
-        self.radii = radii
-        self.dim = self.centers.shape[1]
-        self.ftr = ftr
-    
-    def func(self, x):
-        
-        xT = (x[:self.dim].T)[None, :, :]
-        comps = (self.centers[:, None, :] - xT)**2
-        norms = np.sqrt(np.sum(comps, axis = 2))
-        dists = self.radii[:, None] - norms
-
-        return self.ftr*np.max(dists, axis = 0)
     
 
 class Level:

@@ -109,11 +109,11 @@ def test_01():
     def sub_domain(x):
         # 0.42 < x[1] < 0.58
         # 1.95 < x[0]
-        ineqs = (
+        ineqs = [
             x[1] - 0.42,
             0.58 - x[1],
             x[0] - 1.95
-        )
+		]
         return ineqs
     
     md.sub = [sub_domain.expression()]
@@ -207,13 +207,13 @@ def test_02():
 
     @dib.region_of(domain)
     def sub_domain(x):
-        ineqs = (
+        ineqs = [
             x[1] - 0.375,
             0.625 - x[1],
             x[2] - 0.375,
             0.625 - x[2],
             x[0] - 1.95
-        )
+		]
         return ineqs
 
     md.sub = [sub_domain.expression()]
