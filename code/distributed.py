@@ -15,6 +15,7 @@ from dolfinx.mesh import (
 
 from dolfinx.fem.petsc import (
     LinearProblem, DirichletBC,
+    NonlinearProblem,
     assemble_matrix, assemble_vector,
     create_vector, apply_lifting, set_bc
 )
@@ -26,7 +27,8 @@ from dolfinx.fem import (
     locate_dofs_topological,
     locate_dofs_geometrical,
     assemble_scalar, form,
-    functionspace, dirichletbc
+    functionspace, dirichletbc,
+    compile_form, create_form
 )
 
 from ufl import (
@@ -36,6 +38,8 @@ from ufl import (
     system, conditional,
     inner, grad, dot, sqrt, gt
 )
+
+from dolfinx.nls.petsc import NewtonSolver
 
 from abc import ABC, abstractmethod
 from typing import Any, List, Tuple
@@ -82,10 +86,7 @@ class Model(ABC):
         bci : the corresponding list of dirichlet boundary conditions
         """
         pass
-    
-    def pde_nl(self, level_set_func):
-        return []
-    
+        
     @abstractmethod
     def adjoint(self, level_set_func, states) -> List[Tuple[ufl_expr, DirichletBC]]:
         """
@@ -1389,6 +1390,336 @@ def global_scalar_list(values, comm):
     local_vals = [assemble_scalar(v) for v in values]
     
     return [comm.allreduce(v, op = MPI.SUM) for v in local_vals]
+
+class NonLinSol():
+    
+    def __init__(self, solver, u, initial):
+        self.solver = solver
+        self.u = u
+        self.initial = initial
+    
+    def solve(self):
+        self.u.interpolate(self.initial)
+        n, converged = self.solver.solve(self.u)
+
+def create_non_lin_solver(F, bcs, J, u, initial):
+    
+	problem = NonlinearProblem(F, u, bcs = bcs, J = J)
+	solver = NewtonSolver(MPI.COMM_WORLD, problem)
+	solver.convergence_criterion = "incremental"
+	solver.rtol = 1e-6
+	solver.report = True
+
+	ksp = solver.krylov_solver
+	opts = PETSc.Options()
+	option_prefix = ksp.getOptionsPrefix()
+	opts[f"{option_prefix}ksp_type"] = "gmres"
+	opts[f"{option_prefix}ksp_rtol"] = 1.0e-8
+	opts[f"{option_prefix}pc_type"] = "hypre"
+	opts[f"{option_prefix}pc_hypre_type"] = "boomeramg"
+	opts[f"{option_prefix}pc_hypre_boomeramg_max_iter"] = 1
+	opts[f"{option_prefix}pc_hypre_boomeramg_cycle_type"] = "v"
+	ksp.setFromOptions()
+    
+	return NonLinSol(solver, u, initial)
+	    
+
+def run(
+        model,
+        initial_guess,
+        niter = 100,
+        save_path = Path(""),
+        reinit_step = None,
+        reinit_pars = (8, 1e-2),
+        dfactor = 1e-2,
+        lv_time = (1e-3, 1.0),
+        lv_iter = (8, 12),
+        smooth = False,
+        start_to_check = 30,
+        ctrn_tol = 1e-2,
+        lgrn_tol = 1e-2,
+        cost_tol = 1e-2,
+        prev = 10,
+        seed = 26
+    ):
+    """
+    Implements Data Parallelism.
+    """
+
+    start_assembly = MPI.Wtime()
+
+    rein_steps, rein_end = reinit_pars
+    min_time, max_time = lv_time
+    min_iter, max_iter = lv_iter
+
+    # Constants ===========================
+    filename = save_path / "results.xdmf"
+    stop_flag = False
+    
+    dim = model.dim
+    domain = model.domain
+    nv = FacetNormal(domain)
+    
+    vol = volume(domain, comm)
+    nfems = nbr_fems(domain, dim, comm)
+
+    if rank == 0:
+        diam2 = get_diam2(dim, vol, nfems)
+        inilset = InitialLevel(*initial_guess)
+        np.random.seed(seed)
+        lsearch = LineSearch(
+            [min_time, max_time],
+            [min_iter, max_iter],
+            dfactor
+        )
+        tosave = Save()
+    else:
+        diam2 = None
+        inilset = None
+    
+    diam2 = comm.bcast(diam2, root = 0)
+    inilset = comm.bcast(inilset, root = 0)
+    
+    # List of variables
+    # -----------------
+    # sp_lset : space of level set functions
+    # sp_vlty : space of velocity fields
+    # phi : level set function
+    # tht : velocity field
+    # ste_eqs : list of state equations
+    # adj_eqs : list of adjoint equations
+    # ste_fcs : list of state functions
+    # adj_fcs : list of adjoint functions
+    # ste_pbs : list of state problems
+    # adj_pbs : list of adjoint problems
+    # eq_ctrs : list of equality constraints
+    # nbr_ste : number of states 
+    # nbr_adj : number of adjoints
+    # nbr_ctr : number of constraints
+    # J : cost functional
+    # C : list of constraints
+    # L : list of lagrange multipliers
+    # S0, S1 : derivative components 
+
+    # Level set function
+    sp_lset = create_space(domain, "CG", 1)
+    phi = Function(sp_lset)
+    phi.name = "phi"
+    # Velocity field
+    sp_vlty = create_space(domain, "CG", dim)
+    tht = Function(sp_vlty)
+    tht.name = "tht"
+
+    # State equations/functions/problems
+    ste_eqs = model.pde(phi)
+    nbr_ste = len(ste_eqs)
+    ste_fcs = [Function(model.space) for _ in range(nbr_ste)]
+    for i in range(nbr_ste):
+        ste_fcs[i].name = "u" + str(i)
+    
+    ste_pbs = []
+    
+    for i in range(nbr_ste):
+        ste_problem = ste_eqs[i]
+        if len(ste_problem) == 2:
+            weak_form, bcs = ste_problem
+            bi, li = system(weak_form)
+            ste_pbs.append(
+                create_solver(form(bi), form(li), bcs, ste_fcs[i])
+            )
+        else:
+            weak_form, bcs, jacobian, seudo_state, ini_func = ste_problem
+            compiled_weak_form = compile_form(MPI.COMM_WORLD, weak_form)
+            compiled_jacobian = compile_form(MPI.COMM_WORLD, jacobian)
+            form_weak_form = create_form(
+                compiled_weak_form, [model.space], domain, {}, {seudo_state: ste_fcs[i], phi: phi}, {}
+            )
+            form_jacobian = create_form(
+                compiled_jacobian, [model.space, model.space], domain, {}, {seudo_state: ste_fcs[i], phi: phi}, {}
+            )
+            ste_pbs.append(
+                create_non_lin_solver(form_weak_form, bcs, form_jacobian, ste_fcs[i], ini_func)
+            )       
+
+    # Adjoint equations/functions
+    adj_eqs = model.adjoint(phi, ste_fcs)
+    nbr_adj = len(adj_eqs)
+    if nbr_adj > 0:
+        adj_fcs = [Function(model.space) for _ in range(nbr_adj)]
+        for i in range(nbr_adj):
+            adj_fcs[i].name = "p" + str(i)
+        adj_pbs = []
+        for (weak_form, bcs), f in zip(adj_eqs, adj_fcs):
+            bi, li = system(weak_form)
+            adj_pbs.append(
+                create_solver(form(bi), form(li), bcs, f)
+            )
+    else:
+        adj_fcs = []
+
+    # Cost functional
+    J = form(model.cost(phi, ste_fcs))
+    # Derivative components
+    S0_cts, S1_cts = model.derivative(phi, ste_fcs, adj_fcs)
+    S0 = S0_cts[0]
+    S1 = S1_cts[0]
+    # Equality constraints
+    eq_ctrs = model.constraint(phi, ste_fcs)
+    nbr_ctr = len(eq_ctrs)
+    if nbr_ctr > 0:
+        # Compilation of the constraints
+        C = [form(c) for c in eq_ctrs]
+        # Lagrange multipliers
+        L = [const(domain, 0) for _ in range(nbr_ctr)]
+        # Creation of the derivatives components
+        for i in range(nbr_ctr):
+            S0 += L[i]*S0_cts[1][i]
+            S1 += L[i]*S1_cts[1][i]
+    # Derivative norm
+    nDJ = form((model.bilinear_form(tht, tht))[0])
+    # To calculate the velocity field
+    cls_vlty = Velocity(
+        dim, domain, sp_vlty,
+        model.bilinear_form, S0, S1
+    )
+    # To calculate the level set function
+    cls_lset = Level(
+        domain, sp_lset, phi, tht, diam2, smooth
+    )
+    # Reinicialization
+    if reinit_step:
+        cls_rein = Reinit(
+            domain, sp_lset, phi, diam2
+        )
+        
+    local_assembly = MPI.Wtime() - start_assembly
+    max_assembly = comm.allreduce(local_assembly, op = MPI.MAX)
+
+    # Iteration i = 0 =======
+    start_solve = MPI.Wtime()
+
+    phi.interpolate(inilset.func)
+    
+    [p.solve() for p in ste_pbs]
+    comm.Barrier()
+
+    cost = global_scalar(J, comm)
+    
+    if nbr_ctr > 0:
+        ctrs = global_scalar_list(C, comm)
+        if rank == 0:
+            cls_meth = PPL(nbr_ctr, cost, ctrs)
+    
+    if nbr_adj > 0:
+        [p.solve() for p in adj_pbs]
+        comm.barrier()
+
+    cls_vlty.run(tht)
+    nder = global_scalar(nDJ, comm, np.sqrt)
+
+    if rank == 0:
+        lset_steps, lset_end = lsearch.get(nder)
+    else:
+        lset_steps, lset_end = None, None
+    lset_steps = comm.bcast(lset_steps, root = 0)
+    lset_end = comm.bcast(lset_end, root = 0)
+
+    # print ==============================================
+    if rank == 0:
+        print("> Iterations:")
+        if nbr_ctr > 0:
+            print0(0, cost, ctrs, nder, 0, cls_meth.see())
+        else:
+            print1(0, cost, nder, 0)
+        tosave.add(cost, nder)
+    # ====================================================
+
+    with XDMFFile(comm, filename, "w") as xdmf:
+        xdmf.write_mesh(domain)
+        xdmf.write_function(phi, 0)
+        for f in ste_fcs: xdmf.write_function(f, 0)
+        for f in adj_fcs: xdmf.write_function(f, 0)
+        xdmf.write_function(tht, 0)
+
+        for iter in range(1, niter + 1):
+            
+            cls_lset.run(phi, lset_steps, lset_end)
+            # Reinitialization
+            if reinit_step and iter > start_to_check:
+                if iter%reinit_step == 0:
+                    cls_rein.run(phi, rein_steps, rein_end)			
+            
+            [p.solve() for p in ste_pbs]
+            comm.barrier()
+
+            cost = global_scalar(J, comm)
+            
+            if nbr_ctr > 0:
+                ctrs = global_scalar_list(C, comm)
+                if rank == 0:
+                    lm = cls_meth.run(cost, ctrs)
+                else:
+                    lm = None
+                lm = comm.bcast(lm, root = 0)
+                for i in range(nbr_ctr):
+                    L[i].value = lm[i]
+            
+            if nbr_adj > 0:
+                [p.solve() for p in adj_pbs]
+                comm.barrier()
+            
+            cls_vlty.run(tht)
+            nder = global_scalar(nDJ, comm, np.sqrt)
+            
+            if rank == 0:
+                lset_steps, lset_end = lsearch.get(nder)
+            else:
+                lset_steps, lset_end = None, None
+            lset_steps = comm.bcast(lset_steps, root = 0)
+            lset_end = comm.bcast(lset_end, root = 0)
+
+            xdmf.write_function(phi, iter)
+            for f in ste_fcs: xdmf.write_function(f, iter)
+            for f in adj_fcs: xdmf.write_function(f, iter)
+            xdmf.write_function(tht, iter)
+            
+            if rank == 0:
+                if nbr_ctr > 0:
+                    print0(iter, cost, ctrs, nder, lset_steps, cls_meth.see())
+                else:
+                    print1(iter, cost, nder, lset_steps)
+                tosave.add(cost, nder)
+
+                if iter > start_to_check:
+                    if nbr_ctr > 0:
+                        ctrn_errs = [c - 1.0 for c in ctrs]
+                        lgrn_last = cls_meth.list_Lg[-1]
+                        lgrn_errs = [l - lgrn_last for l in cls_meth.list_Lg[-prev:-1]]
+                        cond1 = Norm(ctrn_errs, np.inf) < ctrn_tol
+                        cond2 = Norm(lgrn_errs, np.inf) < lgrn_tol*abs(lgrn_last)
+                        stop_flag = cond1 and cond2
+                    else:
+                        cost_last = tosave.cost[-1]
+                        cost_diff = [j - cost_last for j in tosave.cost[-prev:-1]]
+                        stop_flag = Norm(cost_diff, np.inf) < cost_tol*abs(cost_last)
+
+            stop_flag = comm.bcast(stop_flag, root = 0)
+
+            if stop_flag:
+                if rank == 0: print("> Stopping condition reached!")
+                break
+
+    local_solve = MPI.Wtime() - start_solve
+    max_solve = comm.allreduce(local_solve, op = MPI.MAX)
+
+    if rank == 0:
+        if nbr_ctr > 0:
+            tosave.add_ppl(cls_meth)
+        tosave.add_times(max_assembly, max_solve)
+        tosave.save(save_path)
+        print(f"> Assembly time = {max_assembly} s")
+        print(f"> Resolution time = {max_solve} s")
+
 
 def runDP(
         model,

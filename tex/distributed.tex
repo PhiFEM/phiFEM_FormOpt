@@ -5,6 +5,7 @@
 \usepackage{graphicx}  % for including graphics
 \usepackage{multicol}
 \usepackage{mathtools}
+\usepackage{dsfont}
 
 
 
@@ -57,6 +58,10 @@ $J$ is the cost functional, $C$ is the vector-valued constraint function
 This will be similar to \cite[Section 2]{MR3843884},
 recalling definitions of distributed and boundary expression of shape derivative.
 
+Notations. Let $\mathcal{D}\subset\mathds{R}^d$ be open bounded domain with boundary
+$\Gamma = \partial \mathcal{D}$. Let $n$ denote the outward unit normal vector to $\Gamma$.
+Let $I$ denote the $d$-dimensional identity matrix.
+
 \begin{equation}
 	dJ(\Omega) \theta = \int_{\mathcal{D}} S_0^J \cdot \theta + S_1^J : D\theta 
 \end{equation}
@@ -70,9 +75,17 @@ recalling definitions of distributed and boundary expression of shape derivative
 
 Here one could show the calculation of the distributed shape derivative for a model problem. 
 One should choose a different problem from \cite[Section 3]{MR3843884},
-for instance the inverse problem in elasticity. One could add another subsection with another model problem, for instance heat equation, where one would just show the result with the tensors $S_1,S_0$.
+for instance the inverse problem in elasticity. One could add another
+subsection with another model problem, for instance heat equation,
+where one would just show the result with the tensors $S_1,S_0$.
 
 Inverse Elasticity. Let $\Gamma_0$, $\Gamma_1$ subsets of $\Gamma$. 
+\begin{equation*}
+	e(w)=\frac{Dw+{Dw}^{\top}}{2},\quad \sigma(w)=2\mu\,e(w)+\lambda(\nabla\cdot w)I
+\end{equation*}
+\begin{equation*}
+	H_{\Gamma_0}(\mathcal{D})^d\coloneqq\left\{ u\in H(\mathcal{D})^{d}\mid u|_{\Gamma_0}=\boldsymbol{0}\right\} 
+\end{equation*}
 The problem reads
 \begin{equation}
 	\min_{\Omega \subset \mathcal{D}}
@@ -116,8 +129,7 @@ Find $v \in  H^1_{\Gamma_0}(\mathcal{D})^d$ such that
 	\forall \, w \in  H^1_{\Gamma_0}(\mathcal{D})^d
 \end{equation}
 Lagrangian functional
-\begingroup
-\small
+
 \begin{align} \label{eq:elastic_lag}
     L(\Omega,\varphi, \psi, \rho, \varrho) & \coloneqq 
     \frac{\alpha}{2}\int_{\mathcal{D}}\left|\varphi-\psi-g\right|^{2} +
@@ -125,7 +137,7 @@ Lagrangian functional
     & +\int_{\mathcal{D}}A_{\Omega}\sigma(\varphi):e(\rho) - \int_{\Gamma_{1}}f \cdot \rho\\
     & +\int_{\mathcal{D}}A_{\Omega}\sigma(\psi + g):e(\varrho) \nonumber
 \end{align}
-\endgroup
+
 Adjoint equations
 \begin{align} \label{eq:f-adj}
 		\int_{\mathcal{D}} A_{\Omega}\sigma(p):e(r) & = -\alpha \int_{\mathcal{D}} (u-v-g) \cdot r \\
@@ -142,17 +154,33 @@ Adjoint equations
 	& L\left(\Omega_{t},\varphi\circ T_{t}^{-1},\psi\circ T_{t}^{-1},\rho\circ T_{t}^{-1},\varrho\circ T_{t}^{-1}\right)
 \end{align*}
 
+
+
 \begin{equation}
 	dJ(\Omega; \theta) = \partial_{t}G(0, u, v, p, q)
 \end{equation}
 
+\begin{equation}
+	dJ(\Omega; \theta) = \int_{\mathcal{D}} S_0^J \cdot \theta + S_1^J : D\theta 
+\end{equation}
+with 
+\begin{equation*}
+	S^{J}_{0} = -\alpha{Dg}^{\top}(u - v - g) + A_{\Omega}\sum_{i,j=1}^{d}{\sigma (q)}_{i,j}\nabla(e(g)_{i,j})
+\end{equation*}
+and
+\begin{align*}
+	S^{J}_{1} & = \frac{\alpha}{2}{|u-v-g|}^2 I + {}\\
+			  & \quad \left(A_{\Omega}\sigma(u):e(p) + A_{\Omega}\sigma(v+g):e(q)\right)I + {} \\
+			  & \quad A_{\Omega} \left({Du}^{\top}\sigma(p) + {Dp}^{\top}\sigma(u)\right) + {}\\
+			  & \quad A_{\Omega} \left({Dv}^{\top}\sigma(q) + {Dq}^{\top}\sigma(v+g)\right)
+\end{align*}
 
-Velocity equation
+Velocity equation: Find $\theta\in\mathbb{H}$ such that
 \begin{equation} \label{eq:velocity}
 	\mathcal{B} (\theta, \xi) =
 	- \int_{\mathcal{D}} S_0\cdot\xi + S_1 : D\xi \quad\forall \; \xi \in \mathbb{H}
 \end{equation}
-with $\mathbb{H} = H^1(\mathcal{D}, \mathbb{R}^d)$ or $\mathbb{H} = H_0^1(\mathcal{D}, \mathbb{R}^d)$
+with $\mathbb{H} = H^1(\mathcal{D})^d$ or $\mathbb{H} = H_0^1(\mathcal{D})^d$
 %%%%%%%%%%%%%%%%%%%%%%%
 \section{Numerical implementation}
 %%%%%%%%%%%%%%%%%%%%%%%

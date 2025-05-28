@@ -1,6 +1,7 @@
 import distributed as dib
 
 from models import (
+    Logistic,
     Compliance, 
     CompliancePlus,
     InverseElasticity,
@@ -36,6 +37,64 @@ test_13 : Heat conduction with two sinks (Task Parallelism)
 test_14 : Heat conduction with two sinks (Mix Parallelism)
 """
 
+def test_00():
+    test_path = Path("../results/t00/")
+    dim = 2
+    rank_dim = 1
+    mesh_size = 0.012
+    
+    vertices = np.array([
+        (0.0, 0.0),
+        (1.0, 0.0),
+        (1.0, 1.0),
+        (0.0, 1.0)
+    ])
+    
+    output = dib.create_domain_2d_DP(
+        vertices, [], mesh_size,
+        path = test_path,
+        plot = True
+    )
+    
+    domain, nbr_tri, boundary_tags = output
+
+    # Space for the PDE solution
+    space = dib.create_space(domain, "CG", rank_dim)
+    
+    # Create the model
+    md = Logistic(
+        dim, domain, space
+    )
+    md.ini_func = lambda x: 1 + 0.2 * np.sin(6 * np.pi * x[0]) * np.sin(6 * np.pi * x[1])
+    
+    # Initial guess: centers and radii
+    centers = []
+    
+    centers += [(0, 0.25*i) for i in range(5)]
+    centers += [(0.25, 0.25*i) for i in range(5)]
+    centers += [(0.5, 0.25*i) for i in range(5)]
+    centers += [(0.75, 0.25*i) for i in range(5)]
+    centers += [(1, 0.25*i) for i in range(5)]
+    
+    centers = np.array(centers)
+    radii = np.repeat(0.1, centers.shape[0])
+    
+    dib.save_initial(
+        comm, (centers, radii, -1),
+        domain, test_path / "initial.xdmf"
+    )
+
+    dib.run(
+        model = md,
+        initial_guess = (centers, radii, -1),
+        niter = 300,
+        save_path = test_path,
+        reinit_step = 6,
+        ctrn_tol = 1e-2,
+        lv_iter = (10, 16),
+        dfactor = 1e-1,
+        smooth = True
+    )
 
 def test_01():
     """
@@ -3166,6 +3225,7 @@ def test_20():
 
 
 test_functions = {
+    "00": test_00,
     "01": test_01,
     "02": test_02,
     "03": test_03,

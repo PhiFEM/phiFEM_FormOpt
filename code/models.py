@@ -3,7 +3,7 @@ from distributed import Model
 from ufl import (
 	TrialFunction, TestFunction,
 	FacetNormal, Identity, Measure,
-	SpatialCoordinate,
+	SpatialCoordinate, Coefficient,
 	conditional, indices, as_vector,
 	inner, outer, grad, sym, dot,
 	lt, le, pi, cos, sqrt, nabla_div
@@ -18,6 +18,99 @@ Models:
 	HeatPlus
 	HeatMultiple
 """
+
+class Logistic():
+
+	def __init__(self, dim, domain, space):
+
+		self.dim = dim
+		self.domain = domain
+		self.space = space
+		
+		self.dx = Measure('dx', domain = domain)
+		self.ds = Measure("ds", domain = domain)
+
+		self.D = 1.0
+		self.r = 10.0
+		self.vol = 0.5
+		self.ini_func = None
+
+		self.zero_vec = as_vector(dim*[0.0])
+		self.Id = Identity(dim)
+
+		self.K = lambda w: (
+			conditional(lt(w, 0.0), 1.0, 1e-2)
+		)
+		self.chi = lambda w: (
+			conditional(lt(w, 0.0), 1.0, 0.0)
+		)
+
+	def pde(self, phi):
+		
+		u = Coefficient(self.space)
+		v = TestFunction(self.space)
+		du = TrialFunction(self.space)
+
+		F = self.D*dot(grad(u), grad(v))*self.dx
+		F -= self.r*u*(1.0 - u/self.K(phi))*v*self.dx
+
+		J = self.D*dot(grad(du), grad(v))*self.dx
+		J -= self.r*du*(1.0 - 2.0*u/self.K(phi))*v*self.dx
+
+		return [(F, [], J, u, self.ini_func)]
+
+	def adjoint(self, phi, U):
+		
+		u = U[0]
+
+		p = TrialFunction(self.space)
+		q = TestFunction(self.space)
+		
+		W = self.D*dot(grad(p), grad(q))*self.dx
+		W += self.r*p*q*(2.0*u/self.K(phi) - 1.0)*self.dx
+		W -= q*self.dx 
+
+		return [(W, [])]
+
+	def cost(self, phi, U):
+		u = U[0]
+		J = -u*self.dx
+		return J
+
+	def constraint(self, phi, U):
+		
+		C = (1.0/self.vol)*self.K(phi)*self.dx
+		
+		return [C]
+
+	def derivative(self, phi, U, P):
+
+		u = U[0]
+		p = P[0]
+
+		S0_J = self.zero_vec
+		S1_J = (-u + self.D*dot(grad(u), grad(p)))*self.Id 
+		S1_J -= self.r*u*(1.0 - u/self.K(phi))*p*self.Id
+		S1_J -= self.D*(outer(grad(u), grad(p)) + outer(grad(p), grad(u)))
+			
+		S0_C = self.zero_vec
+		S1_C = (1.0/self.vol)*self.K(phi)*self.Id
+		
+		S0 = (S0_J, [S0_C])
+		S1 = (S1_J, [S1_C])
+		
+		return S0, S1
+
+	def bilinear_form(self, th, xi):
+		
+		nv = FacetNormal(self.domain)
+		
+		B = 0.1*dot(th, xi)*self.dx
+		B += inner(grad(th), grad(xi))*self.dx
+		B += 1e4*dot(th, nv)*dot(xi, nv)*self.ds
+		
+		return B, False
+
 
 class Compliance(Model):
 	"""
