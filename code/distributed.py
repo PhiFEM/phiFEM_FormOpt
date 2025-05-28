@@ -83,6 +83,9 @@ class Model(ABC):
         """
         pass
     
+    def pde_nl(self, level_set_func):
+        return []
+    
     @abstractmethod
     def adjoint(self, level_set_func, states) -> List[Tuple[ufl_expr, DirichletBC]]:
         """
