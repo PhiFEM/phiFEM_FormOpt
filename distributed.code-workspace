@@ -13,7 +13,8 @@
 			"Bashforth",
 			"mathbb",
 			"mathcal",
-			"mpirun"
+			"mpirun",
+			"Sobolev"
 		]
 	}
 }

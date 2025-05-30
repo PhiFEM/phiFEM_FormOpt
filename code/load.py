@@ -167,16 +167,22 @@ def test_13():
 	plot_basic(test_path)
 
 def test_14():
-	print("\n\tSymmetric cantilever")
-	name_test = "../results/t14/"
+	print("\n\tLogistic, r = 10")
+	test_path = Path("../results/t14/")
+
+	plot_basic(test_path)
 
 def test_15():
-	print("\n\tSloping roof")
-	name_test = "../results/t15/"
+	print("\n\tLogistic, r = 40")
+	test_path = Path("../results/t15/")
+
+	plot_basic(test_path)
 
 def test_16():
-	print("\n\tLarge sloping roof")
-	name_test = "../results/t16/"
+	print("\n\tLogistic, r = 90")
+	test_path = Path("../results/t16/")
+
+	plot_basic(test_path)
 
 def test_17():
 	pass

@@ -79,15 +79,18 @@ for instance the inverse problem in elasticity. One could add another
 subsection with another model problem, for instance heat equation,
 where one would just show the result with the tensors $S_1,S_0$.
 
-Inverse Elasticity. Let $\Gamma_0$, $\Gamma_1$ subsets of $\Gamma$. 
+Inverse Problem in Linear Elasticity.
+Let $\Gamma_0$, $\Gamma_1$ subsets of $\Gamma$. 
+The stress and symmetric strain tensors are given by
 \begin{equation*}
-	e(w)=\frac{Dw+{Dw}^{\top}}{2},\quad \sigma(w)=2\mu\,e(w)+\lambda(\nabla\cdot w)I
+	\sigma(w)=2\mu\,\epsilon(w)+\lambda(\nabla\cdot w)I,\quad  \epsilon(w)=\frac{Dw+{Dw}^{\top}}{2}.
 \end{equation*}
+Let $H_{\Gamma_0}(\mathcal{D})^d$ be the space of functions
 \begin{equation*}
 	H_{\Gamma_0}(\mathcal{D})^d\coloneqq\left\{ u\in H(\mathcal{D})^{d}\mid u|_{\Gamma_0}=\boldsymbol{0}\right\} 
 \end{equation*}
-The problem reads
-\begin{equation}
+The optimization problem reads:
+\begin{equation} \label{eq:InvProb}
 	\min_{\Omega \subset \mathcal{D}}
 	\frac{\alpha}{2}\int_{\mathcal{D}}\left|u-v\right|^{2} + 
 	\frac{\beta}{2}\int_{\Gamma_{1}}\left|u-v\right|^{2}
@@ -110,10 +113,10 @@ and
             A_{\Omega} \sigma(v)n = 0 & \text{on} & \Gamma \setminus (\Gamma_{1} \cup \Gamma_{1})    
 	\end{array}
 \end{equation}
-respectively. The weak formulation of \eqref{eq:f-prob} reads as:
+respectively. The weak formulation of \eqref{eq:f-prob} reads:
 Find $u \in  H^1_{\Gamma_0}(\mathcal{D})^d$ such that
-\begin{equation}
-	\int_{\mathcal{D}} A_{\Omega}\sigma(u):e(w) =
+\begin{equation} \label{eq:w-f}
+	\int_{\mathcal{D}} A_{\Omega}\sigma(u):\epsilon(w) =
 	\int_{\Gamma_1} f \cdot w
 	\quad
 	\forall \, w \in  H^1_{\Gamma_0}(\mathcal{D})^d
@@ -123,31 +126,33 @@ the weak formulation of \eqref{eq:g-prob}
 is written in such a way that we seek a solution
 in $H^1_{\Gamma_0}(\mathcal{D})^d$:
 Find $v \in  H^1_{\Gamma_0}(\mathcal{D})^d$ such that
-\begin{equation}
-	\int_{\mathcal{D}} A_{\Omega}\sigma(v + g):e(w) = 0
+\begin{equation} \label{eq:w-g}
+	\int_{\mathcal{D}} A_{\Omega}\sigma(v + g):\epsilon(w) = 0
 	\quad
 	\forall \, w \in  H^1_{\Gamma_0}(\mathcal{D})^d
 \end{equation}
-Lagrangian functional
-
+From \eqref{eq:w-f} and \eqref{eq:w-g},
+the Lagrangian functional for \eqref{eq:InvProb}
+is defined by
 \begin{align} \label{eq:elastic_lag}
-    L(\Omega,\varphi, \psi, \rho, \varrho) & \coloneqq 
-    \frac{\alpha}{2}\int_{\mathcal{D}}\left|\varphi-\psi-g\right|^{2} +
-    \frac{\beta}{2}\int_{\Gamma_{1}}\left|\varphi-g\right|^{2} \nonumber \\
-    & +\int_{\mathcal{D}}A_{\Omega}\sigma(\varphi):e(\rho) - \int_{\Gamma_{1}}f \cdot \rho\\
-    & +\int_{\mathcal{D}}A_{\Omega}\sigma(\psi + g):e(\varrho) \nonumber
+    L(\Omega,\varphi, \psi, \rho, \varrho) &= 
+    \frac{\alpha}{2}\int_{\mathcal{D}} \left|\varphi-\psi - g\right|^{2} \nonumber \\
+    &\quad + \frac{\beta}{2}\int_{\Gamma_{1}} \left|\varphi - g \right|^{2} \nonumber \\
+    &\quad + \int_{\mathcal{D}} A_{\Omega} \sigma(\varphi) : \epsilon(\rho) 
+    - \int_{\Gamma_{1}} f \cdot \rho \nonumber \\
+    &\quad + \int_{\mathcal{D}} A_{\Omega} \sigma(\psi + g) : \epsilon(\varrho)
 \end{align}
-
+Deriving $L$, we obtain the adjoint equations
 Adjoint equations
-\begin{align} \label{eq:f-adj}
-		\int_{\mathcal{D}} A_{\Omega}\sigma(p):e(r) & = -\alpha \int_{\mathcal{D}} (u-v-g) \cdot r \\
-		& -\beta \int_{\Gamma_1} (u - g) \cdot r \quad
+\begin{align*} \label{eq:f-adj}
+		\int_{\mathcal{D}} A_{\Omega}\sigma(p):\epsilon(r) & = -\alpha \int_{\mathcal{D}} (u-v-g) \cdot r \\
+		&\quad -\beta \int_{\Gamma_1} (u - g) \cdot r \quad
 		\forall \, r \in  H^1_{\Gamma_0}(\mathcal{D})^d	\nonumber
-\end{align}
-\begin{align} \label{eq:g-adj}
-	\int_{\mathcal{D}} A_{\Omega}\sigma(q):e(r) & = \alpha \int_{\mathcal{D}} (u-v-g) \cdot r \nonumber \\
-		& \qquad \qquad \forall \, r \in  H^1_0(\mathcal{D})^d
-\end{align}
+\end{align*}
+and
+\begin{equation*} \label{eq:g-adj}
+	\int_{\mathcal{D}} A_{\Omega}\sigma(q):\epsilon(r) = \alpha \int_{\mathcal{D}} (u-v-g) \cdot r \quad \forall \, r \in  H^1_0(\mathcal{D})^d
+\end{equation*}
 
 \begin{align*}
 	& G\left(t,\varphi,\psi,\rho,\varrho\right) \coloneqq\\
@@ -165,14 +170,15 @@ Adjoint equations
 \end{equation}
 with 
 \begin{equation*}
-	S^{J}_{0} = -\alpha{Dg}^{\top}(u - v - g) + A_{\Omega}\sum_{i,j=1}^{d}{\sigma (q)}_{i,j}\nabla(e(g)_{i,j})
+	S^{J}_{0} = -\alpha{Dg}^{\top}(u - v - g) +
+	A_{\Omega}\sum_{i,j=1}^{d}{\sigma (q)}_{i,j}\nabla(\epsilon(g)_{i,j})
 \end{equation*}
 and
 \begin{align*}
-	S^{J}_{1} & = \frac{\alpha}{2}{|u-v-g|}^2 I + {}\\
-			  & \quad \left(A_{\Omega}\sigma(u):e(p) + A_{\Omega}\sigma(v+g):e(q)\right)I + {} \\
-			  & \quad A_{\Omega} \left({Du}^{\top}\sigma(p) + {Dp}^{\top}\sigma(u)\right) + {}\\
-			  & \quad A_{\Omega} \left({Dv}^{\top}\sigma(q) + {Dq}^{\top}\sigma(v+g)\right)
+	S^{J}_{1} & = \frac{\alpha}{2}{|u-v-g|}^2 I\\
+			  & \quad + \left(A_{\Omega}\sigma(u):\epsilon(p) + A_{\Omega}\sigma(v+g):\epsilon(q)\right)I\\
+			  & \quad + A_{\Omega} \left({Du}^{\top}\sigma(p) + {Dp}^{\top}\sigma(u)\right)\\
+			  & \quad + A_{\Omega} \left({Dv}^{\top}\sigma(q) + {Dq}^{\top}\sigma(v+g)\right)
 \end{align*}
 
 Velocity equation: Find $\theta\in\mathbb{H}$ such that
@@ -199,7 +205,8 @@ The folder ``Shape'' (?) will contain the files for the shape optimization, this
 \subsection{Parallelization}
 %%%%%%%%%%%%%%%%%%%%%%%
 
-Here we explain the two modes of parallelization, the mesh and the sources, and how the user can play with that. Explain the splitting and the colors.
+Here we explain the two modes of parallelization, the mesh and the sources,
+and how the user can play with that. Explain the splitting and the colors.
 
 Cite some parts of the codes to explain that.
 

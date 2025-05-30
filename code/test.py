@@ -33,68 +33,12 @@ test_09 : Heat conduction problem 1 (Data Parallelism)
 test_10 : Heat conduction problem 2 (Data Parallelism)
 test_11 : Heat conduction problem 3 (Data Parallelism)
 test_12 : Heat conduction with two sinks (Data Parallelism)
-test_13 : Heat conduction with two sinks (Task Parallelism)
-test_14 : Heat conduction with two sinks (Mix Parallelism)
+test_13 : Heat conduction with one load (Data Parallelism)
+test_14 : Logistic equation, r = 10 (Data Parallelism)
+test_15 : Logistic equation, r = 40 (Data Parallelism)
+test_16 : Logistic equation, r = 90 (Data Parallelism)
 """
 
-def test_00():
-    test_path = Path("../results/t00/")
-    dim = 2
-    rank_dim = 1
-    mesh_size = 0.012
-    
-    vertices = np.array([
-        (0.0, 0.0),
-        (1.0, 0.0),
-        (1.0, 1.0),
-        (0.0, 1.0)
-    ])
-    
-    output = dib.create_domain_2d_DP(
-        vertices, [], mesh_size,
-        path = test_path,
-        plot = True
-    )
-    
-    domain, nbr_tri, boundary_tags = output
-
-    # Space for the PDE solution
-    space = dib.create_space(domain, "CG", rank_dim)
-    
-    # Create the model
-    md = Logistic(
-        dim, domain, space
-    )
-    md.ini_func = lambda x: 1 + 0.2 * np.sin(6 * np.pi * x[0]) * np.sin(6 * np.pi * x[1])
-    
-    # Initial guess: centers and radii
-    centers = []
-    
-    centers += [(0, 0.25*i) for i in range(5)]
-    centers += [(0.25, 0.25*i) for i in range(5)]
-    centers += [(0.5, 0.25*i) for i in range(5)]
-    centers += [(0.75, 0.25*i) for i in range(5)]
-    centers += [(1, 0.25*i) for i in range(5)]
-    
-    centers = np.array(centers)
-    radii = np.repeat(0.1, centers.shape[0])
-    
-    dib.save_initial(
-        comm, (centers, radii, -1),
-        domain, test_path / "initial.xdmf"
-    )
-
-    dib.run(
-        model = md,
-        initial_guess = (centers, radii, -1),
-        niter = 300,
-        save_path = test_path,
-        reinit_step = 6,
-        ctrn_tol = 1e-2,
-        lv_iter = (10, 16),
-        dfactor = 1e-1,
-        smooth = True
-    )
 
 def test_01():
     """
@@ -172,7 +116,7 @@ def test_01():
             x[1] - 0.42,
             0.58 - x[1],
             x[0] - 1.95
-		]
+        ]
         return ineqs
     
     md.sub = [sub_domain.expression()]
@@ -204,16 +148,17 @@ def test_01():
         initial_guess = (centers, radii),
         niter = 100,
         save_path = test_path,
-        reinit_step = 4,
         ctrn_tol = 1e-3,
         dfactor = 1e-1,
-        smooth = True
+        smooth = True,
+        seed = 34
     )
 
 
 def test_02():
     """
     Run: mpirun -np <nbr of processes> python test.py 02
+    Recommended: python test.py 02
     """
 
     test_name = "Symmetric cantilever 3D (Data Parallelism)"
@@ -248,7 +193,7 @@ def test_02():
     
     def boundary_neumann(x):
         in_plane = np.isclose(x[0], 2.0)
-        in_square = np.maximum(np.abs(x[1] - 0.5), np.abs(x[2] - 0.5)) <= 0.1 + 1e-6
+        in_square = np.maximum(np.abs(x[1] - 0.5), np.abs(x[2] - 0.5)) <= 0.1
         return in_plane & in_square
     
     # Dirichlet conditions
@@ -257,7 +202,7 @@ def test_02():
     )
     # Boundary to force application 
     ds_g = dib.fun_ds(domain, [boundary_neumann])
-    volume, g = 0.8, [0.0, 0.0, -4.0]
+    volume, g = 1.0, [0.0, 0.0, -4.0]
     # Create the model
     md = Compliance(
         dim, domain, space,
@@ -267,18 +212,18 @@ def test_02():
     @dib.region_of(domain)
     def sub_domain(x):
         ineqs = [
-            x[1] - 0.375,
-            0.625 - x[1],
-            x[2] - 0.375,
-            0.625 - x[2],
-            x[0] - 1.95
-		]
+            x[1] - 0.35,
+            0.65 - x[1],
+            x[2] - 0.35,
+            0.65 - x[2],
+            x[0] - 1.90
+        ]
         return ineqs
 
     md.sub = [sub_domain.expression()]
 
     centers = np.array([
-        (2., .25, .25), (2., .75, .25), (2., .25, .75), (2., .75, .75),
+        (2.0, 0.7, 0.3), (2.0, 0.7, 0.7), (2.0, 0.3, 0.3), (2.0, 0.3, 0.7),
         (2., 0., 0.), (2., 0., 1.), (2., 1., 0.), (2., 1., 1.),
         (2., .5, 0.), (2., .5, 1.), (2., 0., .5,), (2., 1., .5),
         (1.7, 0., 0.), (1.7, 0., 1.), (1.7, 1., 0.), (1.7, 1., 1.),
@@ -290,22 +235,24 @@ def test_02():
         (0.3, 0., 0.), (0.3, 0., 1.), (0.3, 1., 0.), (0.3, 1., 1.),
         (0.3, .5, .5), (0.3, 0, 0.5), (0.3, 1., 0.5), (0.3, 0.5, 0.), (0.3, 0.5, 1.),
         (0., .5, 0.), (0., .5, 1.), (0., 0., .5,), (0., 1., .5), (0., .5, .5),
-        (0.0, 0.25, 0.25), (0.0, 0.75, 0.25), (0.0, 0.25, 0.75), (0.0, 0.75, 0.75)
+        (0.0, 0.25, 0.25), (0.0, 0.75, 0.25), (0.0, 0.25, 0.75), (0.0, 0.75, 0.75),
+        (2.0, 0.5, 0.3), (2.0, 0.5, 0.7), (2.0, 0.3, 0.5), (2.0, 0.7, 0.5),
     ])
     radii = np.repeat(0.1, centers.shape[0])
     dib.save_initial(
-        comm, (centers, radii),
+        comm, (centers, radii, 1, np.inf),
         domain, test_path / "initial.xdmf")
 
     #Run data parallelism
     dib.runDP(
         model = md,
-        initial_guess = (centers, radii),
-        niter = 200,
+        initial_guess = (centers, radii, 1, np.inf),
+        niter = 300,
         save_path = test_path,
         reinit_step = 4,
         ctrn_tol = 1e-3,
-        dfactor = 1e-1
+        dfactor = 1e-1,
+        smooth = True
     )
 
 
@@ -2048,6 +1995,81 @@ def test_13():
         smooth = True
     )
 
+
+def test_14(test_path = Path("../results/t14/"), r = 10):
+    """
+    Run: mpirun -np <nbr of processes> python test.py 14
+    For instance: mpirun -np 2 python test.py 14
+    """
+
+    dim = 2
+    rank_dim = 1
+    mesh_size = 0.012
+    
+    vertices = np.array([
+        (0.0, 0.0),
+        (1.0, 0.0),
+        (1.0, 1.0),
+        (0.0, 1.0)
+    ])
+    
+    output = dib.create_domain_2d_DP(
+        vertices, [], mesh_size,
+        path = test_path,
+        plot = True
+    )
+    
+    domain, nbr_tri, boundary_tags = output
+
+    # Space for the PDE solution
+    space = dib.create_space(domain, "CG", rank_dim)
+    
+    # Create the model
+    md = Logistic(
+        dim, domain, space, r
+    )
+
+    md.ini_func = lambda x: (
+        1 + 0.2 * np.sin(6 * np.pi * x[0]) * np.sin(6 * np.pi * x[1])
+    )
+
+    # Initial guess: centers and radii
+    centers = []
+    
+    centers += [(0, 0.25*i) for i in range(5)]
+    centers += [(0.25, 0.25*i) for i in range(5)]
+    centers += [(0.5, 0.25*i) for i in range(5)]
+    centers += [(0.75, 0.25*i) for i in range(5)]
+    centers += [(1, 0.25*i) for i in range(5)]
+    
+    centers = np.array(centers)
+    radii = np.repeat(0.1, centers.shape[0])
+    
+    dib.save_initial(
+        comm, (centers, radii, -1),
+        domain, test_path / "initial.xdmf"
+    )
+
+    dib.runDP(
+        model = md,
+        initial_guess = (centers, radii, -1),
+        niter = 200,
+        save_path = test_path,
+        reinit_step = 6,
+        ctrn_tol = 1e-3,
+        dfactor = 1.0,
+        smooth = True
+    )
+
+
+def test_15():
+    test_14(test_path = Path("../results/t15/"), r = 40)
+
+
+def test_16():
+    test_14(test_path = Path("../results/t16/"), r = 90)
+
+
 #========================
 def test_13425772():
     """
@@ -2538,7 +2560,7 @@ def test_120():
     states = dib.solve_pde(domain, space, IE.pde, beam_equation)
     print("R:",states[0].x.array)
 
-def test_14():
+def test_1400():
     print("\n\tSymmetric cantilever")
     print("")
     name_test = "../results/t14/"
@@ -2654,7 +2676,7 @@ def test_14():
         ctrs_tol = 1e-2
     )
 
-def test_15():
+def test_150():
     
     print("\n\tSloping roof")
     name_test = "../results/t15/"
@@ -2775,7 +2797,7 @@ def test_15():
         ctrs_tol = 1e-3
     )
 
-def test_16():
+def test_1ddd6():
     
     print("\n\tLarge sloping roof")
     name_test = "../results/t16/"
@@ -2895,7 +2917,7 @@ def test_16():
         ctrs_tol = 1e-3
     )
 
-def test_17():
+def test_1ddd7():
     name_test = "../results/t04/"
     
     # ========== Domain ==========
@@ -2971,7 +2993,7 @@ def test_17():
         save_path = name_test
     )
 
-def test_18():
+def test_1844():
     name_test = "../results/t18/"
     
     # ========== Domain ==========
@@ -3059,7 +3081,7 @@ def test_18():
         save_path = name_test
     )
 
-def test_18():
+def test_1rr8():
     print("Half-wheel")
     name_test = "../results/t05/"
     
@@ -3137,7 +3159,7 @@ def test_18():
         save_path = name_test
     )
 
-def test_20():
+def test_2rr0():
     name_test = "../results/t08/"
     
     # ========== Domain ==========
@@ -3225,7 +3247,6 @@ def test_20():
 
 
 test_functions = {
-    "00": test_00,
     "01": test_01,
     "02": test_02,
     "03": test_03,
@@ -3239,6 +3260,9 @@ test_functions = {
     "11": test_11,
     "12": test_12,
     "13": test_13,
+    "14": test_14,
+    "15": test_15,
+    "16": test_16
 }
 
 def main():

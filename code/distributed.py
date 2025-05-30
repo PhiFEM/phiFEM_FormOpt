@@ -54,6 +54,7 @@ comm_self = MPI.COMM_SELF
 
 dom_name = "domain"
 dat_name = "data"
+res_name = "results"
 
 class Model(ABC):
     """
@@ -80,10 +81,14 @@ class Model(ABC):
     def pde(self, level_set_func) -> List[Tuple[ufl_expr, DirichletBC]]:
         """
         Returns:
-            [(wk0, bc0), (wk1, bc1), ...]
+            A list with elements of the form
+            (wk, bc) or (wk, bc, jac, unk, ini_func)
         where
-        wki : the weak form of the i-th state equation
-        bci : the corresponding list of dirichlet boundary conditions
+        wk : weak formulation of a state equation
+        bc : the corresponding list of dirichlet boundary conditions
+        jac : jacobian of wk
+        unk : unknown in the nonlinear equation
+        ini_func : callable function to define the initial guess
         """
         pass
         
@@ -91,10 +96,14 @@ class Model(ABC):
     def adjoint(self, level_set_func, states) -> List[Tuple[ufl_expr, DirichletBC]]:
         """
         Returns:
-            [(wk0, bc0), (wk1, bc1), ...]
+            A list with elements of the form
+            (wk, bc) or (wk, bc, jac, unk, ini_func)
         where
-        wki : the weak form of the i-th adjoint equation
-        bci : the corresponding list of dirichlet boundary conditions
+        wk : weak formulation of the state equation
+        bc : the corresponding list of dirichlet boundary conditions
+        jac : jacobian of wk
+        unk : unknown in the nonlinear equation
+        ini_func : callable function to define the initial guess
         """
         pass
 
@@ -130,7 +139,7 @@ class Model(ABC):
     def bilinear_form(self, velocity_func, test_func) -> Tuple[ufl_expr, bool]:
         """
         Returns:
-        	the bilinear form B
+            the bilinear form B
         """
         pass
 
@@ -139,7 +148,7 @@ class Subdomain:
     """
     Creates an ufl conditional from a
     list o inequalities of the form
-    	"expresion of x > 0",
+        "expresion of x > 0",
     which represents a subdomain
     of almost zero velocity.
     """
@@ -218,7 +227,7 @@ class InitialLevel:
     whith holes determined by centers and radii.
     """
 
-    def __init__(self, centers, radii, factor = 1.0):
+    def __init__(self, centers, radii, factor = 1.0, ord = 2):
         """
         Arguments
         ---------
@@ -233,12 +242,14 @@ class InitialLevel:
         self.radii = radii
         self.dim = self.centers.shape[1]
         self.factor = factor
+        self.ord = ord
     
     def func(self, x):
         
         xT = (x[:self.dim].T)[None, :, :]
-        comps = (self.centers[:, None, :] - xT)**2
-        norms = np.sqrt(np.sum(comps, axis = 2))
+        #comps = (self.centers[:, None, :] - xT)**2
+        #norms = np.sqrt(np.sum(comps, axis = 2))
+        norms = Norm(self.centers[:, None, :] - xT, ord = self.ord, axis = 2)
         dists = self.radii[:, None] - norms
 
         return self.factor*np.max(dists, axis = 0)
@@ -1273,26 +1284,47 @@ def marked_ds(domain, boundary_tags, marks):
 
 
 class LineSearch:
+    """
+    Line search utility to estimate
+    the number of steps and final time 
+    based on the norm of the velocity field.
+    
+    Attributes
+    ----------
+    factor: float
+        Scaling factor used to estimate final time.
+    noise: float
+        Random variation factor, e.g., 0.05 for 5% variation.
+    
+    Methods
+    -------
+    """
 
-    def __init__(self, times, iterations, ftr, noise = 0.05):
+    def __init__(
+            self,
+            time_bounds: Tuple[float, float],
+            step_bounds: Tuple[int, int], 
+            factor: float,
+            noise: float = 0.05
+        ):
         """
         Arguments
         ---------
-        times :
-            List with the min and max times allowed.
-        iterations :
-            List with the min and max number of steps allowed.
-        factor :
-            Factor for the final time guess.
-        noise :
-            Amount of randomness. Default 5%.
+        time_bounds:  List[float, float]
+            Minimum and maximum allowed final times.
+        step_bounds: List[int, int]
+            Minimum and maximum allowed number of steps.
+        factor: float
+            Scaling factor used to estimate final time.
+        noise: float
+            Random variation factor, e.g., 0.05 for 5% variation.
         """
-        self.tm, self.tM = times
-        self.im, self.iM = iterations
-        self.ftr = ftr
+        self.tm, self.tM = time_bounds
+        self.im, self.iM = step_bounds
+        self.factor = factor
         self.ns = noise
 
-    def func(self, t):
+    def _smooth_step(self, t):
         return (self.iM-self.im)*((t-self.tm)/(self.tM-self.tm))**(1./6.) + self.im
 
     def get(self, derivative_norm):
@@ -1315,10 +1347,10 @@ class LineSearch:
             Estimated final time.
         """
         safe_norm = max(derivative_norm, 1e-8) # To prevent division by zero
-        tend = self.ftr/safe_norm
+        tend = self.factor/safe_norm
         tend = tend*np.random.uniform(1-self.ns, 1+self.ns)
         tend = max(min(tend, self.tM), self.tm)
-        steps = round(self.func(tend))
+        steps = round(self._smooth_step(tend))
         steps = np.random.normal(steps, self.ns*steps)
         steps = np.clip(steps, self.im, self.iM) 
 
@@ -1391,57 +1423,81 @@ def global_scalar_list(values, comm):
     
     return [comm.allreduce(v, op = MPI.SUM) for v in local_vals]
 
-class NonLinSol():
+
+class NonlinearSolverWrapper():
+    """
+    Wrapper for solving nonlinear problems.
+    """
     
     def __init__(self, solver, u, initial):
+        """
+        Arguments
+        ---------
+        solver : dolfinx.nls.petsc.NewtonSolver
+            Non-linear solver.
+        u : dolfinx.fem.Function
+            Function to save the solution.
+        initial : callable
+            Initial guess. A function that can be
+            evaluated at mesh points. For instance, 
+            a lambda function.
+        """
         self.solver = solver
         self.u = u
         self.initial = initial
     
     def solve(self):
+        
         self.u.interpolate(self.initial)
         n, converged = self.solver.solve(self.u)
+        if not converged:
+            print(f"> Newton solver did not converge!")
 
-def create_non_lin_solver(F, bcs, J, u, initial):
+
+def create_non_lin_solver(comm, F, bcs, J, u, initial):
+    """
+    Creates a Newton solver for non-linear problems.
+    """
     
-	problem = NonlinearProblem(F, u, bcs = bcs, J = J)
-	solver = NewtonSolver(MPI.COMM_WORLD, problem)
-	solver.convergence_criterion = "incremental"
-	solver.rtol = 1e-6
-	solver.report = True
+    problem = NonlinearProblem(F, u, bcs = bcs, J = J)
+    solver = NewtonSolver(comm, problem)
+    solver.convergence_criterion = "incremental"
+    solver.rtol = 1e-6
+    solver.report = True
+    solver.maximum_iterations = 10
 
-	ksp = solver.krylov_solver
-	opts = PETSc.Options()
-	option_prefix = ksp.getOptionsPrefix()
-	opts[f"{option_prefix}ksp_type"] = "gmres"
-	opts[f"{option_prefix}ksp_rtol"] = 1.0e-8
-	opts[f"{option_prefix}pc_type"] = "hypre"
-	opts[f"{option_prefix}pc_hypre_type"] = "boomeramg"
-	opts[f"{option_prefix}pc_hypre_boomeramg_max_iter"] = 1
-	opts[f"{option_prefix}pc_hypre_boomeramg_cycle_type"] = "v"
-	ksp.setFromOptions()
+    ksp = solver.krylov_solver
+    opts = PETSc.Options()
+    option_prefix = ksp.getOptionsPrefix()
+    opts[f"{option_prefix}ksp_type"] = "gmres"
+    opts[f"{option_prefix}ksp_rtol"] = 1.0e-8
+    opts[f"{option_prefix}pc_type"] = "hypre"
+    opts[f"{option_prefix}pc_hypre_type"] = "boomeramg"
+    opts[f"{option_prefix}pc_hypre_boomeramg_max_iter"] = 1
+    opts[f"{option_prefix}pc_hypre_boomeramg_cycle_type"] = "v"
+    ksp.setFromOptions()
     
-	return NonLinSol(solver, u, initial)
-	    
+    return NonlinearSolverWrapper(solver, u, initial)
 
-def run(
-        model,
-        initial_guess,
-        niter = 100,
-        save_path = Path(""),
-        reinit_step = None,
-        reinit_pars = (8, 1e-2),
-        dfactor = 1e-2,
-        lv_time = (1e-3, 1.0),
-        lv_iter = (8, 12),
-        smooth = False,
-        start_to_check = 30,
-        ctrn_tol = 1e-2,
-        lgrn_tol = 1e-2,
-        cost_tol = 1e-2,
-        prev = 10,
-        seed = 26
-    ):
+def runDP(
+        model: Model,
+        initial_guess: Tuple[Any, ...],
+        niter: int = 100,
+        save_path: Path = Path(""),
+        reinit_step: int = 4,
+        reinit_pars: Tuple[int, float] = (8, 1e-2),
+        dfactor: float = 1e-2,
+        lv_time: Tuple[float, float] = (1e-3, 1.0),
+        lv_iter: Tuple[int, int] = (8, 12),
+        smooth: bool = False,
+        start_to_check: int = 30,
+        ctrn_tol: float = 1e-2,
+        lgrn_tol: float = 1e-2,
+        cost_tol: float = 1e-2,
+        prev: int = 10,
+        seed: int = 26
+	) -> None:
+    
     """
     Implements Data Parallelism.
     """
@@ -1453,12 +1509,11 @@ def run(
     min_iter, max_iter = lv_iter
 
     # Constants ===========================
-    filename = save_path / "results.xdmf"
+    filename = save_path / f"{res_name}.xdmf"
     stop_flag = False
     
     dim = model.dim
     domain = model.domain
-    nv = FacetNormal(domain)
     
     vol = volume(domain, comm)
     nfems = nbr_fems(domain, dim, comm)
@@ -1510,15 +1565,15 @@ def run(
     tht = Function(sp_vlty)
     tht.name = "tht"
 
-    # State equations/functions/problems
+    # State equations/functions
     ste_eqs = model.pde(phi)
     nbr_ste = len(ste_eqs)
     ste_fcs = [Function(model.space) for _ in range(nbr_ste)]
     for i in range(nbr_ste):
         ste_fcs[i].name = "u" + str(i)
     
+    # Solvers creation
     ste_pbs = []
-    
     for i in range(nbr_ste):
         ste_problem = ste_eqs[i]
         if len(ste_problem) == 2:
@@ -1529,17 +1584,24 @@ def run(
             )
         else:
             weak_form, bcs, jacobian, seudo_state, ini_func = ste_problem
-            compiled_weak_form = compile_form(MPI.COMM_WORLD, weak_form)
-            compiled_jacobian = compile_form(MPI.COMM_WORLD, jacobian)
+            compiled_weak_form = compile_form(comm, weak_form)
+            compiled_jacobian = compile_form(comm, jacobian)
             form_weak_form = create_form(
-                compiled_weak_form, [model.space], domain, {}, {seudo_state: ste_fcs[i], phi: phi}, {}
+                compiled_weak_form,
+                [model.space], domain, {},
+                {seudo_state: ste_fcs[i], phi: phi}, {}
             )
             form_jacobian = create_form(
-                compiled_jacobian, [model.space, model.space], domain, {}, {seudo_state: ste_fcs[i], phi: phi}, {}
+                compiled_jacobian,
+                [model.space, model.space], domain, {},
+                {seudo_state: ste_fcs[i], phi: phi}, {}
             )
             ste_pbs.append(
-                create_non_lin_solver(form_weak_form, bcs, form_jacobian, ste_fcs[i], ini_func)
-            )       
+                create_non_lin_solver(
+                    comm, form_weak_form, bcs,
+                    form_jacobian, ste_fcs[i], ini_func
+                )
+            )    
 
     # Adjoint equations/functions
     adj_eqs = model.adjoint(phi, ste_fcs)
@@ -1548,291 +1610,37 @@ def run(
         adj_fcs = [Function(model.space) for _ in range(nbr_adj)]
         for i in range(nbr_adj):
             adj_fcs[i].name = "p" + str(i)
-        adj_pbs = []
-        for (weak_form, bcs), f in zip(adj_eqs, adj_fcs):
-            bi, li = system(weak_form)
-            adj_pbs.append(
-                create_solver(form(bi), form(li), bcs, f)
-            )
-    else:
-        adj_fcs = []
-
-    # Cost functional
-    J = form(model.cost(phi, ste_fcs))
-    # Derivative components
-    S0_cts, S1_cts = model.derivative(phi, ste_fcs, adj_fcs)
-    S0 = S0_cts[0]
-    S1 = S1_cts[0]
-    # Equality constraints
-    eq_ctrs = model.constraint(phi, ste_fcs)
-    nbr_ctr = len(eq_ctrs)
-    if nbr_ctr > 0:
-        # Compilation of the constraints
-        C = [form(c) for c in eq_ctrs]
-        # Lagrange multipliers
-        L = [const(domain, 0) for _ in range(nbr_ctr)]
-        # Creation of the derivatives components
-        for i in range(nbr_ctr):
-            S0 += L[i]*S0_cts[1][i]
-            S1 += L[i]*S1_cts[1][i]
-    # Derivative norm
-    nDJ = form((model.bilinear_form(tht, tht))[0])
-    # To calculate the velocity field
-    cls_vlty = Velocity(
-        dim, domain, sp_vlty,
-        model.bilinear_form, S0, S1
-    )
-    # To calculate the level set function
-    cls_lset = Level(
-        domain, sp_lset, phi, tht, diam2, smooth
-    )
-    # Reinicialization
-    if reinit_step:
-        cls_rein = Reinit(
-            domain, sp_lset, phi, diam2
-        )
         
-    local_assembly = MPI.Wtime() - start_assembly
-    max_assembly = comm.allreduce(local_assembly, op = MPI.MAX)
-
-    # Iteration i = 0 =======
-    start_solve = MPI.Wtime()
-
-    phi.interpolate(inilset.func)
-    
-    [p.solve() for p in ste_pbs]
-    comm.Barrier()
-
-    cost = global_scalar(J, comm)
-    
-    if nbr_ctr > 0:
-        ctrs = global_scalar_list(C, comm)
-        if rank == 0:
-            cls_meth = PPL(nbr_ctr, cost, ctrs)
-    
-    if nbr_adj > 0:
-        [p.solve() for p in adj_pbs]
-        comm.barrier()
-
-    cls_vlty.run(tht)
-    nder = global_scalar(nDJ, comm, np.sqrt)
-
-    if rank == 0:
-        lset_steps, lset_end = lsearch.get(nder)
-    else:
-        lset_steps, lset_end = None, None
-    lset_steps = comm.bcast(lset_steps, root = 0)
-    lset_end = comm.bcast(lset_end, root = 0)
-
-    # print ==============================================
-    if rank == 0:
-        print("> Iterations:")
-        if nbr_ctr > 0:
-            print0(0, cost, ctrs, nder, 0, cls_meth.see())
-        else:
-            print1(0, cost, nder, 0)
-        tosave.add(cost, nder)
-    # ====================================================
-
-    with XDMFFile(comm, filename, "w") as xdmf:
-        xdmf.write_mesh(domain)
-        xdmf.write_function(phi, 0)
-        for f in ste_fcs: xdmf.write_function(f, 0)
-        for f in adj_fcs: xdmf.write_function(f, 0)
-        xdmf.write_function(tht, 0)
-
-        for iter in range(1, niter + 1):
-            
-            cls_lset.run(phi, lset_steps, lset_end)
-            # Reinitialization
-            if reinit_step and iter > start_to_check:
-                if iter%reinit_step == 0:
-                    cls_rein.run(phi, rein_steps, rein_end)			
-            
-            [p.solve() for p in ste_pbs]
-            comm.barrier()
-
-            cost = global_scalar(J, comm)
-            
-            if nbr_ctr > 0:
-                ctrs = global_scalar_list(C, comm)
-                if rank == 0:
-                    lm = cls_meth.run(cost, ctrs)
-                else:
-                    lm = None
-                lm = comm.bcast(lm, root = 0)
-                for i in range(nbr_ctr):
-                    L[i].value = lm[i]
-            
-            if nbr_adj > 0:
-                [p.solve() for p in adj_pbs]
-                comm.barrier()
-            
-            cls_vlty.run(tht)
-            nder = global_scalar(nDJ, comm, np.sqrt)
-            
-            if rank == 0:
-                lset_steps, lset_end = lsearch.get(nder)
-            else:
-                lset_steps, lset_end = None, None
-            lset_steps = comm.bcast(lset_steps, root = 0)
-            lset_end = comm.bcast(lset_end, root = 0)
-
-            xdmf.write_function(phi, iter)
-            for f in ste_fcs: xdmf.write_function(f, iter)
-            for f in adj_fcs: xdmf.write_function(f, iter)
-            xdmf.write_function(tht, iter)
-            
-            if rank == 0:
-                if nbr_ctr > 0:
-                    print0(iter, cost, ctrs, nder, lset_steps, cls_meth.see())
-                else:
-                    print1(iter, cost, nder, lset_steps)
-                tosave.add(cost, nder)
-
-                if iter > start_to_check:
-                    if nbr_ctr > 0:
-                        ctrn_errs = [c - 1.0 for c in ctrs]
-                        lgrn_last = cls_meth.list_Lg[-1]
-                        lgrn_errs = [l - lgrn_last for l in cls_meth.list_Lg[-prev:-1]]
-                        cond1 = Norm(ctrn_errs, np.inf) < ctrn_tol
-                        cond2 = Norm(lgrn_errs, np.inf) < lgrn_tol*abs(lgrn_last)
-                        stop_flag = cond1 and cond2
-                    else:
-                        cost_last = tosave.cost[-1]
-                        cost_diff = [j - cost_last for j in tosave.cost[-prev:-1]]
-                        stop_flag = Norm(cost_diff, np.inf) < cost_tol*abs(cost_last)
-
-            stop_flag = comm.bcast(stop_flag, root = 0)
-
-            if stop_flag:
-                if rank == 0: print("> Stopping condition reached!")
-                break
-
-    local_solve = MPI.Wtime() - start_solve
-    max_solve = comm.allreduce(local_solve, op = MPI.MAX)
-
-    if rank == 0:
-        if nbr_ctr > 0:
-            tosave.add_ppl(cls_meth)
-        tosave.add_times(max_assembly, max_solve)
-        tosave.save(save_path)
-        print(f"> Assembly time = {max_assembly} s")
-        print(f"> Resolution time = {max_solve} s")
-
-
-def runDP(
-        model,
-        initial_guess,
-        niter = 100,
-        save_path = Path(""),
-        reinit_step = None,
-        reinit_pars = (8, 1e-2),
-        dfactor = 1e-2,
-        lv_time = (1e-3, 1.0),
-        lv_iter = (8, 12),
-        smooth = False,
-        start_to_check = 30,
-        ctrn_tol = 1e-2,
-        lgrn_tol = 1e-2,
-        cost_tol = 1e-2,
-        prev = 10,
-        seed = 26
-    ):
-    """
-    Implements Data Parallelism.
-    """
-
-    start_assembly = MPI.Wtime()
-
-    rein_steps, rein_end = reinit_pars
-    min_time, max_time = lv_time
-    min_iter, max_iter = lv_iter
-
-    # Constants ===========================
-    filename = save_path / "results.xdmf"
-    stop_flag = False
-    
-    dim = model.dim
-    domain = model.domain
-    nv = FacetNormal(domain)
-    
-    vol = volume(domain, comm)
-    nfems = nbr_fems(domain, dim, comm)
-
-    if rank == 0:
-        diam2 = get_diam2(dim, vol, nfems)
-        inilset = InitialLevel(*initial_guess)
-        np.random.seed(seed)
-        lsearch = LineSearch(
-            [min_time, max_time],
-            [min_iter, max_iter],
-            dfactor
-        )
-        tosave = Save()
-    else:
-        diam2 = None
-        inilset = None
-    
-    diam2 = comm.bcast(diam2, root = 0)
-    inilset = comm.bcast(inilset, root = 0)
-    
-    # List of variables
-    # -----------------
-    # sp_lset : space of level set functions
-    # sp_vlty : space of velocity fields
-    # phi : level set function
-    # tht : velocity field
-    # ste_eqs : list of state equations
-    # adj_eqs : list of adjoint equations
-    # ste_fcs : list of state functions
-    # adj_fcs : list of adjoint functions
-    # ste_pbs : list of state problems
-    # adj_pbs : list of adjoint problems
-    # eq_ctrs : list of equality constraints
-    # nbr_ste : number of states 
-    # nbr_adj : number of adjoints
-    # nbr_ctr : number of constraints
-    # J : cost functional
-    # C : list of constraints
-    # L : list of lagrange multipliers
-    # S0, S1 : derivative components 
-
-    # Level set function
-    sp_lset = create_space(domain, "CG", 1)
-    phi = Function(sp_lset)
-    phi.name = "phi"
-    # Velocity field
-    sp_vlty = create_space(domain, "CG", dim)
-    tht = Function(sp_vlty)
-    tht.name = "tht"
-
-    # State equations/functions/problems
-    ste_eqs = model.pde(phi)
-    nbr_ste = len(ste_eqs)
-    ste_fcs = [Function(model.space) for _ in range(nbr_ste)]
-    for i in range(nbr_ste):
-        ste_fcs[i].name = "u" + str(i)
-    ste_pbs = []
-    for (weak_form, bcs), f in zip(ste_eqs, ste_fcs):
-        bi, li = system(weak_form)
-        ste_pbs.append(
-            create_solver(form(bi), form(li), bcs, f)
-        )
-
-    # Adjoint equations/functions
-    adj_eqs = model.adjoint(phi, ste_fcs)
-    nbr_adj = len(adj_eqs)
-    if nbr_adj > 0:
-        adj_fcs = [Function(model.space) for _ in range(nbr_adj)]
-        for i in range(nbr_adj):
-            adj_fcs[i].name = "p" + str(i)
+        # Solvers creation
         adj_pbs = []
-        for (weak_form, bcs), f in zip(adj_eqs, adj_fcs):
-            bi, li = system(weak_form)
-            adj_pbs.append(
-                create_solver(form(bi), form(li), bcs, f)
-            )
+        for i in range(nbr_adj):
+            adj_problem = adj_eqs[i]
+            if len(adj_problem) == 2:
+                weak_form, bcs = adj_problem
+                bi, li = system(weak_form)
+                adj_pbs.append(
+                    create_solver(form(bi), form(li), bcs, adj_fcs[i])
+                )
+            else:
+                weak_form, bcs, jacobian, seudo_adjoint, ini_func = adj_problem
+                compiled_weak_form = compile_form(comm, weak_form)
+                compiled_jacobian = compile_form(comm, jacobian)
+                form_weak_form = create_form(
+                    compiled_weak_form,
+                    [model.space], domain, {},
+                    {seudo_adjoint: adj_fcs[i], phi: phi}, {}
+                )
+                form_jacobian = create_form(
+                    compiled_jacobian,
+                    [model.space, model.space], domain, {},
+                    {seudo_adjoint: adj_fcs[i], phi: phi}, {}
+                )
+                adj_pbs.append(
+                    create_non_lin_solver(
+                        comm, form_weak_form, bcs,
+                        form_jacobian, adj_fcs[i], ini_func
+                    )
+                )    
     else:
         adj_fcs = []
 
@@ -2001,23 +1809,24 @@ def runDP(
 
 
 def runTP(
-        model,
-        initial_guess,
-        niter = 100,
-        save_path = Path(""),
-        reinit_step = None,
-        reinit_pars = (5, 1e-2),
-        dfactor = 1e-2,
-        lv_time = (1e-3, 1.0),
-        lv_iter = (6, 12),
-        smooth = False,
-        start_to_check = 30,
-        ctrn_tol = 1e-2,
-        lgrn_tol = 1e-2,
-        cost_tol = 1e-2,
-        prev = 10,
-        seed = 26
-    ):
+        model: Model,
+        initial_guess: Tuple[Any, ...],
+        niter: int = 100,
+        save_path: Path = Path(""),
+        reinit_step: int = 4,
+        reinit_pars: Tuple[int, float] = (8, 1e-2),
+        dfactor: float = 1e-2,
+        lv_time: Tuple[float, float] = (1e-3, 1.0),
+        lv_iter: Tuple[int, int] = (8, 12),
+        smooth: bool = False,
+        start_to_check: int = 30,
+        ctrn_tol: float = 1e-2,
+        lgrn_tol: float = 1e-2,
+        cost_tol: float = 1e-2,
+        prev: int = 10,
+        seed: int = 26
+    ) -> None:
+    
     """
     Implements Task Parallelism.
     """
@@ -2029,12 +1838,11 @@ def runTP(
     min_iter, max_iter = lv_iter
 
     # Constants ===========================
-    filename = save_path / "results.xdmf"
+    filename = save_path / f"{res_name}.xdmf"
     stop_flag = False
     
     dim = model.dim
     domain = model.domain
-    nv = FacetNormal(domain)
     
     if rank == 0:
         vol = volume(domain, MPI.COMM_SELF)
@@ -2127,7 +1935,7 @@ def runTP(
         cls_lset = Level(
             domain, sp_lset, phi, tht, diam2, smooth
         )
-        # Reinicialization
+        # Reinitialization
         if reinit_step:
             cls_rein = Reinit(
                 domain, sp_lset, phi, diam2
@@ -2322,24 +2130,25 @@ def runTP(
 
 
 def runMP(
-        sub_comm,
-        model,
-        initial_guess,
-        niter = 100,
-        save_path = Path(""),
-        reinit_step = None,
-        reinit_pars = (5, 1e-2),
-        dfactor = 1e-2,
-        lv_time = (1e-3, 1.0),
-        lv_iter = (6, 12),
-        smooth = False,
-        start_to_check = 30,
-        ctrn_tol = 1e-2,
-        lgrn_tol = 1e-2,
-        cost_tol = 1e-2,
-        prev = 10,
-        seed = 26
-    ):
+        sub_comm: MPI.Comm,
+        model: Model,
+        initial_guess: Tuple[Any, ...],
+        niter: int = 100,
+        save_path: Path = Path(""),
+        reinit_step: int = 4,
+        reinit_pars: Tuple[int, float] = (8, 1e-2),
+        dfactor: float = 1e-2,
+        lv_time: Tuple[float, float] = (1e-3, 1.0),
+        lv_iter: Tuple[int, int] = (8, 12),
+        smooth: bool = False,
+        start_to_check: int = 30,
+        ctrn_tol: float = 1e-2,
+        lgrn_tol: float = 1e-2,
+        cost_tol: float = 1e-2,
+        prev: int = 10,
+        seed: int = 26
+    ) -> None:
+    
     """
     Implements Mix Parallelism.
     """
@@ -2356,12 +2165,11 @@ def runMP(
     sub_rank = sub_comm.rank
     
     # Constants ===========================
-    filename = save_path / "results.xdmf"
+    filename = save_path / f"{res_name}.xdmf"
     stop_flag = False
     
     dim = model.dim
     domain = model.domain
-    nv = FacetNormal(domain)
     
     if color == 0:
         vol = volume(domain, sub_comm)
