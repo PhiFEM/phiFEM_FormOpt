@@ -26,11 +26,12 @@ class Compliance(Model):
     problem for linear elasticity.
     """
 
-    def __init__(self, dim, domain, space, g, ds_g, dir_bcs, vol):
+    def __init__(self, dim, domain, space, g, ds_g, dir_bcs, vol, path):
         
         self.dim = dim
         self.domain = domain
         self.space = space
+        self.path = path
         
         self.dx = Measure("dx", domain = domain)
         self.ds = Measure("ds", domain = domain)		
@@ -127,11 +128,12 @@ class CompliancePlus(Model):
     problem with multiple load cases
     """
     
-    def __init__(self, dim, domain, space, g, ds_g, dir_bcs, vol):
+    def __init__(self, dim, domain, space, g, ds_g, dir_bcs, vol, path):
         
         self.dim = dim
         self.domain = domain
-        self.space = space		
+        self.space = space
+        self.path = path
         
         self.dx = Measure("dx", domain = domain)
         self.ds = Measure("ds", domain = domain)

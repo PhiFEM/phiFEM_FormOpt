@@ -105,7 +105,8 @@ def test_01():
     md = Compliance(
         dim, domain, space,
         g, ds_g[0],
-        dirichlet_bcs, area
+        dirichlet_bcs, area,
+        test_path
     )
 
     @dib.region_of(domain)
@@ -138,20 +139,14 @@ def test_01():
     centers = np.array(centers)
     radii = np.repeat(0.1, centers.shape[0])
     
-    dib.save_initial(
-        comm, (centers, radii),
-        domain, test_path / "initial.xdmf"
-    )
+    md.create_initial_level(centers, radii)
+    md.save_initial_level(comm)
     
-    dib.runDP(
-        model = md,
-        initial_guess = (centers, radii),
+    md.runDP(
         niter = 100,
-        save_path = test_path,
         ctrn_tol = 1e-3,
         dfactor = 1e-1,
-        smooth = True,
-        seed = 34
+        smooth = True
     )
 
 
@@ -206,7 +201,8 @@ def test_02():
     # Create the model
     md = Compliance(
         dim, domain, space,
-        g, ds_g[0], dirichlet_bcs, volume
+        g, ds_g[0], dirichlet_bcs, volume,
+        test_path
     )
 
     @dib.region_of(domain)
@@ -239,17 +235,13 @@ def test_02():
         (2.0, 0.5, 0.3), (2.0, 0.5, 0.7), (2.0, 0.3, 0.5), (2.0, 0.7, 0.5),
     ])
     radii = np.repeat(0.1, centers.shape[0])
-    dib.save_initial(
-        comm, (centers, radii, 1, np.inf),
-        domain, test_path / "initial.xdmf")
+
+    md.create_initial_level(centers, radii, ord = np.inf)
+    md.save_initial_level(comm)
 
     #Run data parallelism
-    dib.runDP(
-        model = md,
-        initial_guess = (centers, radii, 1, np.inf),
+    md.runDP(
         niter = 300,
-        save_path = test_path,
-        reinit_step = 4,
         ctrn_tol = 1e-3,
         dfactor = 1e-1,
         smooth = True
@@ -318,7 +310,8 @@ def test_03():
     # Create the model
     md = CompliancePlus(
         dim, domain, space,
-        g, ds_g, dirichlet_bcs, area
+        g, ds_g, dirichlet_bcs, area,
+        test_path
     )
 
     # Initial guess: centers and radii
@@ -328,18 +321,13 @@ def test_03():
     centers += [(i*0.2, 0.75) for i in range(5)]
     centers = np.array(centers)
     radii = np.repeat(0.08, centers.shape[0])
-    dib.save_initial(
-        comm, (centers, radii),
-        domain, test_path / "initial.xdmf"
-    )
+
+    md.create_initial_level(centers, radii)
+    md.save_initial_level(comm)
 
     # Run Data Parallelism
-    dib.runDP(
-        model = md,
-        initial_guess = (centers, radii),
-        save_path = test_path,
+    md.runDP(
         niter = 100,
-        reinit_step = 4,
         ctrn_tol = 1e-3,
         dfactor = 1e-1,
         smooth = True

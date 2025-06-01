@@ -42,8 +42,12 @@ from ufl import (
 from dolfinx.nls.petsc import NewtonSolver
 
 from abc import ABC, abstractmethod
-from typing import Any, List, Tuple
+
+import numpy.typing as npt
+from typing import Any, List, Tuple, final
 from ufl.core.expr import Expr as ufl_expr
+
+from functools import wraps
 
 from plots import plot_domain
 
@@ -55,6 +59,7 @@ comm_self = MPI.COMM_SELF
 dom_name = "domain"
 dat_name = "data"
 res_name = "results"
+ini_name = "initial"
 
 class Model(ABC):
     """
@@ -63,22 +68,16 @@ class Model(ABC):
     dim: int
     domain: Mesh
     space: FunctionSpace
+    path: Path
     
     def __init__(self):
-        
-        required_attrs = (
-            'dim',
-            'domain',
-            'space'
-        )
-        for attr in required_attrs:
-            if not hasattr(self, attr):
-                raise NotImplementedError(
-                    f"Models must define the '{attr}' attribute."
-                )
+        pass
 
     @abstractmethod
-    def pde(self, level_set_func) -> List[Tuple[ufl_expr, DirichletBC]]:
+    def pde(
+            self,
+            level_set_func
+        ) -> List[Tuple[ufl_expr, DirichletBC]]:
         """
         Returns:
             A list with elements of the form
@@ -93,7 +92,11 @@ class Model(ABC):
         pass
         
     @abstractmethod
-    def adjoint(self, level_set_func, states) -> List[Tuple[ufl_expr, DirichletBC]]:
+    def adjoint(
+            self,
+            level_set_func,
+            states
+        ) -> List[Tuple[ufl_expr, DirichletBC]]:
         """
         Returns:
             A list with elements of the form
@@ -108,14 +111,22 @@ class Model(ABC):
         pass
 
     @abstractmethod
-    def cost(self, level_set_func, states) -> ufl_expr:
+    def cost(
+            self,
+            level_set_func,
+            states
+        ) -> ufl_expr:
         """
         Returns the cost functional J
         """
         pass
     
     @abstractmethod
-    def constraint(self, level_set_func, states) -> List[ufl_expr]:
+    def constraint(
+            self,
+            level_set_func,
+            states
+        ) -> List[ufl_expr]:
         """
         Returns:
             [C0, C1, ...]
@@ -125,7 +136,12 @@ class Model(ABC):
         pass
     
     @abstractmethod
-    def derivative(self, level_set_func, states, adjoints) -> Tuple[Tuple[ufl_expr, List[ufl_expr]], Tuple[ufl_expr, List[ufl_expr]]]:
+    def derivative(
+            self,
+            level_set_func,
+            states,
+            adjoints
+        ) -> Tuple[Tuple[ufl_expr, List[ufl_expr]], Tuple[ufl_expr, List[ufl_expr]]]:
         """
         Returns:
             (S0_J, [S0_C0, S0_C1, ...]), (S1_J, [S1_C0, S1_C1, ...])
@@ -136,10 +152,87 @@ class Model(ABC):
         pass
     
     @abstractmethod
-    def bilinear_form(self, velocity_func, test_func) -> Tuple[ufl_expr, bool]:
+    def bilinear_form(
+            self,
+            velocity_func,
+            test_func
+        ) -> Tuple[ufl_expr, bool]:
         """
         Returns:
             the bilinear form B
+        """
+        pass
+    
+    def __verification(self, required_attrs: List[str]):
+        for attr in required_attrs:
+            if not hasattr(self, attr):
+                raise NotImplementedError(
+                    f"Models must define the '{attr}' attribute."
+                )
+    
+    @final
+    def create_initial_level(
+            self,
+            centers: npt.NDArray[np.float64],
+            radii: npt.NDArray[np.float64],
+            factor: float = 1.0,
+            ord: int = 2
+        ) -> None:
+        """
+        Instantiates a InitialLevel object.
+        """
+
+        self.ini_lvl = InitialLevel(centers, radii, factor, ord)
+
+    @final
+    def save_initial_level(self, comm: MPI.Comm) -> None:
+        self.__verification(['domain', 'path'])
+        self.ini_lvl.save(comm, self.domain, self.path)
+
+    @final
+    def get_initial_level(self):
+        return self.ini_lvl.func
+    
+    @final
+    def runDP(
+            self,
+            niter: int = 100,
+            reinit_step: int = 4,
+            reinit_pars: Tuple[int, float] = (8, 1e-2),
+            dfactor: float = 1e-2,
+            lv_time: Tuple[float, float] = (1e-3, 1.0),
+            lv_iter: Tuple[int, int] = (8, 14),
+            smooth: bool = False,
+            start_to_check: int = 30,
+            ctrn_tol: float = 1e-2,
+            lgrn_tol: float = 1e-2,
+            cost_tol: float = 1e-2,
+            prev: int = 10,
+            seed: int = 26    
+        ) -> None:
+        """
+        Data Parallelism
+        """
+        
+        self.__verification(['dim', 'domain', 'space', 'path'])
+
+        runDP(
+            self, niter, reinit_step, reinit_pars, dfactor,
+            lv_time, lv_iter, smooth, start_to_check,
+            ctrn_tol, lgrn_tol, cost_tol, prev, seed
+        )
+    
+    @final
+    def runTP(self, ):
+        """
+        Task Parallelism
+        """
+        pass
+    
+    @final
+    def runMP(self, ):
+        """
+        Mix Parallelism
         """
         pass
 
@@ -224,19 +317,52 @@ class Save:
 class InitialLevel:
     """
     Creates the initial level set function
-    whith holes determined by centers and radii.
+    with ball shaped holes determined by
+    centers and radii.
+    
+    Attributes
+    ----------
+    centers : numpy.ndarray
+        Array of center coordinates.
+    radii : numpy.ndarray
+        Array of radii.
+    dim : int
+        Problem dimension.
+    factor : float
+        Scaling factor.
+    ord : int
+        Order of the norm.
+    
+    Methods
+    -------
+    func(x) :
+        Callable function to be interpolated
+        by a dolfinx function.
+    save() :
+        Interpolates func and saves it into
+        a xdmf file.
     """
 
-    def __init__(self, centers, radii, factor = 1.0, ord = 2):
+    def __init__(
+            self,
+            centers: npt.NDArray[np.float64],
+            radii: npt.NDArray[np.float64],
+            factor: float = 1.0,
+            ord: int = 2
+        ):
         """
         Arguments
         ---------
-        centers :
-            Narray of shape (N, 2) or (N, 3) .
-        radii :
-            Narray of shape (N,).
-        factor :
-            Float number.
+        centers : numpy.ndarray
+            Array of center coordinates
+            of shape (N, 2) or (N, 3).
+        radii : numpy.ndarray 
+            Array of radii of shape (N,).
+        factor : float
+            Scaling factor, positive or negative.
+        ord : int
+            Order of norm. Positive integer
+            grater than 1 or infinity (np.inf).
         """
         self.centers = centers
         self.radii = radii
@@ -245,14 +371,37 @@ class InitialLevel:
         self.ord = ord
     
     def func(self, x):
+        """
+        Callable function to be interpolated
+        by a dolfinx function.
+        """
         
         xT = (x[:self.dim].T)[None, :, :]
         #comps = (self.centers[:, None, :] - xT)**2
         #norms = np.sqrt(np.sum(comps, axis = 2))
-        norms = Norm(self.centers[:, None, :] - xT, ord = self.ord, axis = 2)
-        dists = self.radii[:, None] - norms
+        norms = Norm(
+            self.centers[:, None, :] - xT,
+            ord = self.ord, axis = 2
+        )
+        distances = self.radii[:, None] - norms
+        values = self.factor*np.max(distances, axis = 0)
 
-        return self.factor*np.max(dists, axis = 0)
+        return self.factor*values
+    
+    def save(self, comm, domain, save_path):
+        """
+        Interpolates func and saves it into
+        a xdmf file.
+        """
+
+        space = functionspace(domain, ("CG", 1))
+        intp_func = interpolate(
+            [self.func], space, name = "phi0"
+        )
+        save_functions(
+            comm, domain, intp_func,
+            save_path / f"{ini_name}.xdmf"
+        )
 
 
 def get_funcs_from(space, values):
@@ -583,6 +732,21 @@ def build_gmsh_model_2d(
 
     return nbr_triangles
 
+def interpolate(funcs, to_space, name = "f"):
+    
+    n = len(funcs)
+    new_funcs = [Function(to_space) for _ in range(n)]
+    
+    if n == 1:
+        new_funcs[0].name = name
+        new_funcs[0].interpolate(funcs[0])
+    else:
+        for i in range(n):
+            new_funcs[i].name = name + str(i)
+            new_funcs[i].interpolate(funcs[i])
+
+    return new_funcs
+
 def save_domain(comm, domain, filename, facet_tags = None):
     
     with XDMFFile(comm, filename, "w") as xdmf:
@@ -604,6 +768,12 @@ def save_functions(comm, domain, funcs, filename):
     with XDMFFile(comm, filename, "w") as xdmf:
         xdmf.write_mesh(domain)
         for f in funcs: xdmf.write_function(f, 0)
+
+def save_initial_level(comm, domain, func, filename):
+    
+    space = functionspace(domain, ("CG", 1))
+    intp_func = interpolate([func], space, name = "phi")
+    save_functions(comm, domain, intp_func, filename)
 
 def read_gmsh(filename, comm, dim):
     return gmshio.read_from_msh(filename, comm = comm, gdim = dim)
@@ -1081,21 +1251,6 @@ class PPL:
             f"mu = {', '.join(f'{val:.4f}' for val in self.mu)}",)[0]
 
 
-def interpolate(funcs, to_space, name = "f"):
-    
-    n = len(funcs)
-    new_funcs = [Function(to_space) for _ in range(n)]
-    
-    if n == 1:
-        new_funcs[0].name = name
-        new_funcs[0].interpolate(funcs[0])
-    else:
-        for i in range(n):
-            new_funcs[i].name = name + str(i)
-            new_funcs[i].interpolate(funcs[i])
-
-    return new_funcs
-
 def homogeneus_boundary(domain, space, dim, rank_dimension):
     """
     Create homgeneous boundary conditions over the whole
@@ -1285,12 +1440,20 @@ def marked_ds(domain, boundary_tags, marks):
 
 class LineSearch:
     """
-    Line search utility to estimate
+    Line search utility to estimate (with randomness)
     the number of steps and final time 
     based on the norm of the velocity field.
     
     Attributes
     ----------
+    t_min: float
+        Minimum time.
+    t_max: float
+        Maximum time.
+    s_min: int
+        Minimum number of steps.
+    s_max: int
+        Maximum number of steps.
     factor: float
         Scaling factor used to estimate final time.
     noise: float
@@ -1298,6 +1461,10 @@ class LineSearch:
     
     Methods
     -------
+    _nbr_steps_func(t: float):
+        Power function to estimate the number of steps.
+    get(derivative_norm: float):
+        Computes the number of steps and final time.
     """
 
     def __init__(
@@ -1317,20 +1484,35 @@ class LineSearch:
         factor: float
             Scaling factor used to estimate final time.
         noise: float
-            Random variation factor, e.g., 0.05 for 5% variation.
+            Random variation factor (e.g., 0.05 for 5% variation).
         """
-        self.tm, self.tM = time_bounds
-        self.im, self.iM = step_bounds
+        self.t_min, self.t_max = time_bounds
+        self.s_min, self.s_max = step_bounds
         self.factor = factor
-        self.ns = noise
+        self.noise = noise
 
-    def _smooth_step(self, t):
-        return (self.iM-self.im)*((t-self.tm)/(self.tM-self.tm))**(1./6.) + self.im
-
-    def get(self, derivative_norm):
+    def _nbr_steps_func(self, t: float):
         """
-        Computes the estimated number of steps
-        and final time with randomness.
+        Power function to estimate the number of steps.
+
+        Arguments
+        ---------
+        t: float
+            Final time.
+        
+        Returns
+        -------
+        float: estimated number of steps
+        """
+        
+        scaled_t = (t - self.t_min)/(self.t_max - self.t_min)
+        nbr_steps = (self.s_max - self.s_min)*scaled_t**(1.0/6.0) + self.s_min
+        
+        return nbr_steps
+
+    def get(self, derivative_norm: float):
+        """
+        Computes the number of steps and final time.
         Reference:
         https://docu.ngsolve.org/latest/i-tutorials/unit-7-optimization/01_Shape_Derivative_Levelset.html
 
@@ -1341,20 +1523,30 @@ class LineSearch:
 
         Returns
         -------
-        steps : int
-            Estimated number of steps.
-        tend : float
-            Estimated final time.
+        Tuple[int, float]:
+            Number of steps and final time. 
         """
-        safe_norm = max(derivative_norm, 1e-8) # To prevent division by zero
-        tend = self.factor/safe_norm
-        tend = tend*np.random.uniform(1-self.ns, 1+self.ns)
-        tend = max(min(tend, self.tM), self.tm)
-        steps = round(self._smooth_step(tend))
-        steps = np.random.normal(steps, self.ns*steps)
-        steps = np.clip(steps, self.im, self.iM) 
 
-        return int(steps), tend
+        # To prevent division by zero
+        safe_norm = max(derivative_norm, 1e-8) 
+        # Final time
+        tend = self.factor/safe_norm
+        # Randomness
+        tend = tend*np.random.uniform(
+            1.0 - self.noise, 1.0 + self.noise
+        )
+        # To guarantee tend in [t_min, t_max] 
+        tend = max(self.t_min, min(tend, self.t_max))
+        
+        steps = self._nbr_steps_func(tend)
+        # Randomness
+        steps = np.random.normal(steps, self.noise*steps)
+        # Conversion to integer
+        steps = round(steps)
+        # To guarantee steps in [s_min, s_max]
+        steps = max(self.s_min, min(steps, self.s_max))
+
+        return steps, tend
 
 def get_rank_dimension(shape):
     if len(shape) == 0:
@@ -1481,22 +1673,20 @@ def create_non_lin_solver(comm, F, bcs, J, u, initial):
 
 def runDP(
         model: Model,
-        initial_guess: Tuple[Any, ...],
-        niter: int = 100,
-        save_path: Path = Path(""),
-        reinit_step: int = 4,
-        reinit_pars: Tuple[int, float] = (8, 1e-2),
-        dfactor: float = 1e-2,
-        lv_time: Tuple[float, float] = (1e-3, 1.0),
-        lv_iter: Tuple[int, int] = (8, 12),
-        smooth: bool = False,
-        start_to_check: int = 30,
-        ctrn_tol: float = 1e-2,
-        lgrn_tol: float = 1e-2,
-        cost_tol: float = 1e-2,
-        prev: int = 10,
-        seed: int = 26
-	) -> None:
+        niter: int,
+        reinit_step: int,
+        reinit_pars: Tuple[int, float],
+        dfactor: float,
+        lv_time: Tuple[float, float],
+        lv_iter: Tuple[int, int],
+        smooth: bool,
+        start_to_check: int,
+        ctrn_tol: float,
+        lgrn_tol: float,
+        cost_tol: float,
+        prev: int,
+        seed: int
+    ) -> None:
     
     """
     Implements Data Parallelism.
@@ -1509,7 +1699,7 @@ def runDP(
     min_iter, max_iter = lv_iter
 
     # Constants ===========================
-    filename = save_path / f"{res_name}.xdmf"
+    filename = model.path / f"{res_name}.xdmf"
     stop_flag = False
     
     dim = model.dim
@@ -1520,20 +1710,17 @@ def runDP(
 
     if rank == 0:
         diam2 = get_diam2(dim, vol, nfems)
-        inilset = InitialLevel(*initial_guess)
         np.random.seed(seed)
         lsearch = LineSearch(
-            [min_time, max_time],
-            [min_iter, max_iter],
+            (min_time, max_time),
+            (min_iter, max_iter),
             dfactor
         )
         tosave = Save()
     else:
         diam2 = None
-        inilset = None
     
     diam2 = comm.bcast(diam2, root = 0)
-    inilset = comm.bcast(inilset, root = 0)
     
     # List of variables
     # -----------------
@@ -1685,7 +1872,7 @@ def runDP(
     # Iteration i = 0 =======
     start_solve = MPI.Wtime()
 
-    phi.interpolate(inilset.func)
+    phi.interpolate(model.get_initial_level())
     
     [p.solve() for p in ste_pbs]
     comm.Barrier()
@@ -1803,7 +1990,7 @@ def runDP(
         if nbr_ctr > 0:
             tosave.add_ppl(cls_meth)
         tosave.add_times(max_assembly, max_solve)
-        tosave.save(save_path)
+        tosave.save(model.path)
         print(f"> Assembly time = {max_assembly} s")
         print(f"> Resolution time = {max_solve} s")
 
@@ -1817,7 +2004,7 @@ def runTP(
         reinit_pars: Tuple[int, float] = (8, 1e-2),
         dfactor: float = 1e-2,
         lv_time: Tuple[float, float] = (1e-3, 1.0),
-        lv_iter: Tuple[int, int] = (8, 12),
+        lv_iter: Tuple[int, int] = (8, 14),
         smooth: bool = False,
         start_to_check: int = 30,
         ctrn_tol: float = 1e-2,
@@ -1851,8 +2038,8 @@ def runTP(
         inilset = InitialLevel(*initial_guess)
         np.random.seed(seed)
         lsearch = LineSearch(
-            [min_time, max_time],
-            [min_iter, max_iter],
+            (min_time, max_time),
+            (min_iter, max_iter),
             dfactor
         )
         tosave = Save()
@@ -2139,7 +2326,7 @@ def runMP(
         reinit_pars: Tuple[int, float] = (8, 1e-2),
         dfactor: float = 1e-2,
         lv_time: Tuple[float, float] = (1e-3, 1.0),
-        lv_iter: Tuple[int, int] = (8, 12),
+        lv_iter: Tuple[int, int] = (8, 14),
         smooth: bool = False,
         start_to_check: int = 30,
         ctrn_tol: float = 1e-2,
@@ -2180,8 +2367,8 @@ def runMP(
         inilset = InitialLevel(*initial_guess)
         np.random.seed(seed)
         lsearch = LineSearch(
-            [min_time, max_time],
-            [min_iter, max_iter],
+            (min_time, max_time),
+            (min_iter, max_iter),
             dfactor
         )
         tosave = Save()
