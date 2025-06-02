@@ -100,13 +100,10 @@ def test_01():
     
     area = 1.0
     g = (0.0, -2.0)
-    
     # Create the model
     md = Compliance(
-        dim, domain, space,
-        g, ds_g[0],
-        dirichlet_bcs, area,
-        test_path
+        dim, domain, space, g, ds_g[0],
+        dirichlet_bcs, area, test_path
     )
 
     @dib.region_of(domain)
@@ -146,6 +143,8 @@ def test_01():
         niter = 100,
         ctrn_tol = 1e-3,
         dfactor = 1e-1,
+        reinit_step = 4,
+        reinit_pars = (20, 0.1),
         smooth = True
     )
 
@@ -200,9 +199,8 @@ def test_02():
     volume, g = 1.0, [0.0, 0.0, -4.0]
     # Create the model
     md = Compliance(
-        dim, domain, space,
-        g, ds_g[0], dirichlet_bcs, volume,
-        test_path
+        dim, domain, space, g, ds_g[0],
+        dirichlet_bcs, volume, test_path
     )
 
     @dib.region_of(domain)
@@ -244,6 +242,7 @@ def test_02():
         niter = 300,
         ctrn_tol = 1e-3,
         dfactor = 1e-1,
+        reinit_step = 4,
         smooth = True
     )
 
@@ -309,9 +308,8 @@ def test_03():
     g = [(0.0, -2.0), (0.0, -2.0)]
     # Create the model
     md = CompliancePlus(
-        dim, domain, space,
-        g, ds_g, dirichlet_bcs, area,
-        test_path
+        dim, domain, space, g, ds_g,
+        dirichlet_bcs, area, test_path
     )
 
     # Initial guess: centers and radii
@@ -330,6 +328,8 @@ def test_03():
         niter = 100,
         ctrn_tol = 1e-3,
         dfactor = 1e-1,
+        reinit_step = 4,
+        reinit_pars = (16, 0.05),
         smooth = True
     )
 
@@ -401,8 +401,8 @@ def test_04():
     g = [(0.0, -2.0), (0.0, -2.0)]
     # Create the model
     md = CompliancePlus(
-        dim, domain, space,
-        g, ds_g, dirichlet_bcs, area
+        dim, domain, space, g, ds_g,
+        dirichlet_bcs, area, test_path
     )
 
     # Initial guess: centers and radii
@@ -412,21 +412,18 @@ def test_04():
     centers += [(i*0.2, 0.75) for i in range(5)]
     centers = np.array(centers)
     radii = np.repeat(0.08, centers.shape[0])
+    
+    md.create_initial_level(centers, radii)
     if rank == 0:
-        dib.save_initial(
-            comm_self, (centers, radii),
-            domain, test_path/"initial.xdmf"
-        )
+        md.save_initial_level(comm_self)
     
     # Run Task Parallelism
-    dib.runTP(
-        model = md,
-        initial_guess = (centers, radii),
-        save_path = test_path,
+    md.runTP(
         niter = 100,
-        reinit_step = 4,
         ctrn_tol = 1e-3,
         dfactor = 1e-1,
+        reinit_step = 4,
+        reinit_pars = (16, 0.05),
         smooth = True
     )
 
@@ -504,8 +501,8 @@ def test_05():
     g = [(0.0, -2.0), (0.0, -2.0)]
     # Create the model
     md = CompliancePlus(
-        dim, domain, space,
-        g, ds_g, dirichlet_bcs, area
+        dim, domain, space, g, ds_g,
+        dirichlet_bcs, area, test_path
     )
 
     # Initial guess: centers and radii
@@ -515,22 +512,19 @@ def test_05():
     centers += [(i*0.2, 0.75) for i in range(5)]
     centers = np.array(centers)
     radii = np.repeat(0.08, centers.shape[0])
+    
+    md.create_initial_level(centers, radii)
     if color == 0:
-        dib.save_initial(
-            sub_comm, (centers, radii),
-            domain, test_path / "initial.xdmf"
-        )
+        md.save_initial_level(sub_comm)
     
     # Run Mix Parallelism
-    dib.runMP(
+    md.runMP(
         sub_comm = sub_comm,
-        model = md,
-        initial_guess = (centers, radii),
-        save_path = test_path,
         niter = 100,
-        reinit_step = 4,
         ctrn_tol = 1e-3,
         dfactor = 1e-1,
+        reinit_step = 4,
+        reinit_pars = (16, 0.05),
         smooth = True
     )
 
@@ -671,9 +665,8 @@ def test_06():
     # Instance for data generation
     # We need the method pde0
     md0 = InverseElasticity(
-        dim, domain0, space0,
-        forces, ds_forces, ds1,
-        dirbc_partial, dirbc_total
+        dim, domain0, space0, forces, ds_forces, ds1,
+        dirbc_partial, dirbc_total, test_path
     )
 
     # Function that defines
@@ -775,9 +768,8 @@ def test_06():
     ]
     # Create the model
     md = InverseElasticity(
-        dim, domain, space,
-        forces, ds_forces, ds1,
-        dirbc_partial, dirbc_total
+        dim, domain, space, forces, ds_forces, ds1,
+        dirbc_partial, dirbc_total, test_path
     )
 
     # Space for interpolation (degree = 2)
@@ -801,7 +793,7 @@ def test_06():
     )
     dib.save_functions(
         comm, domain,
-        g_funcs_1, test_path / "g1.xdmf"
+        g_funcs_1, test_path / "gP1.xdmf"
     )
 
     md.gs = g_funcs
@@ -809,16 +801,12 @@ def test_06():
     # Initial guess: centers and radii
     centers = np.array([(0.0, 0.4)])
     radii = np.array([0.15])
-    dib.save_initial(
-        comm, (centers, radii, -1),
-        domain, test_path / "initial.xdmf"
-    )
+
+    md.create_initial_level(centers, radii, factor = -1.0)
+    md.save_initial_level(comm)
     
     # Run Data Parallelism
-    dib.runDP(
-        model = md,
-        initial_guess = (centers, radii, -1),
-        save_path = test_path,
+    md.runDP(
         niter = 200,
         dfactor = 1e-1,
         cost_tol = 1e-1
@@ -959,9 +947,8 @@ def test_07():
         ds1 = sum(ds_parts[1:], start = ds_parts[0])
 
         md0 = InverseElasticity(
-            dim, domain0, space0,
-            forces, ds_forces, ds1,
-            dirbc_partial, dirbc_total
+            dim, domain0, space0, forces, ds_forces, ds1,
+            dirbc_partial, dirbc_total, test_path
         )
 
         def beam_equation(x):
@@ -1057,9 +1044,8 @@ def test_07():
 
     # Create the model
     md = InverseElasticity(
-        dim, domain, space,
-        forces, ds_forces, ds1,
-        dirbc_partial, dirbc_total
+        dim, domain, space, forces, ds_forces, ds1,
+        dirbc_partial, dirbc_total, test_path
     )
 
     g_space = dib.create_space(
@@ -1082,7 +1068,7 @@ def test_07():
         )
         dib.save_functions(
             comm_self, domain,
-            g_funcs_1, test_path / "g1.xdmf"
+            g_funcs_1, test_path / "gP1.xdmf"
         )
 
         g_values = np.vstack([g.x.array[:] for g in g_funcs])
@@ -1097,17 +1083,13 @@ def test_07():
     # Initial guess: centers and radii
     centers = np.array([(0.0, 0.4)])
     radii = np.array([0.15])
+    
+    md.create_initial_level(centers, radii, factor = -1.0)
     if rank == 0:
-        dib.save_initial(
-            comm_self, (centers, radii, -1),
-            domain, test_path / "initial.xdmf"
-        )
+        md.save_initial_level(comm_self)
     
     # Run Task Parallelism
-    dib.runTP(
-        model = md,
-        initial_guess = (centers, radii, -1),
-        save_path = test_path,
+    md.runTP(
         niter = 200,
         dfactor = 1e-1,
         cost_tol = 1e-1
@@ -1253,9 +1235,8 @@ def test_08():
         ds1 = sum(ds_parts[1:], start = ds_parts[0])
 
         md0 = InverseElasticity(
-            dim, domain0, space0,
-            forces, ds_forces, ds1,
-            dirbc_partial, dirbc_total
+            dim, domain0, space0, forces, ds_forces, ds1,
+            dirbc_partial, dirbc_total, test_path
         )
 
         def beam_equation(x):
@@ -1352,9 +1333,8 @@ def test_08():
     ]
     # Create the model
     md = InverseElasticity(
-        dim, domain, space,
-        forces, ds_forces, ds1,
-        dirbc_partial, dirbc_total
+        dim, domain, space, forces, ds_forces, ds1,
+        dirbc_partial, dirbc_total, test_path
     )
 
     g_space = dib.create_space(
@@ -1378,7 +1358,7 @@ def test_08():
         )
         dib.save_functions(
             sub_comm, domain,
-            g_funcs_1, test_path/"g1.xdmf"
+            g_funcs_1, test_path / "gP1.xdmf"
         )
 
         g_values_loc = np.vstack([g.x.array[:] for g in g_funcs])
@@ -1393,18 +1373,14 @@ def test_08():
     # Initial guess: centers and radii
     centers = np.array([(0.0, 0.4)])
     radii = np.array([0.15])
+
+    md.create_initial_level(centers, radii, -1.0)
     if color == 0:
-        dib.save_initial(
-            sub_comm, (centers, radii, -1),
-            domain, test_path / "initial.xdmf"
-        )
+        md.save_initial_level(sub_comm)
     
     # Run Mix Parallelism
-    dib.runMP(
+    md.runMP(
         sub_comm,
-        model = md,
-        initial_guess = (centers, radii, -1),
-        save_path = test_path,
         niter = 200,
         dfactor = 1e-1,
         cost_tol = 1e-1
@@ -1414,9 +1390,10 @@ def test_08():
 def test_09():
     """
     Run: mpirun -np <nbr of processes> python test.py 09
+    For instance: mpirun -np 2 python test.py 09
     """
 
-    test_name = "Heat conduction (Data Parallelism)"
+    test_name = "Heat conduction 1 (Data Parallelism)"
     test_path = Path("../results/t09/")
     dim = 2
     rank_dim = 1
@@ -1461,16 +1438,16 @@ def test_09():
     area = 0.25
     # Create the model
     md = Heat(
-        dim, domain, space, dirichlet_bcs, area
+        dim, domain, space, dirichlet_bcs, area, test_path
     )
 
     @dib.region_of(domain)
     def sub_domain(x):
-        ineqs = (
+        ineqs = [
             x[0] - 0.3,
             0.7 - x[0],
             0.05 - x[1]
-        )
+        ]
         return ineqs
     
     md.sub = [sub_domain.expression()]
@@ -1495,16 +1472,11 @@ def test_09():
     centers = np.array(centers)
     radii = np.repeat(0.08, 49)
 
-    dib.save_initial(
-        comm, (centers, radii),
-        domain, test_path / "initial.xdmf"
-    )
+    md.create_initial_level(centers, radii)
+    md.save_initial_level(comm)
 
     #Run Data Parallelism
-    dib.runDP(
-        model = md,
-        initial_guess = (centers, radii),
-        save_path = test_path,
+    md.runDP(
         niter = 200,
         dfactor = 1e-2,
         ctrn_tol = 1e-3,
@@ -1515,9 +1487,10 @@ def test_09():
 def test_10():
     """
     Run: mpirun -np <nbr of processes> python test.py 10
+    For instance: mpirun -np 2 python test.py 10
     """
 
-    test_name = "Heat conduction (Data Parallelism)"
+    test_name = "Heat conduction 2 (Data Parallelism)"
     test_path = Path("../results/t10/")
     dim = 2
     rank_dim = 1
@@ -1565,24 +1538,25 @@ def test_10():
     area = 0.5
     # Create the model
     md = Heat(
-        dim, domain, space, dirichlet_bcs, area
+        dim, domain, space, dirichlet_bcs, area, test_path
     )
 
     @dib.region_of(domain)
     def sub_domain1(x):
-        return (0.05 - x[1], )
+        return [0.05 - x[1]]
     
     @dib.region_of(domain)
     def sub_domain2(x):
-        return (x[0] - 0.95, )
+        return [x[0] - 0.95]
     
     @dib.region_of(domain)
     def sub_domain3(x):
-        return (x[1] - 0.95, )
+        return [x[1] - 0.95]
 
     @dib.region_of(domain)
     def sub_domain4(x):
-        return (0.05 - x[0], )
+        return [0.05 - x[0]]
+
     md.sub = [
         sub_domain1.expression(),
         sub_domain2.expression(),
@@ -1601,15 +1575,10 @@ def test_10():
     centers = np.array(centers)
     radii = np.repeat(0.05, centers.shape[0])
 
-    dib.save_initial(
-        comm, (centers, radii),
-        domain, test_path / "initial.xdmf"
-    )
+    md.create_initial_level(centers, radii)
+    md.save_initial_level(comm)
     
-    dib.runDP(
-        model = md,
-        initial_guess = (centers, radii),
-        save_path = test_path,
+    md.runDP(
         niter = 200,
         dfactor = 1e-1,
         ctrn_tol = 1e-3,
@@ -1621,9 +1590,10 @@ def test_10():
 def test_11():
     """
     Run: mpirun -np <nbr of processes> python test.py 11
+    For instance: mpirun -np 2 python test.py 11
     """
 
-    test_name = "Heat conduction (Data Parallelism)"
+    test_name = "Heat conduction 3 (Data Parallelism)"
     test_path = Path("../results/t11/")
     dim = 2
     rank_dim = 1
@@ -1673,7 +1643,7 @@ def test_11():
     area = 0.4
     # Create the model
     md = Heat(
-        dim, domain, space, dirichlet_bcs, area
+        dim, domain, space, dirichlet_bcs, area, test_path
     )
 
     @dib.region_of(domain)
@@ -1736,25 +1706,21 @@ def test_11():
     radii_b = np.repeat(0.08, len(centers_b))
     radii_i = np.repeat(0.05, len(centers_i))
     radii = np.concatenate((radii_b, radii_i))
-    dib.save_initial(
-        comm, (centers, radii),
-        domain, test_path / "initial.xdmf"
-    )
-
-    dib.runDP(
-        model = md,
-        initial_guess = (centers, radii),
-        save_path = test_path,
+    
+    md.create_initial_level(centers, radii)
+    md.save_initial_level(comm)
+    
+    md.runDP(
         niter = 250,
         dfactor = 1e-2,
-        ctrn_tol = 1e-3,
-        lgrn_tol = 1e-2
+        ctrn_tol = 1e-3
     )
 
 
 def test_12():
     """
     Run: mpirun -np <nbr of processes> python test.py 11
+    For instance: mpirun -np 2 python test.py 11
     """
 
     test_name = "Heat conduction (Data Parallelism)"
@@ -1807,7 +1773,7 @@ def test_12():
     area = 0.4
     # Create the model
     md = HeatPlus(
-        dim, domain, space, dirichlet_bcs, area
+        dim, domain, space, dirichlet_bcs, area, test_path
     )
 
     @dib.region_of(domain)
@@ -1872,28 +1838,24 @@ def test_12():
     radii_b = np.repeat(0.08, len(centers_b))
     radii_i = np.repeat(0.05, len(centers_i))
     radii = np.concatenate((radii_b, radii_i))
-    dib.save_initial(
-        comm, (centers, radii),
-        domain, test_path / "initial.xdmf"
-    )
 
-    dib.runDP(
-        model = md,
-        initial_guess = (centers, radii),
-        save_path = test_path,
+    md.create_initial_level(centers, radii)
+    md.save_initial_level(comm)
+    
+    md.runDP(
         niter = 250,
         dfactor = 1e-2,
-        ctrn_tol = 1e-3,
-        lgrn_tol = 1e-2
+        ctrn_tol = 1e-3
     )
 
 
 def test_13():
     """
     Run: mpirun -np <nbr of processes> python test.py 13
+    For instance: mpirun -np 2 python test.py 13
     """
 
-    test_name = "Heat conduction (Data Parallelism)"
+    test_name = "Heat conduction with one load (Data Parallelism)"
     test_path = Path("../results/t13/")
     dim = 2
     rank_dim = 1
@@ -1941,7 +1903,7 @@ def test_13():
     area = 0.5
     # Create the model
     md = Heat(
-        dim, domain, space, dirichlet_bcs, area, "1Load"
+        dim, domain, space, dirichlet_bcs, area, test_path, "1Load"
     )
 
     # @dib.region_of(domain)
@@ -1966,15 +1928,10 @@ def test_13():
     centers = np.array(centers)
     radii = np.repeat(0.05, centers.shape[0])
 
-    dib.save_initial(
-        comm, (centers, radii),
-        domain, test_path / "initial.xdmf"
-    )
+    md.create_initial_level(centers, radii)
+    md.save_initial_level(comm)
     
-    dib.runDP(
-        model = md,
-        initial_guess = (centers, radii),
-        save_path = test_path,
+    md.runDP(
         niter = 200,
         dfactor = 1.0,
         ctrn_tol = 1e-3,
@@ -2014,7 +1971,7 @@ def test_14(test_path = Path("../results/t14/"), r = 10):
     
     # Create the model
     md = Logistic(
-        dim, domain, space, r
+        dim, domain, space, r, test_path
     )
 
     md.ini_func = lambda x: (
@@ -2033,16 +1990,11 @@ def test_14(test_path = Path("../results/t14/"), r = 10):
     centers = np.array(centers)
     radii = np.repeat(0.1, centers.shape[0])
     
-    dib.save_initial(
-        comm, (centers, radii, -1),
-        domain, test_path / "initial.xdmf"
-    )
+    md.create_initial_level(centers, radii, factor = -1.0)
+    md.save_initial_level(comm)
 
-    dib.runDP(
-        model = md,
-        initial_guess = (centers, radii, -1),
+    md.runDP(
         niter = 200,
-        save_path = test_path,
         reinit_step = 6,
         ctrn_tol = 1e-3,
         dfactor = 1.0,
@@ -2051,10 +2003,20 @@ def test_14(test_path = Path("../results/t14/"), r = 10):
 
 
 def test_15():
-    test_14(test_path = Path("../results/t15/"), r = 40)
+    """
+    Run: mpirun -np <nbr of processes> python test.py 14
+    For instance: mpirun -np 2 python test.py 15
+    """
+
+    test_14(test_path = Path("../results/t15/"), r = 30)
 
 
 def test_16():
+    """
+    Run: mpirun -np <nbr of processes> python test.py 14
+    For instance: mpirun -np 2 python test.py 16
+    """
+
     test_14(test_path = Path("../results/t16/"), r = 90)
 
 

@@ -232,11 +232,12 @@ class CompliancePlus(Model):
 
 class InverseElasticity(Model):
 
-    def __init__(self, dim, domain, space, forces, ds_forces, ds1, dirbc_partial, dirbc_total):
+    def __init__(self, dim, domain, space, forces, ds_forces, ds1, dirbc_partial, dirbc_total, path):
 
         self.dim = dim
         self.domain = domain
         self.space = space
+        self.path = path
         
         self.dx = Measure("dx", domain = domain)
         self.fs = [as_vector(f) for f in forces]
@@ -402,11 +403,12 @@ class InverseElasticity(Model):
 
 class Heat(Model):
     
-    def __init__(self, dim, domain, space, dir_bcs, vol, sc_type = "Uniform"):
+    def __init__(self, dim, domain, space, dir_bcs, vol, path, sc_type = "Uniform"):
         
         self.dim = dim
         self.domain = domain
         self.space = space
+        self.path = path
 
         self.dx = Measure("dx", domain = domain)
         self.ds = Measure("ds", domain = domain)
@@ -502,11 +504,12 @@ class Heat(Model):
 
 class HeatPlus(Model):
 
-    def __init__(self, dim, domain, space, dir_bcs, vol):
+    def __init__(self, dim, domain, space, dir_bcs, vol, path):
         
         self.dim = dim
         self.domain = domain
         self.space = space
+        self.path = path
 
         self.dx = Measure("dx", domain = domain)
         self.bc = dir_bcs
@@ -704,13 +707,14 @@ class HeatMultiple(Model):
         return B, False
 
 
-class Logistic():
+class Logistic(Model):
 
-    def __init__(self, dim, domain, space, r):
+    def __init__(self, dim, domain, space, r, path):
 
         self.dim = dim
         self.domain = domain
         self.space = space
+        self.path = path
         
         self.dx = Measure('dx', domain = domain)
         self.ds = Measure("ds", domain = domain)

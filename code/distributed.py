@@ -36,7 +36,7 @@ from ufl import (
     FacetNormal, Measure,
     TrialFunction, TestFunction,
     system, conditional,
-    inner, grad, dot, sqrt, gt
+    inner, grad, dot, sqrt, gt, lt
 )
 
 from dolfinx.nls.petsc import NewtonSolver
@@ -65,6 +65,7 @@ class Model(ABC):
     """
     Base class for all user-defined models.
     """
+    
     dim: int
     domain: Mesh
     space: FunctionSpace
@@ -179,25 +180,51 @@ class Model(ABC):
             ord: int = 2
         ) -> None:
         """
-        Instantiates a InitialLevel object.
+        Creates a level set funtion to be used as initial guess,
+        with ball shaped holes determined by centers and radii.
+
+        Arguments
+        ---------
+        centers : numpy.ndarray
+            Array of center coordinates
+            of shape (N, 2) or (N, 3).
+        radii : numpy.ndarray 
+            Array of radii of shape (N,).
+        factor : float
+            Scaling factor, positive or negative.
+        ord : int
+            Order of norm. Positive integer
+            grater than 1 or infinity (np.inf).
         """
 
         self.ini_lvl = InitialLevel(centers, radii, factor, ord)
 
     @final
     def save_initial_level(self, comm: MPI.Comm) -> None:
+        """
+        Saves the initial level set function is a xdmf file.
+
+        Arguments
+        ---------
+        comm: MPI.Comm
+            Communicator.
+        """
+        
         self.__verification(['domain', 'path'])
         self.ini_lvl.save(comm, self.domain, self.path)
 
     @final
     def get_initial_level(self):
+        """
+        Return the callable initial level set function. 
+        """
         return self.ini_lvl.func
     
     @final
     def runDP(
             self,
             niter: int = 100,
-            reinit_step: int = 4,
+            reinit_step: int | bool = False,
             reinit_pars: Tuple[int, float] = (8, 1e-2),
             dfactor: float = 1e-2,
             lv_time: Tuple[float, float] = (1e-3, 1.0),
@@ -208,7 +235,7 @@ class Model(ABC):
             lgrn_tol: float = 1e-2,
             cost_tol: float = 1e-2,
             prev: int = 10,
-            seed: int = 26    
+            seed: int = 26
         ) -> None:
         """
         Data Parallelism
@@ -223,18 +250,63 @@ class Model(ABC):
         )
     
     @final
-    def runTP(self, ):
+    def runTP(
+            self,
+            niter: int = 100,
+            reinit_step: int | bool = False,
+            reinit_pars: Tuple[int, float] = (8, 1e-2),
+            dfactor: float = 1e-2,
+            lv_time: Tuple[float, float] = (1e-3, 1.0),
+            lv_iter: Tuple[int, int] = (8, 14),
+            smooth: bool = False,
+            start_to_check: int = 30,
+            ctrn_tol: float = 1e-2,
+            lgrn_tol: float = 1e-2,
+            cost_tol: float = 1e-2,
+            prev: int = 10,
+            seed: int = 26
+        ) -> None:
         """
         Task Parallelism
         """
-        pass
+        
+        self.__verification(['dim', 'domain', 'space', 'path'])
+
+        runTP(
+            self, niter, reinit_step, reinit_pars, dfactor,
+            lv_time, lv_iter, smooth, start_to_check,
+            ctrn_tol, lgrn_tol, cost_tol, prev, seed
+        )
     
     @final
-    def runMP(self, ):
+    def runMP(
+            self,
+            sub_comm: MPI.Comm,
+            niter: int = 100,
+            reinit_step: int | bool = False,
+            reinit_pars: Tuple[int, float] = (8, 1e-2),
+            dfactor: float = 1e-2,
+            lv_time: Tuple[float, float] = (1e-3, 1.0),
+            lv_iter: Tuple[int, int] = (8, 14),
+            smooth: bool = False,
+            start_to_check: int = 30,
+            ctrn_tol: float = 1e-2,
+            lgrn_tol: float = 1e-2,
+            cost_tol: float = 1e-2,
+            prev: int = 10,
+            seed: int = 26            
+        ) -> None:
         """
         Mix Parallelism
         """
-        pass
+        
+        self.__verification(['dim', 'domain', 'space', 'path'])
+
+        runMP(
+            sub_comm, self, niter, reinit_step, reinit_pars, dfactor,
+            lv_time, lv_iter, smooth, start_to_check,
+            ctrn_tol, lgrn_tol, cost_tol, prev, seed
+        )        
 
 
 class Subdomain:
@@ -384,7 +456,7 @@ class InitialLevel:
             ord = self.ord, axis = 2
         )
         distances = self.radii[:, None] - norms
-        values = self.factor*np.max(distances, axis = 0)
+        values = np.max(distances, axis = 0)
 
         return self.factor*values
     
@@ -1129,11 +1201,40 @@ class Level:
             phi.x.scatter_forward()
 
 
+class Projection:
+
+    def __init__(self, domain, space, phi, diam2):
+
+        u = TrialFunction(space)
+        v = TestFunction(space)
+        dx = Measure("dx", domain = domain)
+
+        a = u*v*dx + diam2*dot(grad(u),grad(v))*dx
+        
+        f = conditional(
+            lt(phi*phi, diam2),
+            phi/sqrt(dot(grad(phi), grad(phi))),
+            phi
+        )
+
+        self.L = form(f*v*dx)
+        self.solver = build_solver(domain, form(a), [])
+    
+    def run(self, phi):
+        
+        b = assemble_vector(self.L)
+        b.ghostUpdate(
+            addv = PETSc.InsertMode.ADD_VALUES,
+            mode = PETSc.ScatterMode.REVERSE
+        )
+        self.solver.solve(b, phi.x.petsc_vec)
+        phi.x.scatter_forward()
+
 class Reinit:
     """
     """
     def __init__(self, domain, space, phi, diam2):
-        
+
         self.domain = domain
         self.dt = const(domain, 0.0)
         self.phi_ini = Function(space)
@@ -1142,24 +1243,24 @@ class Reinit:
         self.w = Function(space)
         dx = Measure("dx", domain = domain) 
 
-        sign_phi_ini = self.phi_ini/sqrt(self.phi_ini**2 + dot(grad(self.phi_ini), grad(self.phi_ini))*diam2)
+        sign_phi_ini = self.phi_ini/sqrt(self.phi_ini**2 + diam2)
         H = lambda p: sign_phi_ini*sqrt(dot(p, p))
         GradH = lambda p: sign_phi_ini*p/sqrt(dot(p, p))
 
         u = TrialFunction(space)
         v = TestFunction(space)
 
-        # Explicit Euler method
         tau = 2.0*sqrt(
             1.0/self.dt**2 +
             dot(GradH(grad(phi)), GradH(grad(phi)))/diam2
         )
-        new_v = v + dot(grad(v), GradH(grad(phi)))/tau
-
-        a = u*new_v*dx
+        new_v = v + dot(grad(v), GradH(grad(phi)))/tau        
+                
+        a = u*new_v*dx #+ diam2*dot(grad(u),grad(v))*dx
         L = phi*new_v*dx
         L += self.dt*sign_phi_ini*new_v*dx 
         L += (self.dt/2.0)*(H(grad(self.phi_prev)) - 3.0*H(grad(phi)))*new_v*dx
+        L += (self.dt/2.0)*diam2*dot(grad(self.phi_prev - 3.0*phi), grad(v))*dx
 
         self.problem = create_solver(
             form(a), form(L), [], self.uh
@@ -1168,6 +1269,7 @@ class Reinit:
         a0 = u*new_v*dx
         L0 = self.dt*sign_phi_ini*new_v*dx 
         L0 += (self.phi_ini - self.dt*H(grad(self.phi_ini)))*new_v*dx
+        L0 -= self.dt*diam2*dot(grad(self.phi_ini), grad(v))*dx
 
         self.problem0 = create_solver(
             form(a0), form(L0), [], self.uh
@@ -1674,7 +1776,7 @@ def create_non_lin_solver(comm, F, bcs, J, u, initial):
 def runDP(
         model: Model,
         niter: int,
-        reinit_step: int,
+        reinit_step: int | bool,
         reinit_pars: Tuple[int, float],
         dfactor: float,
         lv_time: Tuple[float, float],
@@ -1997,21 +2099,19 @@ def runDP(
 
 def runTP(
         model: Model,
-        initial_guess: Tuple[Any, ...],
-        niter: int = 100,
-        save_path: Path = Path(""),
-        reinit_step: int = 4,
-        reinit_pars: Tuple[int, float] = (8, 1e-2),
-        dfactor: float = 1e-2,
-        lv_time: Tuple[float, float] = (1e-3, 1.0),
-        lv_iter: Tuple[int, int] = (8, 14),
-        smooth: bool = False,
-        start_to_check: int = 30,
-        ctrn_tol: float = 1e-2,
-        lgrn_tol: float = 1e-2,
-        cost_tol: float = 1e-2,
-        prev: int = 10,
-        seed: int = 26
+        niter: int,
+        reinit_step: int | bool,
+        reinit_pars: Tuple[int, float],
+        dfactor: float,
+        lv_time: Tuple[float, float],
+        lv_iter: Tuple[int, int],
+        smooth: bool,
+        start_to_check: int,
+        ctrn_tol: float,
+        lgrn_tol: float,
+        cost_tol: float,
+        prev: int,
+        seed: int
     ) -> None:
     
     """
@@ -2025,7 +2125,7 @@ def runTP(
     min_iter, max_iter = lv_iter
 
     # Constants ===========================
-    filename = save_path / f"{res_name}.xdmf"
+    filename = model.path / f"{res_name}.xdmf"
     stop_flag = False
     
     dim = model.dim
@@ -2035,7 +2135,6 @@ def runTP(
         vol = volume(domain, MPI.COMM_SELF)
         nfems = nbr_fems(domain, dim, MPI.COMM_SELF)
         diam2 = get_diam2(dim, vol, nfems)
-        inilset = InitialLevel(*initial_guess)
         np.random.seed(seed)
         lsearch = LineSearch(
             (min_time, max_time),
@@ -2047,12 +2146,10 @@ def runTP(
         vol = None
         nfems = None
         diam2 = None
-        inilset = None
 
     vol = comm.bcast(vol, root = 0)
     nfems = comm.bcast(nfems, root = 0)
     diam2 = comm.bcast(diam2, root = 0)
-    inilset = comm.bcast(inilset, root = 0)
     
     # Level set function
     sp_lset = create_space(domain, "CG", 1)
@@ -2136,7 +2233,7 @@ def runTP(
 
     # --------------------------------------------
     if rank == 0:
-        phi.interpolate(inilset.func)
+        phi.interpolate(model.get_initial_level())
         phi_vls = phi.x.array[:]
     else:
         phi_vls = None
@@ -2311,7 +2408,7 @@ def runTP(
         if nbr_ctr > 0:
             tosave.add_ppl(cls_meth)
         tosave.add_times(max_assembly, max_solve)
-        tosave.save(save_path)
+        tosave.save(model.path)
         print(f"> Assembly time = {max_assembly} s")
         print(f"> Resolution time = {max_solve} s")
 
@@ -2319,23 +2416,20 @@ def runTP(
 def runMP(
         sub_comm: MPI.Comm,
         model: Model,
-        initial_guess: Tuple[Any, ...],
-        niter: int = 100,
-        save_path: Path = Path(""),
-        reinit_step: int = 4,
-        reinit_pars: Tuple[int, float] = (8, 1e-2),
-        dfactor: float = 1e-2,
-        lv_time: Tuple[float, float] = (1e-3, 1.0),
-        lv_iter: Tuple[int, int] = (8, 14),
-        smooth: bool = False,
-        start_to_check: int = 30,
-        ctrn_tol: float = 1e-2,
-        lgrn_tol: float = 1e-2,
-        cost_tol: float = 1e-2,
-        prev: int = 10,
-        seed: int = 26
+        niter: int,
+        reinit_step: int | bool,
+        reinit_pars: Tuple[int, float],
+        dfactor: float,
+        lv_time: Tuple[float, float],
+        lv_iter: Tuple[int, int],
+        smooth: bool,
+        start_to_check: int,
+        ctrn_tol: float,
+        lgrn_tol: float,
+        cost_tol: float,
+        prev: int,
+        seed: int
     ) -> None:
-    
     """
     Implements Mix Parallelism.
     """
@@ -2352,7 +2446,7 @@ def runMP(
     sub_rank = sub_comm.rank
     
     # Constants ===========================
-    filename = save_path / f"{res_name}.xdmf"
+    filename = model.path / f"{res_name}.xdmf"
     stop_flag = False
     
     dim = model.dim
@@ -2364,7 +2458,6 @@ def runMP(
     
     if rank == 0:
         diam2 = get_diam2(dim, vol, nfems)
-        inilset = InitialLevel(*initial_guess)
         np.random.seed(seed)
         lsearch = LineSearch(
             (min_time, max_time),
@@ -2374,10 +2467,8 @@ def runMP(
         tosave = Save()
     else:
         diam2 = None
-        inilset = None
 
     diam2 = comm.bcast(diam2, root = 0)
-    inilset = comm.bcast(inilset, root = 0)
     
     # Level set function
     sp_lset = create_space(domain, "CG", 1)
@@ -2459,7 +2550,7 @@ def runMP(
 
     # ------------------------------------
     if color == 0:
-        phi.interpolate(inilset.func)
+        phi.interpolate(model.get_initial_level())
         phi_vls_loc = phi.x.array[:]
     else:
         # Colect None if color is not 0
@@ -2636,6 +2727,6 @@ def runMP(
         if nbr_ctr > 0:
             tosave.add_ppl(cls_meth)
         tosave.add_times(max_assembly, max_solve)
-        tosave.save(save_path)
+        tosave.save(model.path)
         print(f"> Assembly time = {max_assembly} s")
         print(f"> Resolution time = {max_solve} s")
