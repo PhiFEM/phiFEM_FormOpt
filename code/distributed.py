@@ -47,7 +47,6 @@ import numpy.typing as npt
 from typing import Any, List, Tuple, final
 from ufl.core.expr import Expr as ufl_expr
 
-from functools import wraps
 
 from plots import plot_domain
 
@@ -224,21 +223,43 @@ class Model(ABC):
     def runDP(
             self,
             niter: int = 100,
-            reinit_step: int | bool = False,
-            reinit_pars: Tuple[int, float] = (8, 1e-2),
             dfactor: float = 1e-2,
             lv_time: Tuple[float, float] = (1e-3, 1.0),
             lv_iter: Tuple[int, int] = (8, 14),
             smooth: bool = False,
+            reinit_step: int | bool = False,
+            reinit_pars: Tuple[int, float] = (8, 1e-2),
             start_to_check: int = 30,
             ctrn_tol: float = 1e-2,
             lgrn_tol: float = 1e-2,
             cost_tol: float = 1e-2,
             prev: int = 10,
-            seed: int = 26
+            random_pars: Tuple[int, float] = (26, 0.05)
         ) -> None:
         """
         Data Parallelism
+        
+        Arguments
+        ---------
+        niter: int
+            The number of iterations.
+        dfactor: float
+            A positive scaling factor applied to the inverse of
+            the derivative norm to estimate the final integration
+            time of the level set equation.
+            Values <= 1 are recommended.
+        lv_time: Tuple[float, float]
+            A tuple with the minimum and maximum time allowed
+            for the integration of the level set equation.
+        lv_iter: Tuple[int, int]
+            A tuple with the minimum and maximum number of
+            iterations allowed for the integration of the level
+            set equation.
+        smooth: bool, default = True
+            If True, a diffusion term is added to the level set
+            equation; if False, the equation is solved without
+            diffusion.
+        reinit_step: bool or int, default = False
         """
         
         self.__verification(['dim', 'domain', 'space', 'path'])
@@ -246,7 +267,7 @@ class Model(ABC):
         runDP(
             self, niter, reinit_step, reinit_pars, dfactor,
             lv_time, lv_iter, smooth, start_to_check,
-            ctrn_tol, lgrn_tol, cost_tol, prev, seed
+            ctrn_tol, lgrn_tol, cost_tol, prev, random_pars
         )
     
     @final
@@ -264,7 +285,7 @@ class Model(ABC):
             lgrn_tol: float = 1e-2,
             cost_tol: float = 1e-2,
             prev: int = 10,
-            seed: int = 26
+            random_pars: Tuple[int, float] = (26, 0.05)
         ) -> None:
         """
         Task Parallelism
@@ -275,7 +296,7 @@ class Model(ABC):
         runTP(
             self, niter, reinit_step, reinit_pars, dfactor,
             lv_time, lv_iter, smooth, start_to_check,
-            ctrn_tol, lgrn_tol, cost_tol, prev, seed
+            ctrn_tol, lgrn_tol, cost_tol, prev, random_pars
         )
     
     @final
@@ -294,7 +315,7 @@ class Model(ABC):
             lgrn_tol: float = 1e-2,
             cost_tol: float = 1e-2,
             prev: int = 10,
-            seed: int = 26            
+            random_pars: Tuple[int, float] = (26, 0.05)            
         ) -> None:
         """
         Mix Parallelism
@@ -305,7 +326,7 @@ class Model(ABC):
         runMP(
             sub_comm, self, niter, reinit_step, reinit_pars, dfactor,
             lv_time, lv_iter, smooth, start_to_check,
-            ctrn_tol, lgrn_tol, cost_tol, prev, seed
+            ctrn_tol, lgrn_tol, cost_tol, prev, random_pars
         )        
 
 
@@ -1593,7 +1614,7 @@ class LineSearch:
         self.factor = factor
         self.noise = noise
 
-    def _nbr_steps_func(self, t: float):
+    def _estimate_steps_from_time(self, t: float):
         """
         Power function to estimate the number of steps.
 
@@ -1640,7 +1661,7 @@ class LineSearch:
         # To guarantee tend in [t_min, t_max] 
         tend = max(self.t_min, min(tend, self.t_max))
         
-        steps = self._nbr_steps_func(tend)
+        steps = self._estimate_steps_from_time(tend)
         # Randomness
         steps = np.random.normal(steps, self.noise*steps)
         # Conversion to integer
@@ -1787,7 +1808,7 @@ def runDP(
         lgrn_tol: float,
         cost_tol: float,
         prev: int,
-        seed: int
+        random_pars: Tuple[int, float]
     ) -> None:
     
     """
@@ -1799,6 +1820,7 @@ def runDP(
     rein_steps, rein_end = reinit_pars
     min_time, max_time = lv_time
     min_iter, max_iter = lv_iter
+    seed, noise = random_pars
 
     # Constants ===========================
     filename = model.path / f"{res_name}.xdmf"
@@ -1816,7 +1838,7 @@ def runDP(
         lsearch = LineSearch(
             (min_time, max_time),
             (min_iter, max_iter),
-            dfactor
+            dfactor, noise
         )
         tosave = Save()
     else:
@@ -2111,7 +2133,7 @@ def runTP(
         lgrn_tol: float,
         cost_tol: float,
         prev: int,
-        seed: int
+        random_pars: Tuple[int, float]
     ) -> None:
     
     """
@@ -2123,6 +2145,7 @@ def runTP(
     rein_steps, rein_end = reinit_pars
     min_time, max_time = lv_time
     min_iter, max_iter = lv_iter
+    seed, noise = random_pars
 
     # Constants ===========================
     filename = model.path / f"{res_name}.xdmf"
@@ -2139,7 +2162,7 @@ def runTP(
         lsearch = LineSearch(
             (min_time, max_time),
             (min_iter, max_iter),
-            dfactor
+            dfactor, noise
         )
         tosave = Save()
     else:
@@ -2428,7 +2451,7 @@ def runMP(
         lgrn_tol: float,
         cost_tol: float,
         prev: int,
-        seed: int
+        random_pars: Tuple[int, float]
     ) -> None:
     """
     Implements Mix Parallelism.
@@ -2439,6 +2462,7 @@ def runMP(
     rein_steps, rein_end = reinit_pars
     min_time, max_time = lv_time
     min_iter, max_iter = lv_iter
+    seed, noise = random_pars
 
     group_size = sub_comm.size
     nbr_groups = size // group_size
@@ -2462,7 +2486,7 @@ def runMP(
         lsearch = LineSearch(
             (min_time, max_time),
             (min_iter, max_iter),
-            dfactor
+            dfactor, noise
         )
         tosave = Save()
     else:
