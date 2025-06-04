@@ -140,9 +140,9 @@ def test_01():
     md.save_initial_level(comm)
     
     md.runDP(
-        niter = 100,
         ctrn_tol = 1e-3,
         dfactor = 1e-1,
+        lv_iter = (10, 16),
         reinit_step = 4,
         reinit_pars = (20, 0.1),
         smooth = True
@@ -1995,7 +1995,10 @@ def test_14(test_path = Path("../results/t14/"), r = 10):
 
     md.runDP(
         niter = 200,
+        lv_iter = (10, 16),
+        lv_time = (1e-3, 1.0),
         reinit_step = 6,
+        reinit_pars = (10, 0.01),
         ctrn_tol = 1e-3,
         dfactor = 1.0,
         smooth = True

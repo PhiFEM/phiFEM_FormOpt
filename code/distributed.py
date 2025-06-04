@@ -32,8 +32,7 @@ from dolfinx.fem import (
 )
 
 from ufl import (
-    SpatialCoordinate,
-    FacetNormal, Measure,
+    SpatialCoordinate, Measure,
     TrialFunction, TestFunction,
     system, conditional,
     inner, grad, dot, sqrt, gt, lt
@@ -44,7 +43,9 @@ from dolfinx.nls.petsc import NewtonSolver
 from abc import ABC, abstractmethod
 
 import numpy.typing as npt
-from typing import Any, List, Tuple, final
+from typing import (
+    Any, List, Tuple, final, Callable
+)
 from ufl.core.expr import Expr as ufl_expr
 
 
@@ -205,7 +206,7 @@ class Model(ABC):
 
         Arguments
         ---------
-        comm: MPI.Comm
+        comm : MPI.Comm
             Communicator.
         """
         
@@ -224,11 +225,11 @@ class Model(ABC):
             self,
             niter: int = 100,
             dfactor: float = 1e-2,
-            lv_time: Tuple[float, float] = (1e-3, 1.0),
-            lv_iter: Tuple[int, int] = (8, 14),
+            lv_time: Tuple[float, float] = (1e-3, 1e-1),
+            lv_iter: Tuple[int, int] = (8, 16),
             smooth: bool = False,
             reinit_step: int | bool = False,
-            reinit_pars: Tuple[int, float] = (8, 1e-2),
+            reinit_pars: Tuple[int, float] = (8, 1e-1),
             start_to_check: int = 30,
             ctrn_tol: float = 1e-2,
             lgrn_tol: float = 1e-2,
@@ -241,25 +242,50 @@ class Model(ABC):
         
         Arguments
         ---------
-        niter: int
+        niter : int, default=100
             The number of iterations.
-        dfactor: float
+        dfactor : float, default=1e-2
             A positive scaling factor applied to the inverse of
             the derivative norm to estimate the final integration
             time of the level set equation.
             Values <= 1 are recommended.
-        lv_time: Tuple[float, float]
+        lv_time : Tuple[float, float], default=(1e-3, 1e-1)
             A tuple with the minimum and maximum time allowed
             for the integration of the level set equation.
-        lv_iter: Tuple[int, int]
+        lv_iter : Tuple[int, int], default=(8, 16)
             A tuple with the minimum and maximum number of
             iterations allowed for the integration of the level
             set equation.
-        smooth: bool, default = True
+        smooth : bool, default=True
             If True, a diffusion term is added to the level set
             equation; if False, the equation is solved without
             diffusion.
-        reinit_step: bool or int, default = False
+        reinit_step : bool or int, default=False
+            A positive integer to apply the reinitialization
+            method when the condition
+                iter>start_to_check and reinit_step%iter == 0
+            holds. If False, no reinitialization is applied.
+        reinit_pars : Tuple[int, float], default=(8, 1e-1)
+            A tuple with the number of iterations and the final
+            time for the integration of the reinitialization
+            equation. The argument reinit_step must be a
+            positive integer.
+        start_to_check : int, default=30,
+            A positive integer to verify the stopping condition
+            when current iteration > start_to_check. 
+        ctrn_tol : float, default=1e-2,
+            Tolerance for the error constraint.
+        lgrn_tol : float, default=1e-2,
+            Tolerance for the relative difference
+            of the <prev>-th previous Lagrangian values. 
+        cost_tol : float, default=1e-2,
+            Tolerance for the relative difference
+            of the <prev>-th previous cost values. 
+        prev : int, default=10,
+            Number of previous values to verify the tolerance
+            of the Lagrangian and cost functionals.
+        random_pars : Tuple[int, float], default=(26, 0.05)
+            Seed and noise level in the line search method.
         """
         
         self.__verification(['dim', 'domain', 'space', 'path'])
@@ -332,26 +358,64 @@ class Model(ABC):
 
 class Subdomain:
     """
-    Creates an ufl conditional from a
-    list o inequalities of the form
-        "expresion of x > 0",
-    which represents a subdomain
-    of almost zero velocity.
+    Creates an ufl conditional from a list o inequalities
+    that determine a subdomain of almost zero velocity.
+    
+    Attributtes
+    -----------
+        domain : Mesh
+            Problem domain.
+        cond_func : Callable[[npt.NDArray[np.float64]], List[ufl_expr]]
+            Callable function that returns a list of
+            ufl expressions of x (coordinate).
+            For instance, the subdomain
+                {0.42 < y < 0.58 and 1.95 < x}
+            is obtained with the function
+            def sub_domain(x):
+                ineqs = [
+                    x[1] - 0.42,
+                    0.58 - x[1],
+                    x[0] - 1.95
+                ]
+                return ineqs
+            Thus, the elements of ineq read as 
+            positive inequalities:
+                x[1] - 0.42 > 0
+                0.58 - x[1] > 0
+                x[0] - 1.95 > 0
+    Methods
+    -------
+        expression() :
+            Collect the inequalities from cond_func
+            and returns the ufl expresion correspoding
+            to the indicator function obtained
+            by the intersection of the inequalities.
     """
 
-    def __init__(self, domain, cond_func):
+    def __init__(
+            self,
+            domain: Mesh,
+            cond_func: Callable[[npt.NDArray[np.float64]], List[ufl_expr]]
+        ):
+        
         self.domain = domain
         self.cond_func = cond_func
 
     def expression(self):
+        
         x = SpatialCoordinate(self.domain)
         conditions = self.cond_func(x)
         chi = 1.0
+        
         for cond in conditions:
             chi *= conditional(gt(cond, 0.0), 1.0, 0.0)
+        
         return chi
     
-def region_of(domain):
+def region_of(domain: Mesh):
+    """
+    Wrapper for the Subdomain class.
+    """
     def wrapper(func):
         return Subdomain(domain, func)
     return wrapper
@@ -1221,35 +1285,6 @@ class Level:
             solver.solve(b, phi.x.petsc_vec)
             phi.x.scatter_forward()
 
-
-class Projection:
-
-    def __init__(self, domain, space, phi, diam2):
-
-        u = TrialFunction(space)
-        v = TestFunction(space)
-        dx = Measure("dx", domain = domain)
-
-        a = u*v*dx + diam2*dot(grad(u),grad(v))*dx
-        
-        f = conditional(
-            lt(phi*phi, diam2),
-            phi/sqrt(dot(grad(phi), grad(phi))),
-            phi
-        )
-
-        self.L = form(f*v*dx)
-        self.solver = build_solver(domain, form(a), [])
-    
-    def run(self, phi):
-        
-        b = assemble_vector(self.L)
-        b.ghostUpdate(
-            addv = PETSc.InsertMode.ADD_VALUES,
-            mode = PETSc.ScatterMode.REVERSE
-        )
-        self.solver.solve(b, phi.x.petsc_vec)
-        phi.x.scatter_forward()
 
 class Reinit:
     """

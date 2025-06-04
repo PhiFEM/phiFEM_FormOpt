@@ -6,9 +6,10 @@
 \usepackage{multicol}
 \usepackage{mathtools}
 \usepackage{dsfont}
+\usepackage{xparse}
 
-
-
+\newcommand{\pyfunc}[1]{\operatorname{\texttt{#1}}}
+\newcommand{\pyarg}[1]{\texttt{#1}}
 
 \title{A FEniCSx toolbox for level set-based shape and topology optimization supporting parallel computing}
 \author{
@@ -377,12 +378,62 @@ sss
 $I(i) = \left\{i-\text{\texttt{prev}}, \dots,i-1\right\}$
 
 \textbf{Initial guess.}
+The initial level set function is constructed
+using two arrays:  \pyarg{centers} and \pyarg{radii}.
+The array \pyarg{centers} contains points
+which represent centers of balls included in $\mathcal{D}$,
+and the array \pyarg{radii} contains the corresponding radii.
+Then, we define $\phi^0$ as follows:
+\begin{equation}
+	\phi^0(x)= \pyarg{factor} \cdot \max_k \omega_k(x),	
+\end{equation}
+where $\omega_k$ is given by
+\begin{equation}
+\omega_k(x) = \pyarg{raddi}[k] - \left|x - \pyarg{centers}[k]\right|_{\pyarg{ord}}. 
+\end{equation}
+Here, $\pyarg{factor}$ is non-zero number and \pyarg{ord}
+is the order of the norm $\left|\cdot\right|_{\pyarg{ord}}$.
+By default, $\pyarg{factor} = 1$ and $\pyarg{ord} = 2$ (Euclidean norm).
+Note that the set
 \[
-\phi^0(x)= \text{\texttt{factor}} \left(\max_k \omega_k(x)\right)
+\Omega_k = \left\{x\mid \pyarg{factor} \cdot \omega_k(x) < 0\right\}
 \]
+determines either a ball or the complement of a ball,
+if \pyarg{factor} is positive or negative, respectively.
+Applying level set operations we have
 \[
-\omega_k(x) = \text{\texttt{raddi}}[k] - \left|x - \text{\texttt{centers}}[k]\right|_{\text{\texttt{ord}}} 
+\Omega^0 =  \bigcap_{k}  \Omega_k =
+\begin{cases}
+  \mathcal{D} \setminus \bigcup_k \mathbb{B}(k) & \text{if } \pyarg{factor} > 0, \\
+  \bigcup_k \mathbb{B}(k) & \text{if } \pyarg{factor} < 0.
+\end{cases}
 \]
+where $\mathbb{B}(k)$ is the $\pyarg{ord}$-norm ball
+centered at $\pyarg{centers}[k]$ with radius $\pyarg{raddi}[k]$.
+Thus, the initial level set can be either $\mathcal{D}$ with holes
+or the union of balls included in $\mathcal{D}$.
+
+\textbf{Dirichlet extension.}
+Given a function $u\in H^1(\mathcal{D})^{d}$,
+the Dirichlet extension of $u$ is defined 
+as the solution to the problem: Find $\eta\in H^1(\mathcal{D})^{d}$ such that
+\begin{equation}
+\begin{aligned}
+	\int_{\mathcal{D}} D\eta : D\zeta &= 0 &&\quad \forall\, \zeta \in H^1_0(\mathcal{D})^{d}, \\
+	\eta &= u &&\quad \text{on } \Gamma.
+\end{aligned}
+\end{equation}
+
+\textbf{Mesh diameter.}
+\begin{equation}
+	h =
+	\begin{cases}
+		4\frac{\left|\mathcal{D}\right|}{N_T\sqrt{3}} & \text{if } d = 2\\
+		\left(6\sqrt{2}\frac{\left|\mathcal{D}\right|}{N_T}\right)^{2/3} & \text{if } d = 3		
+	\end{cases}
+\end{equation}
+$\left|\mathcal{D}\right|$ denotes the area (or volume) of $\mathcal{D}$
+and $N_T$ denotes the number of triangles (or tetrahedrons).
 
 %%%%%%%%%%%%%%%%%%%%%%%
 \section{Numerical results}
