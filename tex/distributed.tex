@@ -275,7 +275,7 @@ where $\hat{\psi}=\psi+\tau^{-1}\theta\cdot\nabla\psi$ with
 $h$ is the diameter associated to the mesh.
 Note that the boundary condition is weakly imposed.
 Alternatively, we add a diffusion term of the form
-$h\nabla^2 \phi$ to \eqref{eq:transport}.
+$h^2\nabla^2 \phi$ to \eqref{eq:transport}.
 
 %with boundary condition $\phi(0, \cdot) = \phi^{i}(\cdot)$ on the inflow boundary
 %$\Gamma_{-} = \left\{x\in\partial\mathcal{D} \mid \theta \cdot n < 0 \right\}$.
@@ -289,13 +289,13 @@ such as line search, reinitialization of level set, stopping criterion,  etc ...
 
 We seek a solution to Eikonal equation with fictitious time derivative
 \begin{equation} \label{eq:Eikonal}
-	\varphi_{t} + S(\phi)(|\nabla \varphi| - 1) = h^2 \Delta\varphi
+	\varphi_{t} + S(\phi)(|\nabla \varphi| - 1) = h^2 \nabla^2\varphi
 	\quad x\in \mathcal{D},\, t\in(0, T]
 \end{equation}
 
 We write \eqref{eq:Eikonal} in the form of the Hamilton-Jacobi equation
 \begin{equation} \label{eq:HJ}
-	\varphi_{t} + H(\nabla \varphi)= S(\phi) + h^2 \Delta\varphi \quad x\in \mathcal{D},\, t\in(0, T]
+	\varphi_{t} + H(\nabla \varphi)= S(\phi) + h^2 \nabla^2\varphi \quad x\in \mathcal{D},\, t\in(0, T]
 \end{equation}
 where $H(p) = S(\phi) |\nabla p|$. Note that  $H$ satisfies $H(p) = \nabla H (p) \cdot p$
 The Petrov-Galerkin method \cite{MR1640142} with

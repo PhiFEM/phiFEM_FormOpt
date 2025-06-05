@@ -721,13 +721,15 @@ class Logistic(Model):
         
         self.r = r
         self.vol = 0.5
-        
         self.ini_func = None
 
         self.zero_vec = as_vector(dim*[0.0])
         self.Id = Identity(dim)
         self.K = lambda w: (
-            conditional(lt(w, 0.0), 1.0, 1e-2)
+            conditional(lt(w, 0.0), 1.0, 0.01)
+        )
+        self.chi = lambda w: (
+            conditional(lt(w, 0.0), 1.0, 0.0)
         )
 
     def pde(self, phi):
@@ -764,7 +766,7 @@ class Logistic(Model):
 
     def constraint(self, phi, U):
         
-        C = (1.0/self.vol)*self.K(phi)*self.dx
+        C = (1.0/self.vol)*self.chi(phi)*self.dx
         
         return [C]
 
@@ -779,7 +781,7 @@ class Logistic(Model):
         S1_J -= (outer(grad(u), grad(p)) + outer(grad(p), grad(u)))
             
         S0_C = self.zero_vec
-        S1_C = (1.0/self.vol)*self.K(phi)*self.Id
+        S1_C = (1.0/self.vol)*self.chi(phi)*self.Id
         
         S0 = (S0_J, [S0_C])
         S1 = (S1_J, [S1_C])

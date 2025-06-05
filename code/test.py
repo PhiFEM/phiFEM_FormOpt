@@ -1941,7 +1941,7 @@ def test_13():
     )
 
 
-def test_14(test_path = Path("../results/t14/"), r = 10):
+def test_14(test_path = Path("../results/t14/"), r = 10.0):
     """
     Run: mpirun -np <nbr of processes> python test.py 14
     For instance: mpirun -np 2 python test.py 14
@@ -1961,7 +1961,7 @@ def test_14(test_path = Path("../results/t14/"), r = 10):
     output = dib.create_domain_2d_DP(
         vertices, [], mesh_size,
         path = test_path,
-        plot = True
+        plot = False
     )
     
     domain, nbr_tri, boundary_tags = output
@@ -1994,11 +1994,11 @@ def test_14(test_path = Path("../results/t14/"), r = 10):
     md.save_initial_level(comm)
 
     md.runDP(
-        niter = 200,
+        niter = 300,
         lv_iter = (10, 16),
         lv_time = (1e-3, 1.0),
         reinit_step = 6,
-        reinit_pars = (10, 0.01),
+        reinit_pars = (20, 0.1),
         ctrn_tol = 1e-3,
         dfactor = 1.0,
         smooth = True
@@ -2011,8 +2011,8 @@ def test_15():
     For instance: mpirun -np 2 python test.py 15
     """
 
-    test_14(test_path = Path("../results/t15/"), r = 30)
-
+    test_path = Path("../results/t15/")
+    test_14(test_path, r = 40)
 
 def test_16():
     """
@@ -2020,7 +2020,8 @@ def test_16():
     For instance: mpirun -np 2 python test.py 16
     """
 
-    test_14(test_path = Path("../results/t16/"), r = 90)
+    test_path = Path("../results/t16/")
+    test_14(test_path, r = 100)
 
 
 #========================
