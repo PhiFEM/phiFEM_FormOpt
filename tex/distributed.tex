@@ -7,6 +7,7 @@
 \usepackage{mathtools}
 \usepackage{dsfont}
 \usepackage{xparse}
+\usepackage{caption}
 
 \newcommand{\pyfunc}[1]{\operatorname{\texttt{#1}}}
 \newcommand{\pyarg}[1]{\texttt{#1}}
@@ -388,31 +389,31 @@ which represent centers of balls included in $\mathcal{D}$,
 and the array \pyarg{radii} contains the corresponding radii.
 Then, we define $\phi^0$ as follows:
 \begin{equation}
-	\phi^0(x)= \pyarg{factor} \cdot \max_k \omega_k(x),	
+	\phi^0(x)= \pyarg{factor} \cdot \max_k \phi_k(x),	
 \end{equation}
-where $\omega_k$ is given by
+where $\phi_k$ is given by
 \begin{equation}
-\omega_k(x) = \pyarg{raddi}[k] - \left|x - \pyarg{centers}[k]\right|_{\pyarg{ord}}. 
+\phi_k(x) = \pyarg{radii}[k] - \left|x - \pyarg{centers}[k]\right|_{\pyarg{ord}}. 
 \end{equation}
 Here, $\pyarg{factor}$ is non-zero number and \pyarg{ord}
 is the order of the norm $\left|\cdot\right|_{\pyarg{ord}}$.
 By default, $\pyarg{factor} = 1$ and $\pyarg{ord} = 2$ (Euclidean norm).
 Note that the set
 \[
-\Omega_k = \left\{x\mid \pyarg{factor} \cdot \omega_k(x) < 0\right\}
+\omega_k = \left\{x\mid \pyarg{factor} \cdot \phi_k(x) < 0\right\}
 \]
 determines either a ball or the complement of a ball,
 if \pyarg{factor} is positive or negative, respectively.
 Applying level set operations we have
 \[
-\Omega^0 =  \bigcap_{k}  \Omega_k =
+\Omega^0 =  \bigcap_{k}  \omega_k =
 \begin{cases}
   \mathcal{D} \setminus \bigcup_k \mathbb{B}(k) & \text{if } \pyarg{factor} > 0, \\
   \bigcup_k \mathbb{B}(k) & \text{if } \pyarg{factor} < 0.
 \end{cases}
 \]
 where $\mathbb{B}(k)$ is the $\pyarg{ord}$-norm ball
-centered at $\pyarg{centers}[k]$ with radius $\pyarg{raddi}[k]$.
+centered at $\pyarg{centers}[k]$ with radius $\pyarg{radii}[k]$.
 Thus, the initial level set can be either $\mathcal{D}$ with holes
 or the union of balls included in $\mathcal{D}$.
 
@@ -438,13 +439,76 @@ as the solution to the problem: Find $\eta\in H^1(\mathcal{D})^{d}$ such that
 $\left|\mathcal{D}\right|$ denotes the area (or volume) of $\mathcal{D}$
 and $N_T$ denotes the number of triangles (or tetrahedrons).
 
+\textbf{Subdomains of almost zero velocity.}
+
 %%%%%%%%%%%%%%%%%%%%%%%
 \section{Numerical results}
 %%%%%%%%%%%%%%%%%%%%%%%
 
 Here we need to decide which examples we want to show. Inverse elasticity 2D or 3D, Compliance 2D or 3D? Heat equation?
 
-\subsection{Compliance}
+\subsection{Compliance minimization}
+
+Here, we minimize the compliance in a linear elasticity problem.
+
+$C(\Omega) = \left|\mathcal{D}\right|/2$
+
+
+\textbf{Symmetric cantilever.}
+$\mathcal{D} = (0, 2)\times(0, 1)$
+line segment $\{x=2, 0.45<y<0.55\}$, $\{x=0, 0<y<1\}$ 
+
+$g = (0, -2)$
+
+\begin{center}
+\includegraphics[width=0.48\linewidth]{compliance0.png}
+\hfill
+\includegraphics[width=0.48\linewidth]{compliance1.png}
+\includegraphics[width=0.85\linewidth]{compliance2.png}
+\captionof{figure}{
+	(top) Initial guess and optimized design.
+	(bottom) The level set function approximates the distance function.
+}
+\label{fig:compli2D}
+\end{center}
+
+$\mathcal{D} = (0, 2)\times(0, 1)\times(0, 1)$
+
+$\{x=0, 0<y<1, 0<z<1\}$
+
+$\{x=1, 0.4<y<0.6, 0.4<z<0.6\}$
+
+$g = (0, 0, -4)$
+\begin{center}
+\includegraphics[width=0.48\linewidth]{compli3D_0.png}
+\hfill
+\includegraphics[width=0.48\linewidth]{compli3D_1.png}
+\includegraphics[width=0.48\linewidth]{compli3D_2.png}
+\hfill
+\includegraphics[width=0.48\linewidth]{compli3D_3.png}
+\captionof{figure}{
+	Some iterations of the three-dimensional
+	cantilever.
+}
+\label{fig:compli3D}
+\end{center}
+
+\textbf{Multiple load cases.}
+\begin{center}
+\includegraphics[width=0.48\linewidth]{compliplus1_0.png}
+\hfill
+\includegraphics[width=0.48\linewidth]{compliplus1_1.png}
+
+\vspace{0.3cm}
+
+\includegraphics[width=0.48\linewidth]{compliplus2_0.png}
+\hfill
+\includegraphics[width=0.48\linewidth]{compliplus2_1.png}
+\captionof{figure}{
+	(Top) (Bottom)
+}
+\label{fig:compliplus}
+\end{center}
 
 \subsection{Inverse Elasticity}
 

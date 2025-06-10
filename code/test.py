@@ -23,9 +23,9 @@ comm_self = MPI.COMM_SELF
 """
 test_01 : Symmetric cantilever 2D (Data Parallelism)
 test_02 : Symmetric cantilever 3D (Data Parallelism)
-test_03 : Cantilever with two loads (Data Parallelism)
-test_04 : Cantilever with two loads (Task Parallelism)
-test_05 : Cantilever with two loads (Mix Parallelism)
+test_03 : Cantilever with two loads I (Data Parallelism)
+test_04 : Cantilever with two loads I (Task Parallelism)
+test_05 : Cantilever with two loads I (Mix Parallelism)
 test_06 : Elasticity inverse problem (Data Parallelism)
 test_07 : Elasticity inverse problem (Task Parallelism)
 test_08 : Elasticity inverse problem (Mix Parallelism)
@@ -37,6 +37,8 @@ test_13 : Heat conduction with one load (Data Parallelism)
 test_14 : Logistic equation, r = 10 (Data Parallelism)
 test_15 : Logistic equation, r = 40 (Data Parallelism)
 test_16 : Logistic equation, r = 90 (Data Parallelism)
+test_17 : ?
+test_18 : Cantilever with two loads II (Task Parallelism)
 """
 
 
@@ -72,7 +74,7 @@ def test_01():
     output = dib.create_domain_2d_DP(
         vertices, boundary_parts, mesh_size,
         path = test_path,
-        plot = True
+        plot = False
     )
     
     domain, nbr_tri, boundary_tags = output
@@ -132,11 +134,11 @@ def test_01():
         (0.65, 0.75), (1.35, 0.75),
         (2.0, 0.65), (0.0, 0.5)
     ])
-    
     centers = np.array(centers)
     radii = np.repeat(0.1, centers.shape[0])
-    
+    # Create the initial level set function
     md.create_initial_level(centers, radii)
+    # Save as initial.xdmf
     md.save_initial_level(comm)
     
     md.runDP(
@@ -328,6 +330,7 @@ def test_03():
         niter = 100,
         ctrn_tol = 1e-3,
         dfactor = 1e-1,
+        lv_time = (0.001, 1.0),
         reinit_step = 4,
         reinit_pars = (16, 0.05),
         smooth = True
@@ -345,7 +348,7 @@ def test_04():
         print(f"Nbr of processes must be = {task_nbr}")
         return
 
-    test_name = "Multiple load cases (Task Parallelism)"
+    test_name = "Cantilever with two loads I (Task Parallelism)"
     test_path = Path("../results/t04/")
     dim = 2
     rank_dim = 2
@@ -1971,12 +1974,17 @@ def test_14(test_path = Path("../results/t14/"), r = 10.0):
     
     # Create the model
     md = Logistic(
-        dim, domain, space, r, test_path
+        dim, domain, space, test_path
     )
 
     md.ini_func = lambda x: (
         1 + 0.2 * np.sin(6 * np.pi * x[0]) * np.sin(6 * np.pi * x[1])
     )
+    
+    md.d = 1.0
+    md.vol = 0.5
+    md.name = "K"
+    md.args = (r, 1.0, 0.01)
 
     # Initial guess: centers and radii
     centers = []
@@ -2014,6 +2022,7 @@ def test_15():
     test_path = Path("../results/t15/")
     test_14(test_path, r = 40)
 
+
 def test_16():
     """
     Run: mpirun -np <nbr of processes> python test.py 14
@@ -2022,6 +2031,196 @@ def test_16():
 
     test_path = Path("../results/t16/")
     test_14(test_path, r = 100)
+
+def test_17(test_path = Path("../results/t17/"), vol = 0.3):
+    
+    dim = 2
+    rank_dim = 1
+    mesh_size = 0.012
+    
+    vertices = np.array([
+        (0.0, 0.0),
+        (1.0, 0.0),
+        (1.0, 1.0),
+        (0.0, 1.0)
+    ])
+    
+    output = dib.create_domain_2d_DP(
+        vertices, [], mesh_size,
+        path = test_path,
+        plot = False
+    )
+    
+    domain, nbr_tri, boundary_tags = output
+
+    # Space for the PDE solution
+    space = dib.create_space(domain, "CG", rank_dim)
+    
+    # Create the model
+    md = Logistic(
+        dim, domain, space, test_path
+    )
+
+    md.ini_func = lambda x: (
+        10.0 + 0.1*np.sin(6 * np.pi * x[0]) * np.sin(6 * np.pi * x[1])
+    )
+    
+    md.d = 0.01
+    md.vol = vol
+    md.name = "R"
+    md.args = (1.0, 0.0)
+
+    # Initial guess: centers and radii
+    centers = []
+    
+    centers += [(0, 0.25*i) for i in range(5)]
+    centers += [(0.25, 0.25*i) for i in range(5)]
+    centers += [(0.5, 0.25*i) for i in range(5)]
+    centers += [(0.75, 0.25*i) for i in range(5)]
+    centers += [(1, 0.25*i) for i in range(5)]
+    
+    centers = np.array(centers)
+    radii = np.repeat(0.1, centers.shape[0])
+    
+    md.create_initial_level(centers, radii, factor = -1.0)
+    md.save_initial_level(comm)
+
+    md.runDP(
+        niter = 200,
+        lv_iter = (10, 16),
+        lv_time = (1e-3, 1.0),
+        reinit_step = 6,
+        reinit_pars = (20, 0.1),
+        ctrn_tol = 1e-3,
+        dfactor = 0.1,
+        smooth = True
+    )
+
+def test_18():
+    """
+    Run: mpirun -np 2 python test.py 18
+    """
+    
+    # Verification
+    task_nbr = 2
+    if size != task_nbr:
+        print(f"Nbr of processes must be = {task_nbr}")
+        return
+
+    test_name = "Cantilever with two loads II (Task Parallelism)"
+    test_path = Path("../results/t18/")
+    dim = 2
+    rank_dim = 2
+    mesh_size = 0.012
+    
+    vertices = np.array([
+        [0.0, 0.0],
+        [0.95, 0.0],
+        [1.05, 0.0],
+        [2.0, 0.0],
+        [2.0, 0.45],
+        [2.0, 0.55],
+        [2.0, 1.0],
+        [0.0, 1.0],
+    ])
+    
+    dir_idx, dir_mkr = [8], 1
+    neu_idx_bot, neu_mkr_bot = [2], 2
+    neu_idx_right, neu_mkr_right = [5], 3
+
+    boundary_parts = [
+        (dir_idx, dir_mkr, "dir"),
+        (neu_idx_bot, neu_mkr_bot, "neu_bot"),
+        (neu_idx_right, neu_mkr_right, "neu_right")
+    ]
+
+    # Create gmsh domain for Task Parallelism
+    output = dib.create_domain_2d_TP(
+        vertices, boundary_parts, mesh_size,
+        path = test_path,
+        plot = False
+    )
+    
+    domain, nbr_tri, boundary_tags = output
+    
+    if rank == 0:
+        print("\n\t" + test_name + "\n")
+        print(f"> Path = {test_path}")
+        print(f"> Nbr of triangles = {nbr_tri}")
+    
+    # Space
+    space = dib.create_space(domain, "CG", rank_dim)
+    # Dirichlet conditions
+    dirichlet_bcs = dib.homogeneous_dirichlet(
+        domain, space, boundary_tags,
+        [dir_mkr], rank_dim
+    )
+    # Boundary to force application
+    ds_g = dib.marked_ds(
+        domain,
+        boundary_tags,
+        [neu_mkr_bot, neu_mkr_right]
+    )
+    area = 1.1
+    g = [(0.0, -2.0), (0.0, 2.0)]
+    # Create the model
+    md = CompliancePlus(
+        dim, domain, space, g, ds_g,
+        dirichlet_bcs, area, test_path
+    )
+    
+    @dib.region_of(domain)
+    def sub_domain_right(x):
+        # 0.42 < x[1] < 0.58
+        # 1.95 < x[0]
+        ineqs = [
+            x[1] - 0.42,
+            0.58 - x[1],
+            x[0] - 1.95
+        ]
+        return ineqs
+
+    @dib.region_of(domain)
+    def sub_domain_bottom(x):
+        # 0.92 < x[0] < 1.08
+        # x[1] < 0.05
+        ineqs = [
+            x[0] - 0.92,
+            1.08 - x[0],
+            0.05 - x[1]
+        ]
+        return ineqs
+    
+    md.sub = [sub_domain_right.expression(), sub_domain_bottom.expression()]
+
+    # Initial guess: centers and radii
+    centers = []
+
+    centers += [(2.0, 0.0), (2.0, 0.35), (2.0, 0.65), (2.0, 1.0)]
+    centers += [(0.0, 0.25), (0.0, 0.5), (0.0, 0.75)]
+    centers += [(0.3 + i*0.35, 0.0) for i in range(5) if i not in (2, )]
+    centers += [(0.3 + i*0.35, 0.5) for i in range(5)]
+    centers += [(0.3 + i*0.35, 1.0) for i in range(5)]
+    centers += [(0.475 + i*0.35, 0.25) for i in range(4)]
+    centers += [(0.475 + i*0.35, 0.75) for i in range(4)]    
+    centers += [(1.15, 0.0)]
+    centers = np.array(centers)
+    radii = np.repeat(0.1, centers.shape[0])
+    
+    md.create_initial_level(centers, radii)
+    if rank == 0:
+        md.save_initial_level(comm_self)
+    
+    # Run Task Parallelism
+    md.runTP(
+        niter = 200,
+        ctrn_tol = 1e-3,
+        dfactor = 1e-1,
+        lv_time = (0.001, 1.0),
+        reinit_step = 4,
+        reinit_pars = (16, 0.05),
+        smooth = True
+    )
 
 
 #========================
@@ -3217,7 +3416,9 @@ test_functions = {
     "13": test_13,
     "14": test_14,
     "15": test_15,
-    "16": test_16
+    "16": test_16,
+    "17": test_17,
+    "18": test_18
 }
 
 def main():

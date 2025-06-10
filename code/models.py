@@ -225,7 +225,7 @@ class CompliancePlus(Model):
         B += inner(grad(th), grad(xi))*self.dx
         B += 1e4*dot(th, nv)*dot(xi, nv)*self.ds
         for sb in self.sub:
-            B += 1e4*sb*dot(th, xi)*self.dx
+            B += 1e5*sb*dot(th, xi)*self.dx
 
         return B, False
 
@@ -709,7 +709,7 @@ class HeatMultiple(Model):
 
 class Logistic(Model):
 
-    def __init__(self, dim, domain, space, r, path):
+    def __init__(self, dim, domain, space, path):
 
         self.dim = dim
         self.domain = domain
@@ -719,18 +719,44 @@ class Logistic(Model):
         self.dx = Measure('dx', domain = domain)
         self.ds = Measure("ds", domain = domain)
         
-        self.r = r
-        self.vol = 0.5
+        self.d = None
+        self.name = None
+        self.args = None
+
+        self.vol = None
         self.ini_func = None
 
         self.zero_vec = as_vector(dim*[0.0])
         self.Id = Identity(dim)
-        self.K = lambda w: (
-            conditional(lt(w, 0.0), 1.0, 0.01)
-        )
+
         self.chi = lambda w: (
             conditional(lt(w, 0.0), 1.0, 0.0)
         )
+        self.T = lambda w, tmax, tmin: (
+            conditional(lt(w, 0.0), tmax, tmin)
+        )
+        
+    def L(self, u, phi):
+        if self.name == "K":
+            r, kmax, kmin = self.args
+            return r*(1.0 - u/self.T(phi, kmax, kmin))
+        elif self.name == "R":
+            rmax, rmin = self.args
+            return self.T(phi, rmax, rmin) - u
+        elif self.name == "I":
+            r, imax, imin = self.args
+            return r - self.T(phi, imax, imin)*u
+    
+    def DL(self, u, phi):
+        if self.name == "K":
+            r, kmax, kmin = self.args
+            return r*(1.0 - 2.0*u/self.T(phi, kmax, kmin))
+        elif self.name == "R":
+            rmax, rmin = self.args
+            return self.T(phi, rmax, rmin) - 2.0*u
+        elif self.name == "I":
+            r, imax, imin = self.args
+            return r -  2.0*self.T(phi, imax, imin)*u
 
     def pde(self, phi):
         
@@ -738,11 +764,11 @@ class Logistic(Model):
         v = TestFunction(self.space)
         du = TrialFunction(self.space)
 
-        F = dot(grad(u), grad(v))*self.dx
-        F -= self.r*u*(1.0 - u/self.K(phi))*v*self.dx
+        F = self.d*dot(grad(u), grad(v))*self.dx
+        F -= self.L(u, phi)*u*v*self.dx
 
-        J = dot(grad(du), grad(v))*self.dx
-        J -= self.r*du*(1.0 - 2.0*u/self.K(phi))*v*self.dx
+        J = self.d*dot(grad(du), grad(v))*self.dx
+        J -= self.DL(u, phi)*du*v*self.dx
 
         return [(F, [], J, u, self.ini_func)]
 
@@ -753,8 +779,8 @@ class Logistic(Model):
         p = TrialFunction(self.space)
         q = TestFunction(self.space)
         
-        W = dot(grad(p), grad(q))*self.dx
-        W += self.r*p*q*(2.0*u/self.K(phi) - 1.0)*self.dx
+        W = self.d*dot(grad(p), grad(q))*self.dx
+        W -= self.DL(u, phi)*p*q*self.dx
         W -= q*self.dx 
 
         return [(W, [])]
@@ -776,9 +802,9 @@ class Logistic(Model):
         p = P[0]
 
         S0_J = self.zero_vec
-        S1_J = (-u + dot(grad(u), grad(p)))*self.Id 
-        S1_J -= self.r*u*(1.0 - u/self.K(phi))*p*self.Id
-        S1_J -= (outer(grad(u), grad(p)) + outer(grad(p), grad(u)))
+        S1_J = (-u + self.d*dot(grad(u), grad(p)))*self.Id 
+        S1_J -= self.L(u, phi)*u*p*self.Id
+        S1_J -= self.d*(outer(grad(u), grad(p)) + outer(grad(p), grad(u)))
             
         S0_C = self.zero_vec
         S1_C = (1.0/self.vol)*self.chi(phi)*self.Id
@@ -792,8 +818,8 @@ class Logistic(Model):
         
         nv = FacetNormal(self.domain)
         
-        B = 0.1*dot(th, xi)*self.dx
-        B += inner(grad(th), grad(xi))*self.dx
+        #B = 0.1*dot(th, xi)*self.dx
+        B = inner(grad(th), grad(xi))*self.dx
         B += 1e4*dot(th, nv)*dot(xi, nv)*self.ds
         
         return B, False

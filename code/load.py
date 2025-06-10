@@ -237,9 +237,13 @@ def test_16():
     test_path = Path("../results/t16/")
 
     plot_basic(test_path)
-
+    
 def test_17():
-    pass
+    
+    print("\n\t? (Data Parallelism)\n")
+    test_path = Path("../results/t17/")
+
+    plot_basic(test_path)
 
 def test_18():
     pass
