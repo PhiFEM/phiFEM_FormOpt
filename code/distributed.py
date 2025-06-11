@@ -60,6 +60,7 @@ dom_name = "domain"
 dat_name = "data"
 res_name = "results"
 ini_name = "initial"
+ext_name = "extensions"
 
 class Model(ABC):
     """
@@ -78,7 +79,7 @@ class Model(ABC):
     def pde(
             self,
             level_set_func
-        ) -> List[Tuple[ufl_expr, DirichletBC]]:
+        ) -> List[Tuple[ufl_expr, List[DirichletBC]]]:
         """
         Returns:
             A list with elements of the form
@@ -97,7 +98,7 @@ class Model(ABC):
             self,
             level_set_func,
             states
-        ) -> List[Tuple[ufl_expr, DirichletBC]]:
+        ) -> List[Tuple[ufl_expr, List[DirichletBC]]]:
         """
         Returns:
             A list with elements of the form
@@ -626,21 +627,28 @@ def dirichlet_extension_from_bcs(domain, space, list_bcs):
 
     return ext
 
-def dirichlet_extension(domain, space, funcs):
+def dirichlet_extension(
+        domain: Mesh,
+        space: FunctionSpace,
+        funcs: List[Function]
+    ) -> List[Function]:
     """
-    Parameters
-    ----------
-    domain : dolfinx.mesh.Mesh
-        d-dimensional problem domain, for d = 2 or 3.
-    space :
-        Function space
-    dir_funcs :
+    Compute the Dirichlet extensions of a
+    list of functions.
+
+    Arguments
+    ---------
+    domain : Mesh
+        Problem domain.
+    space : FunctionSpace
+        Space of functions where the extensions are computed.
+    funcs : List[Function]
         List of functions to be used as Dirichlet conditions.
-        These functions are defined on the whole domain.
+        These functions are defined on the domain.
         
     Returns
     -------
-    List of extended functions.
+    The Dirichlet extensions of the input functions.
     """
     dx = Measure("dx", domain = domain)
     nbr_fcs = len(funcs)
@@ -1730,20 +1738,35 @@ def solve_pde(space, pde, phi):
     
     return solutions
 
-def dir_extension_from(comm, domain, space, pde, func, filename):
+def dir_extension_from(
+        comm: MPI.Comm,
+        domain: Mesh,
+        space: FunctionSpace,
+        pde: Callable[[Function], List[Tuple[ufl_expr, List[DirichletBC]]]],
+        func: Callable[[npt.NDArray[np.float64]], float],
+        path: Path
+    ):
     """
-    Calculate the Dirichlet extension of the solutions of a set
-    of partial differential equations.
+    Calculate the Dirichlet extension of the solutions
+    to a set of linear partial differential equations.
 
     Arguments
-        comm: Communicator.
-        domain: Domain problem.
-        space: Space of functions.
-        pde: Partial differential equations.
-        func: Level set function.
-        filename: Name of the xdmf file containing the results.
+    ---------
+        comm : MPI.Comm.
+            Communicator.
+        domain : Mesh
+            Problem domain.
+        space : FunctionSpace
+            Space of functions.
+        pde : Callable[[Function], List[Tuple[ufl_expr, List[DirichletBC]]]]
+            Linear partial differential equations.
+        func : Callable[[npt.NDArray[np.float64]], float]
+            Level set function.
+        path : Path
+            Test path.
 
     Returns
+    -------
         Dirichlet extension functions.
     """
     
@@ -1756,7 +1779,11 @@ def dir_extension_from(comm, domain, space, pde, func, filename):
     solutions = solve_pde(space, pde, phi)
     extensions = dirichlet_extension(domain, space, solutions)
     
-    save_functions(comm, domain,  [phi] + solutions + extensions, filename)
+    save_functions(
+        comm, domain, 
+        [phi] + solutions + extensions,
+        path / f"{ext_name}.xdmf"
+    )
     
     return extensions
 

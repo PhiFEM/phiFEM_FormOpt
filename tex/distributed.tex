@@ -9,7 +9,30 @@
 \usepackage{xparse}
 \usepackage{caption}
 
-\newcommand{\pyfunc}[1]{\operatorname{\texttt{#1}}}
+\usepackage{listings}
+\usepackage{xcolor}
+\lstset{
+  language=Python,
+  basicstyle=\ttfamily\scriptsize,
+  backgroundcolor=\color{gray!5},
+  frame=single,
+  rulecolor=\color{black!20},
+  breaklines=true,
+  breakatwhitespace=true,
+  captionpos=b,
+  tabsize=4,
+  keepspaces=true,
+  showspaces=false,
+  showstringspaces=false,
+  showtabs=false,
+  numbers=none,
+  xleftmargin=1pt,
+  framexleftmargin=1pt,
+  aboveskip=1em,
+  belowskip=1em
+}
+
+
 \newcommand{\pyarg}[1]{\texttt{#1}}
 
 \title{A FEniCSx toolbox for level set-based shape and topology optimization supporting parallel computing}
@@ -63,7 +86,7 @@ recalling definitions of distributed and boundary expression of shape derivative
 
 Notations. Let $\mathcal{D}\subset\mathds{R}^d$ be open bounded domain with boundary
 $\Gamma = \partial \mathcal{D}$. Let $n$ denote the outward unit normal vector to $\Gamma$.
-Let $I$ denote the $d$-dimensional identity matrix.
+Let $I$ denote the $d$-dimensional identity matrix. $\left|\cdot\right|_{\infty}$ denotes the infinity norm.
 \begin{equation}
 	dJ(\Omega) \theta = \int_{\mathcal{D}} S_0^J \cdot \theta + S_1^J : D\theta 
 \end{equation}
@@ -349,49 +372,63 @@ The final time in \eqref{eq:transport}
 and the number of steps/iterations in \eqref{eq:weak_transport}
 are chosen as
 \begin{align}
-    T  &= \frac{\text{\texttt{dfactor}}}{\mathcal{B}(\theta, \theta)}\quad\text{and} \label{eq:tend} \\
-    \hat{s} &= (s_{\max} - s_{\min}) \left( \frac{T - t_{\min}}{t_{\max} - t_{\min}} \right)^{1/6} + s_{\min}, \label{eq:steps}
+    T  & = \frac{\pyarg{dfactor}}{B(\theta, \theta)}\quad\text{and} \label{eq:tend} \\
+    \hat{s} & =
+	(s_{\max} - s_{\min}) \left( \frac{T - t_{\min}}{t_{\max} - t_{\min}} \right)^{1/6}
+	+ s_{\min}, \label{eq:steps}
 \end{align}
-respectively, with \texttt{dfactor}, \texttt{lv\_time} $= (t_{\min}, t_{\max})$, and
-\texttt{lv\_iter} $= (s_{\max}, s_{\max})$ user-chosen parameters.
-Moreover, randomness can be introduced by specifying a \texttt{noise} level:
-$T$ is scaled by a random factor drawn from the uniform distribution $\mathcal{U}(1 - \text{\texttt{noise}}, 1 + \text{\texttt{noise}})$
-and $\hat{s}$ is replaced by a sample drawn from the normal distribution $\mathcal{N}(\hat{s}, (\text{\texttt{noise}} \cdot \hat{s})^2) $.
-We consider a minimal value for $\mathcal{B}(\theta, \theta)$ to prevent division by zero in \eqref{eq:tend}.
-Before return $T$ and $\hat{s}$, we ensure that $t_{\min}\leq T \leq t_{\max}$, $s_{\min}\leq \hat{s} \leq s_{\max}$,
-and $\hat{s}$ be an integer.
+respectively, with $\pyarg{dfactor}$, $\pyarg{lv\_time} = (t_{\min}, t_{\max})$, and
+$\pyarg{lv\_iter} = (s_{\max}, s_{\max})$ user-chosen parameters.
+Moreover, randomness can be introduced by specifying
+a seed number $n_\mathrm{seed}$ and a noise level $\vartheta$ in the argument
+$\pyarg{random\_pars} = (n_\mathrm{seed}, \vartheta)$:
+$T$ is scaled by a random factor drawn from the uniform distribution
+$\mathcal{U}(1 - \vartheta, 1 + \vartheta)$
+and $\hat{s}$ is replaced by a sample drawn from the normal distribution
+$\mathcal{N}(\hat{s}, (\vartheta \hat{s})^2) $.
+We consider a minimal value for $B(\theta, \theta)$
+to prevent division by zero in \eqref{eq:tend}.
+Before return $T$ and $\hat{s}$, we ensure that
+$t_{\min}\leq T \leq t_{\max}$, $s_{\min}\leq \hat{s} \leq s_{\max}$,
+and $\hat{s}$ be an integer. Internally, the \pyarg{LineSearch} class 
+performs these procedures.
 
 \textbf{Stopping criterion.}
 We consider the following stopping criterions:
-\[
-\left| (J(\Omega^i)-J(\Omega^j))_{j\in I(i)}  \right|_{\infty} < \text{\texttt{cost\_tol}} \left|J(\Omega^i)\right|
-\]
-for the problem without constraints;
-\begin{align*}
-&\left| (L(\Omega^i, z^i, \lambda^i, \mu^i)-L(\Omega^j, z^j, \lambda^j, \mu^j))_{j\in I(i)}  \right|_\infty \\
-&< \text{\texttt{lgrn\_tol}} \left|L(\Omega^i, z^i, \lambda^i, \mu^i)\right|
-\end{align*}
-\[
-\text{and}\quad\left|C(\Omega^i) - \textbf{1}\right|_\infty < \text{\texttt{ctrn\_tol}}
-\]
-for the problem with constraints,
-where
-$\left|\cdot\right|_{\infty}$ denotes the infinity norm
-and $I(i) = \left\{i-\text{\texttt{prev}}, \dots,i-1\right\}$.
+for each $i>\pyarg{start\_to\_check}$
+\begin{itemize}
+	\item (problem without constraints) we check
+	the relative error of the cost functional $J$
+	given by
+	\[
+	\left| (J(\Omega^i)-J(\Omega^j))_{j\in I(i)}  \right|_{\infty}
+	< \pyarg{cost\_tol} \cdot \left|J(\Omega^i)\right|
+	\]
+	\item (problem with constraints) we check
+	the relative error of the Lagrangian functional $L$
+	and the error constraint given by
+	\begin{align*}
+	&\left| (L(\Omega^i, z^i, \lambda^i, \mu^i)-L(\Omega^j, z^j, \lambda^j, \mu^j))_{j\in I(i)}  \right|_\infty \\
+	&< \pyarg{lgrn\_tol} \cdot \left|L(\Omega^i, z^i, \lambda^i, \mu^i)\right| \\
+	& \text{and}\quad\left|C(\Omega^i) - \textbf{1}\right|_\infty < \pyarg{ctrn\_tol}
+	\end{align*}
+\end{itemize}
+where $I(i) = \left\{i-\pyarg{prev}, \dots,i-1\right\}$.
 The parameters \pyarg{cost\_tol}, \pyarg{lgrn\_tol}, and \pyarg{ctrn\_tol} 
-are error tolerances and \pyarg{prev} is the number of previous values considered.
+are error tolerances, and \pyarg{prev} is
+the number of previous values considered.
 
 \textbf{Initial guess.}
 The initial level set function is constructed
 using two arrays:  \pyarg{centers} and \pyarg{radii}.
-The array \pyarg{centers} contains points
-which represent centers of balls included in $\mathcal{D}$,
-and the array \pyarg{radii} contains the corresponding radii.
-Then, we define $\phi^0$ as follows:
+The array \pyarg{centers} contains coordinates that
+represent centers of balls included in $\mathcal{D}$,
+and the array \pyarg{radii} contains their corresponding radii.
+Then, we define $\phi^0: \mathcal{\overline{D}} \rightarrow \mathds{R}$ as follows:
 \begin{equation}
 	\phi^0(x)= \pyarg{factor} \cdot \max_k \phi_k(x),	
 \end{equation}
-where $\phi_k$ is given by
+where each $\phi_k :\mathcal{\overline{D}} \rightarrow \mathds{R}$ is given by
 \begin{equation}
 \phi_k(x) = \pyarg{radii}[k] - \left|x - \pyarg{centers}[k]\right|_{\pyarg{ord}}. 
 \end{equation}
@@ -399,23 +436,34 @@ Here, $\pyarg{factor}$ is non-zero number and \pyarg{ord}
 is the order of the norm $\left|\cdot\right|_{\pyarg{ord}}$.
 By default, $\pyarg{factor} = 1$ and $\pyarg{ord} = 2$ (Euclidean norm).
 Note that the set
+$\left\{x\in\overline{\mathcal{D}}\mid \pyarg{factor} \cdot \phi_k(x) < 0\right\}$
+determines either the complement of a closed ball
+or an open ball, if \pyarg{factor} is positive or negative, respectively.
+Applying level set operations, we see that the initial domain
+$\Omega^0=  \left\{x\in\overline{\mathcal{D}}\mid \phi^0(x) < 0\right\}$ is given by
 \[
-\omega_k = \left\{x\mid \pyarg{factor} \cdot \phi_k(x) < 0\right\}
-\]
-determines either a ball or the complement of a ball,
-if \pyarg{factor} is positive or negative, respectively.
-Applying level set operations we have
-\[
-\Omega^0 =  \bigcap_{k}  \omega_k =
+\Omega^0 = 
 \begin{cases}
-  \mathcal{D} \setminus \bigcup_k \mathbb{B}(k) & \text{if } \pyarg{factor} > 0, \\
-  \bigcup_k \mathbb{B}(k) & \text{if } \pyarg{factor} < 0.
+  \overline{\mathcal{D}} \setminus \bigcup_k \overline{\mathbb{B}(k)} & \text{if } \pyarg{factor} > 0, \\
+  \bigcup_k \mathbb{B}(k) & \text{if } \pyarg{factor} < 0,
 \end{cases}
 \]
-where $\mathbb{B}(k)$ is the $\pyarg{ord}$-norm ball
+where $\mathbb{B}(k)$ is the $\pyarg{ord}$-norm open ball
 centered at $\pyarg{centers}[k]$ with radius $\pyarg{radii}[k]$.
-Thus, the initial level set can be either $\mathcal{D}$ with holes
-or the union of balls included in $\mathcal{D}$.
+Thus, $\Omega^0$ can be either
+$\overline{\mathcal{D}}$ with ball shaped holes
+or the union of balls included in $\overline{\mathcal{D}}$.
+For instance,
+after instantiating an object of a model class that inherits from $\pyarg{Model}$,
+we can invoke the method \pyarg{create\_initial\_level} to pass
+the arrays that define $\phi^0$:
+\begin{lstlisting}
+md = MyModel(...)
+md.create_initial_level(centers, radii)	
+\end{lstlisting}
+Internally, the $\pyarg{InitialLevel}$ class
+provides a callable method that uses the
+\pyarg{centers} and \pyarg{radii} arrays to construct $\phi^0$.
 
 \textbf{Dirichlet extension.}
 Given a function $u\in H^1(\mathcal{D})^{d}$,

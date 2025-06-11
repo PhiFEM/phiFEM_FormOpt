@@ -246,7 +246,11 @@ def test_17():
     plot_basic(test_path)
 
 def test_18():
-    pass
+    
+    print("\n\tCantilever with two loads II (Task Parallelism)\n")
+    test_path = Path("../results/t18/")
+
+    plot_basic(test_path)
 
 def test_19():
     pass
