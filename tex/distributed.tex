@@ -1,9 +1,12 @@
-\documentclass{article}
+\documentclass[a4paper, oneside]{article} 
+
+\usepackage[a4paper, left=17mm, right=17mm, top=25mm, bottom=25mm]{geometry}
 \usepackage{amsfonts}
-\usepackage{fullpage}
-\usepackage{amsmath}  % for mathematical symbols and equations
-\usepackage{graphicx}  % for including graphics
+\usepackage{amsmath}
+\usepackage{graphicx}
 \usepackage{multicol}
+\setlength{\columnsep}{7mm}
+\setlength{\textwidth}{176mm}
 \usepackage{mathtools}
 \usepackage{dsfont}
 \usepackage{xparse}
@@ -33,7 +36,7 @@
 }
 
 
-\newcommand{\pyarg}[1]{\texttt{#1}}
+\newcommand{\code}[1]{\texttt{#1}}
 
 \title{A FEniCSx toolbox for level set-based shape and topology optimization supporting parallel computing}
 \author{
@@ -58,6 +61,7 @@ On the other hand, we also implement a parallelization of the source terms in th
 \end{abstract}
 
 \begin{multicols}{2}
+
 
 \section{Introduction}
 Here we emphasize the following points:
@@ -103,7 +107,7 @@ for instance the inverse problem in elasticity. One could add another
 subsection with another model problem, for instance heat equation,
 where one would just show the result with the tensors $S_1,S_0$.
 
-Inverse Problem in Linear Elasticity.
+\textbf{Inverse Problem in Linear Elasticity.}
 Let $\Gamma_0$, $\Gamma_1$ subsets of $\Gamma$. 
 The stress and symmetric strain tensors are given by
 \begin{equation*}
@@ -158,41 +162,55 @@ Find $v \in  H^1_{\Gamma_0}(\mathcal{D})^d$ such that
 From \eqref{eq:w-f} and \eqref{eq:w-g},
 the Lagrangian functional for \eqref{eq:InvProb}
 is defined by
-\begin{align} \label{eq:elastic_lag}
-    L(\Omega,\varphi, \psi, \rho, \varrho) &= 
-    \frac{\alpha}{2}\int_{\mathcal{D}} \left|\varphi-\psi - g\right|^{2} \nonumber \\
-    &\quad + \frac{\beta}{2}\int_{\Gamma_{1}} \left|\varphi - g \right|^{2} \nonumber \\
-    &\quad + \int_{\mathcal{D}} A_{\Omega} \sigma(\varphi) : \epsilon(\rho) 
-    - \int_{\Gamma_{1}} f \cdot \rho \nonumber \\
-    &\quad + \int_{\mathcal{D}} A_{\Omega} \sigma(\psi + g) : \epsilon(\varrho)
-\end{align}
-Deriving $L$, we obtain the adjoint equations
-Adjoint equations
+\begin{equation} \label{eq:elastic_lag}
+	\mathcal{L}(\Omega,\varphi, \psi, \rho, \varrho) =
+	\mathcal{L}_{\mathrm{cost}} +
+	\mathcal{L}_{\mathrm{state}} +
+	\mathcal{L}_{\mathrm{adjoint}}
+\end{equation}
+\begin{align*}
+	\mathcal{L}_{\mathrm{cost}}    &= \frac{\alpha}{2}\int_{\mathcal{D}} \left|\varphi-\psi - g\right|^{2} + \frac{\beta}{2}\int_{\Gamma_{1}} \left|\varphi - g \right|^{2} \\
+	\mathcal{L}_{\mathrm{state}}   &= \int_{\mathcal{D}} A_{\Omega} \sigma(\varphi) : \epsilon(\rho) - \int_{\Gamma_{1}} f \cdot \rho \\
+	\mathcal{L}_{\mathrm{adjoint}} &= \int_{\mathcal{D}} A_{\Omega} \sigma(\psi + g) : \epsilon(\varrho)
+\end{align*}
+Deriving $\mathcal{L}$, we obtain the adjoint equations
 \begin{align*} \label{eq:f-adj}
-		\int_{\mathcal{D}} A_{\Omega}\sigma(p):\epsilon(r) & = -\alpha \int_{\mathcal{D}} (u-v-g) \cdot r \\
-		&\quad -\beta \int_{\Gamma_1} (u - g) \cdot r \quad
-		\forall \, r \in  H^1_{\Gamma_0}(\mathcal{D})^d	\nonumber
+\int_{\mathcal{D}} A_{\Omega}\sigma(p):\epsilon(r) & = -\alpha \int_{\mathcal{D}} (u-v-g) \cdot r \\
+&\quad -\beta \int_{\Gamma_1} (u - g) \cdot r \quad
+\forall \, r \in  H^1_{\Gamma_0}(\mathcal{D})^d	\nonumber
 \end{align*}
 and
 \begin{equation*} \label{eq:g-adj}
-	\int_{\mathcal{D}} A_{\Omega}\sigma(q):\epsilon(r) = \alpha \int_{\mathcal{D}} (u-v-g) \cdot r \quad \forall \, r \in  H^1_0(\mathcal{D})^d
+	\int_{\mathcal{D}} A_{\Omega}\sigma(q):\epsilon(r) =
+	\alpha \int_{\mathcal{D}} (u-v-g) \cdot r \quad \forall \, r \in  H^1_0(\mathcal{D})^d.
 \end{equation*}
-
+In order to obtain the shape derivative of $J$, we define
 \begin{align*}
-	& G\left(t,\varphi,\psi,\rho,\varrho\right) \coloneqq\\
-	& L\left(\Omega_{t},\varphi\circ T_{t}^{-1},\psi\circ T_{t}^{-1},\rho\circ T_{t}^{-1},\varrho\circ T_{t}^{-1}\right)
+	& \mathcal{G}(t,\varphi,\psi,\rho,\varrho) \coloneqq\\
+	& \mathcal{L}\left(\Omega_{t},\varphi\circ T_{t}^{-1},\psi\circ T_{t}^{-1},\rho\circ T_{t}^{-1},\varrho\circ T_{t}^{-1}\right)
 \end{align*}
-
-
-
+Applying the change of variable $x \mapsto T_t(x)$,
+\begin{equation*}
+	\mathcal{G}(t,\varphi,\psi,\rho,\varrho) =
+	\mathcal{G}_{\mathrm{cost}} +
+	\mathcal{G}_{\mathrm{state}} +
+	\mathcal{G}_{\mathrm{adjoint}}
+\end{equation*}
+\begin{align*}
+	\mathcal{G}_{\mathrm{cost}}    &= \frac{\alpha}{2}\int_{\mathcal{D}}\left|\phi-\varphi-g\circ T_{t}\right|^{2}\xi(t)+\frac{\beta}{2}\int_{\Gamma_{1}}\left|\phi-g\right|^{2} \\
+	\mathcal{G}_{\mathrm{state}}   &= \int_{\mathcal{D}}A_{\Omega}E(t,\phi):E(t,\rho)\xi(t)-\int_{\Gamma_{1}}f\cdot\rho \\
+	\mathcal{G}_{\mathrm{adjoint}} &= \int_{\mathcal{D}}A_{\Omega}E(t,\varphi + g\circ T_{t}):E(t,\varrho)\xi(t)
+\end{align*}
+Since
 \begin{equation}
-	dJ(\Omega; \theta) = \partial_{t}G(0, u, v, p, q)
+	dJ(\Omega; \theta) = \partial_{t}\mathcal{G}(0, u, v, p, q),
 \end{equation}
-
+we derivate $\mathcal{G}$ with respect to $t$ and
+evaluate it at $(0,u,v,p,q)$ to obtain
 \begin{equation}
 	dJ(\Omega; \theta) = \int_{\mathcal{D}} S_0^J \cdot \theta + S_1^J : D\theta 
 \end{equation}
-with 
+with $S_0^J$ and $S_1^J$ given by
 \begin{equation*}
 	S^{J}_{0} = -\alpha{Dg}^{\top}(u - v - g) +
 	A_{\Omega}\sum_{i,j=1}^{d}{\sigma (q)}_{i,j}\nabla(\epsilon(g)_{i,j})
@@ -202,15 +220,20 @@ and
 	S^{J}_{1} & = \frac{\alpha}{2}{|u-v-g|}^2 I\\
 			  & \quad + \left(A_{\Omega}\sigma(u):\epsilon(p) + A_{\Omega}\sigma(v+g):\epsilon(q)\right)I\\
 			  & \quad + A_{\Omega} \left({Du}^{\top}\sigma(p) + {Dp}^{\top}\sigma(u)\right)\\
-			  & \quad + A_{\Omega} \left({Dv}^{\top}\sigma(q) + {Dq}^{\top}\sigma(v+g)\right)
+			  & \quad + A_{\Omega} \left({Dv}^{\top}\sigma(q) + {Dq}^{\top}\sigma(v+g)\right),
 \end{align*}
-
-Velocity equation: Find $\theta\in\mathbb{H}$ such that
-\begin{equation} \label{eq:velocity}
-	\mathcal{B} (\theta, \xi) =
-	- \int_{\mathcal{D}} S_0\cdot\xi + S_1 : D\xi \quad\forall \; \xi \in \mathbb{H}
+respectively.
+In addition, it is necessary to choose a bilinear form
+in order to find the velocity field to compute the level set function.
+We choose $B:H^1(\mathcal{D})^d \times H^1(\mathcal{D})^d \rightarrow \mathds{R}$
+defined by
+\begin{equation}
+	B(\theta, \xi) = \int_{\mathcal{D}} {10}^{-1}\theta \cdot \xi + D\theta : D\xi 
 \end{equation}
-with $\mathbb{H} = H^1(\mathcal{D})^d$ or $\mathbb{H} = H_0^1(\mathcal{D})^d$
+Find $\theta \in H^1(\mathcal{D})^d$ such that
+\begin{equation}
+	B(\theta, \xi) = - dJ(\Omega; \xi) \quad \forall\, \xi\in H^1(\mathcal{D})^d.
+\end{equation}
 %%%%%%%%%%%%%%%%%%%%%%%
 \section{Numerical implementation}
 %%%%%%%%%%%%%%%%%%%%%%%
@@ -223,6 +246,61 @@ Here explain how the toolbox is organized.
 The folder ``Models'' will contain the files for each model. One for inverse problem in elasticity, one for heat equation, etc ... For each model, what changes is the PDEs, the geometric configuration such as boundary conditions and domain, and the tensors $S_1,S_0$.
 
 The folder ``Shape'' (?) will contain the files for the shape optimization, this includes in particular the file for the level set method.
+
+\subsection{Model construction}
+We start by creating a subclass of \code{Model} class
+with the following necessary attributes and methods:
+\begin{lstlisting}
+from distributed import Model
+
+class MyModel(Model):
+
+    def __init__(self, dim, domain, space, path):
+
+        self.dim = dim
+        self.domain = domain
+        self.space = space
+        self.path = path
+
+	def pde(self, phi):
+		pass
+	
+	def adjoint(self, phi, U):
+		pass
+
+	def cost(self, phi, U):
+		pass
+	
+    def constraint(self, phi, U):
+		pass
+
+	def derivative(self, phi, U, P):
+	 	pass
+	
+	def bilinear_form(self, th, xi):
+		pass
+\end{lstlisting}
+The attributes \code{dim}, \code{domain}, \code{space}, and \code{path}
+are the dimension of the problem domain $d$, the mesh that represents the domain $\Omega$,
+the space of functions for the problem solutions, and the test path where the results will be saved, respectively. 
+
+The \code{pde} method models the partial differential equations of the problem.
+It must return a list with elements of the form \code{(wk, bc)},
+where \code{wk} is the weak formulation of the equations
+and \code{bc} is a list with the Dirichlet boundary conditions.
+The \code{adjoint} method model the adjoint equations of the problem.
+It must return a list of similar struct that \code{pde}. 
+The \code{cost} method must return the cost functional $J(\Omega)$.
+The \code{constraint} method must return a list with the components of $C(\Omega)$.
+The \code{derivative} method must return two tuples,
+each one with the derivative components $S_0$ and $S_1$, respectively,
+corresponding to the cost functional and the constraints.
+Finally, the \code{bilinear\_form} method must return
+the chosen bilinear form $B(\theta, \xi)$.
+
+All the content of this class must be written exclusively using
+UFL and native Python functions. Details of the input and outputs of these methods
+can be view in the documentation of the \code{Model} class. 
 
 
 %%%%%%%%%%%%%%%%%%%%%%%
@@ -275,25 +353,55 @@ $r = 0.999$, $\delta^{0} = 0.5$,
 $\alpha = 2000$, $\beta = 0.5$,
 $z^{0} = 0$, $\lambda^{0} = 0$, and $\lambda^{0} = 0$.
 
-%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Velocity}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+The velocity $\theta$ is obtained by solving the following weak formulation:
+Find $\theta\in\mathbb{H}$ such that
+\begin{equation} \label{eq:velocity}
+	B (\theta, \xi) =
+	- \int_{\mathcal{D}} S_0\cdot\xi + S_1 : D\xi \quad\forall \; \xi \in \mathbb{H}
+\end{equation}
+with $\mathbb{H} = H^1(\mathcal{D})^d$ or $\mathbb{H} = H_0^1(\mathcal{D})^d$.
+The bilinear form $B$ must be provided as a UFL expression
+in the method \code{bilinear\_form} of the model class.
+This method must return \eqref{eq:velocity}, and
+either \code{False} (if $\mathbb{H} = H^1(\mathcal{D})^d$)
+or \code{True} (if $\mathbb{H} = H_0^1(\mathcal{D})^d$).
+The \code{Velocity} class sets up and solve \eqref{eq:velocity}.
+
+If $\mathbb{H} = H^1(\mathcal{D})^d$, consider in $B$
+a term of the form
+$$
+{10}^{5}
+$$
+in order to have $\theta\cdot n = 0$ (almost zero) on the boundary.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Level set method}
-%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Explain how the level set method is implemented, cite the code.
-We solve the transport problem
+We solve the diffusion-transport problem
 \begin{equation} \label{eq:transport}
-	\phi_{t} + \theta \cdot \nabla_{x} \phi  = 0 \quad x\in \mathcal{D},\, t\in(0, T]
+\begin{aligned}
+\partial_t \phi+\theta\cdot\nabla\phi - h^2\nabla^2\varphi &= 0 && x\in \mathcal{D},\, t>0, \\
+										 \partial_{n} \phi &= 0 && x\in \partial\mathcal{D},\, t>0, \\
+												\phi(0, x) &= \phi^{i}(x) && x\in \mathcal{D},
+\end{aligned}
 \end{equation}
 We choose $\phi^{i+1}(x) = \phi(T,x)$.
 The Petrov-Galerkin method \cite{MR1640142} with the Crank-Nicolson method yields
 \begin{align} \label{eq:weak_transport}
-	& \int_{\mathcal{D}} \left( \phi(t+\Delta t,\cdot) + \frac{\Delta t}{2} \theta \cdot \nabla \phi(t+\Delta t,\cdot) \right) \hat{\psi} = \nonumber \\
-	& \int_{\mathcal{D}} \left( \phi(t,\cdot) - \frac{\Delta t}{2} \theta \cdot \nabla \phi(t,\cdot) \right) \hat{\psi}
+	& \int_{\mathcal{D}} \phi(t+\Delta t,\cdot)\hat{\psi} + \Delta t \, \mathcal{F}(\phi(t+\Delta t,\cdot), \hat{\psi}) = \nonumber \\
+	& \int_{\mathcal{D}} \phi(t,\cdot) \hat{\psi} - \Delta t \, \mathcal{F}(\phi(t,\cdot), \hat{\psi})
 	\quad \forall \, \psi\in H^1(\mathcal{D})
 \end{align}
-where $\hat{\psi}=\psi+\tau^{-1}\theta\cdot\nabla\psi$ with 
-\begin{equation}
-	\tau(x) = 2\left(\frac{1}{\Delta t^2}  + \frac{|\theta(x)|^2}{h^2}\right)^{1/2}
+where $\mathcal{F}(u, v) = \frac{(\theta \cdot \nabla u) v}{2} + h^2\frac{\nabla u \cdot \nabla v}{2}$
+and $\hat{\psi}=\psi+\tau \theta\cdot\nabla\psi$, with 
+\begin{equation} \label{eq:tau_lv}
+	\tau = 2\left(\frac{1}{\Delta t^2}  + \frac{|\theta|^2}{h^2}\right)^{-1/2}
 \end{equation}
 
 $h$ is the diameter associated to the mesh.
@@ -301,8 +409,6 @@ Note that the boundary condition is weakly imposed.
 Alternatively, we add a diffusion term of the form
 $h^2\nabla^2 \phi$ to \eqref{eq:transport}.
 
-%with boundary condition $\phi(0, \cdot) = \phi^{i}(\cdot)$ on the inflow boundary
-%$\Gamma_{-} = \left\{x\in\partial\mathcal{D} \mid \theta \cdot n < 0 \right\}$.
 
 %%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Other implementation aspects}
@@ -311,77 +417,92 @@ $h^2\nabla^2 \phi$ to \eqref{eq:transport}.
 This could be the less important implementation aspects,
 such as line search, reinitialization of level set, stopping criterion,  etc ...
 
-We seek a solution to Eikonal equation with fictitious time derivative
+\textbf{Reinitialization.}
+We regularly perform a reinitialization of the level set function $\phi^i$
+by solving the diffusive Eikonal equation with fictitious time derivative
 \begin{equation} \label{eq:Eikonal}
-	\varphi_{t} + S(\phi)(|\nabla \varphi| - 1) = h^2 \nabla^2\varphi
-	\quad x\in \mathcal{D},\, t\in(0, T]
+\begin{aligned}
+    \partial_t \varphi - h^2 \nabla^2 \varphi &= S(\phi^i)(1 - |\nabla \varphi|)
+    && x\in \mathcal{D},\, t>0, \\
+    \partial_n \varphi &= 0
+    && x\in \partial\mathcal{D},\, t>0, \\
+	\varphi(0, x) &= \phi^i(x)
+	&& x\in \overline{\mathcal{D}},
+\end{aligned}
 \end{equation}
-
-We write \eqref{eq:Eikonal} in the form of the Hamilton-Jacobi equation
+where $S(\psi):\overline{\mathcal{D}}\rightarrow (-1, 1)$ given by 
+\begin{equation*}
+	S(\psi) = \frac{\psi}{\sqrt{\psi^2 + h^2}}\quad (h= \text{mesh diameter})
+\end{equation*}
+approximates the signed distance function associated to
+the set $\{x\in\overline{\mathcal{D}} \mid \psi(x)<0\}$.
+We write the first equation of \eqref{eq:Eikonal}
+in the form of a Hamilton-Jacobi equation:
 \begin{equation} \label{eq:HJ}
-	\varphi_{t} + H(\nabla \varphi)= S(\phi) + h^2 \nabla^2\varphi \quad x\in \mathcal{D},\, t\in(0, T]
+	\varphi_{t} + H(\nabla \varphi) =
+	S(\phi^i) + h^2 \nabla^2\varphi \quad x\in \mathcal{D},\, t>0,
 \end{equation}
-where $H(p) = S(\phi) |\nabla p|$. Note that  $H$ satisfies $H(p) = \nabla H (p) \cdot p$
-The Petrov-Galerkin method \cite{MR1640142} with
-the two-step Adams-Bashforth method yields
+where $H(p) = S(\phi^i) |\nabla p|$ is the Hamiltonian.
+Note that $H$ is homogeneous of degree $1$: $H(\lambda p) = \lambda H(p)$
+for all positive $\lambda$. By Euler's homogeneous function theorem,
+$H(p) = \nabla H (p) \cdot p$, with $\nabla H (p) = S(\phi^i)p/ \left|p\right|$.
+These observations let us to consider, again,
+the Petrov-Galerkin method developed in \cite{MR1640142}. 
+Discretizing the time derivative with the two-step Adams-Bashforth method,
+we obtain the following iterative scheme:
 \begin{align} \label{eq:weak_HJ}
-	& \int_{\mathcal{D}}  \varphi(t + \delta t, \cdot) \hat{\psi} = \int_{\mathcal{D}} \varphi(t, \cdot) \hat{\psi} + {\delta t} \, S(\phi) \hat{\psi} \nonumber \\
-	& \int_{\mathcal{D}} {\delta t}\,\mathcal{F}(\varphi(t, \cdot), \varphi(t - \delta t, \cdot), \hat{\psi}) \quad \forall \, \psi\in H^1(\mathcal{D})
+	& \int_{\mathcal{D}}  \varphi(t + \Delta t, \cdot) \hat{\psi} = \int_{\mathcal{D}} (\varphi(t, \cdot) + {\Delta t} \, S(\phi^i)) \hat{\psi} + {}\nonumber \\
+	& \int_{\mathcal{D}} {\Delta t}\,\mathcal{G}(\varphi(t, \cdot), \varphi(t - \Delta t, \cdot), \hat{\psi}) \quad \forall \, \psi\in H^1(\mathcal{D})
 \end{align}
-\begin{align*} 
-	& \mathcal{F}(u, v, w) = \tfrac{H(\nabla v)-3H(\nabla u)}{2} w + h^2 \tfrac{\nabla v - 3\nabla u}{2} \cdot \nabla w\\
-	&  
-\end{align*}
+where $\mathcal{G}(u, v, w) = \tfrac{H(\nabla v)-3H(\nabla u)}{2} w + h^2 \tfrac{\nabla v - 3\nabla u}{2} \cdot \nabla w$
+and $\hat{\psi}=\psi+\tau\nabla H(\nabla \varphi(t, \cdot)) \cdot\nabla\psi $, with 
+\begin{equation}
+	\tau = 2\left(\frac{1}{\Delta t^2}  + \frac{|\nabla H(\nabla \varphi(t, \cdot))|^2}{h^2}\right)^{-1/2}.
+\end{equation}
+Note that $|\nabla H(\nabla \varphi(t, \cdot))| = \left|S(\phi^i)\right|$.
+Hence, as in \eqref{eq:tau_lv}, $\tau$ is time-independent.
+The two-step Adams-Bashforth method provides an explicit scheme
+to the nonlinear equation \eqref{eq:Eikonal}, while the order
+of accuracy in time is $O(\Delta t ^2)$.
+The diffusion term prevents the propagation of
+small instabilities due to $\nabla H(\nabla \varphi (t, \cdot))$:
+although $\varphi$ aims to approximate the distance function
+associated to $\Omega^i$, and
+then $\left|\nabla \varphi\right| \approx 1$,
+$\left|\nabla \varphi\right|$ can be small at the first iterations of \eqref{eq:weak_HJ}
+due to the initial condition.
+In practice, we observed that computing
+the first iteration $\varphi(\Delta t, \cdot)$,
+which is necessary for \eqref{eq:weak_HJ},
+using the explicit Euler method is sufficient.
+Recall that the goal of the reinitialization is to
+keep the function level set non-degenerated along iterations.
+Finally, we point out that, unlike \cite{MR1640142}, inflow fluxes were not considered.
 
-% Reinitialization of level set (part I)
-
-% Smooth $L^2$-projection
-% \begin{equation}
-% 	\int_{\mathcal{D}} \phi^{\mathrm{new}} \psi + h^2 \nabla \phi^{\mathrm{new}} \cdot  \nabla \psi 
-% 	= \int_{\mathcal{D}} F(\phi) \psi
-% 	\quad \forall \psi \in H^1(\mathcal{D})
-% \end{equation}
-% where
-% \begin{equation}
-% 	F(\phi)(x) =
-% 	\begin{cases}
-% 		\phi(x)/|\nabla \phi(x)| & \mathrm{if}\;|\phi(x)| < h\\
-% 		\phi(x)  & \mathrm{otherwise}
-% 	\end{cases}
-% \end{equation}
-
-% Reinitialization of level set (part 2)
-
-% We apply Ralston's method
-% \begin{equation}
-% \begin{aligned}
-% 	\int_{\mathcal{D}} k_1\psi & = \int_{\mathcal{D}} F(\varphi(t, \cdot))\psi \\
-% 	\int_{\mathcal{D}} k_2\psi & = \int_{\mathcal{D}} F\left(\varphi(t, \cdot) + \Delta t \frac{2k_1}{3}\right)\psi \\
-% 	\int_{\mathcal{D}} \varphi(t + \Delta t, \cdot) \psi &
-% 	= \int_{\mathcal{D}} \left(\varphi(t, \cdot) + \Delta t \left(\frac{k_1}{4} + \frac{3k_2}{4}\right)\right)\psi \\
-% 	& \qquad\qquad\qquad\qquad \forall \psi \in H^1(\mathcal{D})	
-% \end{aligned}
-% \end{equation}
-% where
-% \begin{equation}
-% 	F(v) = S(\phi)(1 - |\nabla v|)
-% \end{equation}
+The \code{Reinit} class implements the reinitialization.
+Its constructor creates a precompiled solver for \eqref{eq:weak_HJ},
+and the method \code{run} performs the iterations.
+There are two user-parameters.
+\code{reinit\_step} is either \code{False} or a positive integer.
+If \code{False}, there is no reinitialization; otherwise
+the reinitialization is performed when $\code{reinit\_step} \% \code{iter} = 0$.
+\code{reinit\_pars} is a tuple with the number of iterations and the final time.
 
 \textbf{Line search method.} 
 The final time in \eqref{eq:transport} 
 and the number of steps/iterations in \eqref{eq:weak_transport}
 are chosen as
 \begin{align}
-    T  & = \frac{\pyarg{dfactor}}{B(\theta, \theta)}\quad\text{and} \label{eq:tend} \\
+    T  & = \frac{\code{dfactor}}{B(\theta, \theta)}\quad\text{and} \label{eq:tend} \\
     \hat{s} & =
 	(s_{\max} - s_{\min}) \left( \frac{T - t_{\min}}{t_{\max} - t_{\min}} \right)^{1/6}
 	+ s_{\min}, \label{eq:steps}
 \end{align}
-respectively, with $\pyarg{dfactor}$, $\pyarg{lv\_time} = (t_{\min}, t_{\max})$, and
-$\pyarg{lv\_iter} = (s_{\max}, s_{\max})$ user-chosen parameters.
+respectively, with $\code{dfactor}$, $\code{lv\_time} = (t_{\min}, t_{\max})$, and
+$\code{lv\_iter} = (s_{\max}, s_{\max})$ user-chosen parameters.
 Moreover, randomness can be introduced by specifying
 a seed number $n_\mathrm{seed}$ and a noise level $\vartheta$ in the argument
-$\pyarg{random\_pars} = (n_\mathrm{seed}, \vartheta)$:
+$\code{random\_pars} = (n_\mathrm{seed}, \vartheta)$:
 $T$ is scaled by a random factor drawn from the uniform distribution
 $\mathcal{U}(1 - \vartheta, 1 + \vartheta)$
 and $\hat{s}$ is replaced by a sample drawn from the normal distribution
@@ -390,91 +511,99 @@ We consider a minimal value for $B(\theta, \theta)$
 to prevent division by zero in \eqref{eq:tend}.
 Before return $T$ and $\hat{s}$, we ensure that
 $t_{\min}\leq T \leq t_{\max}$, $s_{\min}\leq \hat{s} \leq s_{\max}$,
-and $\hat{s}$ be an integer. Internally, the \pyarg{LineSearch} class 
+and $\hat{s}$ be an integer. Internally, the \code{LineSearch} class 
 performs these procedures.
 
 \textbf{Stopping criterion.}
 We consider the following stopping criterions:
-for each $i>\pyarg{start\_to\_check}$
+for each $i>\code{start\_to\_check}$
 \begin{itemize}
 	\item (problem without constraints) we check
 	the relative error of the cost functional $J$
 	given by
 	\[
 	\left| (J(\Omega^i)-J(\Omega^j))_{j\in I(i)}  \right|_{\infty}
-	< \pyarg{cost\_tol} \cdot \left|J(\Omega^i)\right|
+	< \code{cost\_tol} \cdot \left|J(\Omega^i)\right|
 	\]
 	\item (problem with constraints) we check
 	the relative error of the Lagrangian functional $L$
 	and the error constraint given by
 	\begin{align*}
 	&\left| (L(\Omega^i, z^i, \lambda^i, \mu^i)-L(\Omega^j, z^j, \lambda^j, \mu^j))_{j\in I(i)}  \right|_\infty \\
-	&< \pyarg{lgrn\_tol} \cdot \left|L(\Omega^i, z^i, \lambda^i, \mu^i)\right| \\
-	& \text{and}\quad\left|C(\Omega^i) - \textbf{1}\right|_\infty < \pyarg{ctrn\_tol}
+	&< \code{lgrn\_tol} \cdot \left|L(\Omega^i, z^i, \lambda^i, \mu^i)\right| \\
+	& \text{and}\quad\left|C(\Omega^i) - \textbf{1}\right|_\infty < \code{ctrn\_tol}
 	\end{align*}
 \end{itemize}
-where $I(i) = \left\{i-\pyarg{prev}, \dots,i-1\right\}$.
-The parameters \pyarg{cost\_tol}, \pyarg{lgrn\_tol}, and \pyarg{ctrn\_tol} 
-are error tolerances, and \pyarg{prev} is
+where $I(i) = \left\{i-\code{prev}, \dots,i-1\right\}$.
+The parameters \code{cost\_tol}, \code{lgrn\_tol}, and \code{ctrn\_tol} 
+are error tolerances, and \code{prev} is
 the number of previous values considered.
 
 \textbf{Initial guess.}
 The initial level set function is constructed
-using two arrays:  \pyarg{centers} and \pyarg{radii}.
-The array \pyarg{centers} contains coordinates that
+using two arrays:  \code{centers} and \code{radii}.
+The array \code{centers} contains coordinates that
 represent centers of balls included in $\mathcal{D}$,
-and the array \pyarg{radii} contains their corresponding radii.
+and the array \code{radii} contains their corresponding radii.
 Then, we define $\phi^0: \mathcal{\overline{D}} \rightarrow \mathds{R}$ as follows:
 \begin{equation}
-	\phi^0(x)= \pyarg{factor} \cdot \max_k \phi_k(x),	
+	\phi^0(x)= \code{factor} \cdot \max_k \phi_k(x),	
 \end{equation}
 where each $\phi_k :\mathcal{\overline{D}} \rightarrow \mathds{R}$ is given by
 \begin{equation}
-\phi_k(x) = \pyarg{radii}[k] - \left|x - \pyarg{centers}[k]\right|_{\pyarg{ord}}. 
+\phi_k(x) = \code{radii}[k] - \left|x - \code{centers}[k]\right|_{\code{ord}}. 
 \end{equation}
-Here, $\pyarg{factor}$ is non-zero number and \pyarg{ord}
-is the order of the norm $\left|\cdot\right|_{\pyarg{ord}}$.
-By default, $\pyarg{factor} = 1$ and $\pyarg{ord} = 2$ (Euclidean norm).
+Here, $\code{factor}$ is non-zero number and \code{ord}
+is the order of the norm $\left|\cdot\right|_{\code{ord}}$.
+By default, $\code{factor} = 1$ and $\code{ord} = 2$ (Euclidean norm).
 Note that the set
-$\left\{x\in\overline{\mathcal{D}}\mid \pyarg{factor} \cdot \phi_k(x) < 0\right\}$
+$\left\{x\in\overline{\mathcal{D}}\mid \code{factor} \cdot \phi_k(x) < 0\right\}$
 determines either the complement of a closed ball
-or an open ball, if \pyarg{factor} is positive or negative, respectively.
+or an open ball, if \code{factor} is positive or negative, respectively.
 Applying level set operations, we see that the initial domain
 $\Omega^0=  \left\{x\in\overline{\mathcal{D}}\mid \phi^0(x) < 0\right\}$ is given by
 \[
 \Omega^0 = 
 \begin{cases}
-  \overline{\mathcal{D}} \setminus \bigcup_k \overline{\mathbb{B}(k)} & \text{if } \pyarg{factor} > 0, \\
-  \bigcup_k \mathbb{B}(k) & \text{if } \pyarg{factor} < 0,
+  \overline{\mathcal{D}} \setminus \bigcup_k \overline{\mathbb{B}(k)} & \text{if } \code{factor} > 0, \\
+  \bigcup_k \mathbb{B}(k) & \text{if } \code{factor} < 0,
 \end{cases}
 \]
-where $\mathbb{B}(k)$ is the $\pyarg{ord}$-norm open ball
-centered at $\pyarg{centers}[k]$ with radius $\pyarg{radii}[k]$.
+where $\mathbb{B}(k)$ is the $\code{ord}$-norm open ball
+centered at $\code{centers}[k]$ with radius $\code{radii}[k]$.
 Thus, $\Omega^0$ can be either
 $\overline{\mathcal{D}}$ with ball shaped holes
 or the union of balls included in $\overline{\mathcal{D}}$.
 For instance,
-after instantiating an object of a model class that inherits from $\pyarg{Model}$,
-we can invoke the method \pyarg{create\_initial\_level} to pass
+after instantiating an object of a model class that inherits from $\code{Model}$,
+we can invoke the method \code{create\_initial\_level} to pass
 the arrays that define $\phi^0$:
 \begin{lstlisting}
 md = MyModel(...)
 md.create_initial_level(centers, radii)	
 \end{lstlisting}
-Internally, the $\pyarg{InitialLevel}$ class
+Internally, the $\code{InitialLevel}$ class
 provides a callable method that uses the
-\pyarg{centers} and \pyarg{radii} arrays to construct $\phi^0$.
+\code{centers} and \code{radii} arrays to construct $\phi^0$.
 
 \textbf{Dirichlet extension.}
 Given a function $u\in H^1(\mathcal{D})^{d}$,
 the Dirichlet extension of $u$ is defined 
-as the solution to the problem: Find $\eta\in H^1(\mathcal{D})^{d}$ such that
-\begin{equation}
+as the solution to the following problem:
+Find $\eta\in H^1(\mathcal{D})^{d}$ such that
+\begin{equation} \label{eq:dir}
 \begin{aligned}
 	\int_{\mathcal{D}} D\eta : D\zeta &= 0 &&\quad \forall\, \zeta \in H^1_0(\mathcal{D})^{d}, \\
 	\eta &= u &&\quad \text{on } \Gamma.
 \end{aligned}
 \end{equation}
+The function $\code{dirichlet\_extension}$ implements equation \eqref{eq:dir}.
+By solving \eqref{eq:dir}, we generate the data displacement $g$ used in \eqref{eq:w-g}.
+Since the data displacement must correspond to a force application,
+we define the function $\code{dir\_extension\_from}$, which
+solves \eqref{eq:w-f} and then extend its solution by calling
+$\code{dirichlet\_extension}$.
+
 
 \textbf{Mesh diameter.}
 \begin{equation}
@@ -489,11 +618,30 @@ and $N_T$ denotes the number of triangles (or tetrahedrons).
 
 \textbf{Subdomains of almost zero velocity.}
 
-%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Numerical results}
-%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 
 Here we need to decide which examples we want to show. Inverse elasticity 2D or 3D, Compliance 2D or 3D? Heat equation?
+
+\subsection{Inverse Elasticity}
+
+We start written the model class for this problem. 
+We call our model \code{InverseElasticity}:
+\begin{lstlisting}
+from distributed import Model
+
+class InverseElasticity(Model):
+	def __init__(self, dim, domain, space, path):
+		pass
+\end{lstlisting}
+We add the following arguments to the initializer:
+\begin{lstlisting}
+def __init__(self, dim, domain, space, forces, ds_forces, ds1, dirbc_partial, dirbc_total, path):
+\end{lstlisting}
+
+
 
 \subsection{Compliance minimization}
 
@@ -558,7 +706,7 @@ $g = (0, 0, -4)$
 \label{fig:compliplus}
 \end{center}
 
-\subsection{Inverse Elasticity}
+
 
 \subsection{Heat Conduction}
 

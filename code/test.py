@@ -812,6 +812,7 @@ def test_06():
     md.runDP(
         niter = 200,
         dfactor = 1e-1,
+        lv_time = (1e-3, 1.0),
         cost_tol = 1e-1
     )
 

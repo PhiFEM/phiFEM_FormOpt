@@ -32,7 +32,7 @@ from dolfinx.fem import (
 )
 
 from ufl import (
-    SpatialCoordinate, Measure,
+    Form, SpatialCoordinate, Measure, Coefficient,
     TrialFunction, TestFunction,
     system, conditional,
     inner, grad, dot, sqrt, gt, lt
@@ -44,9 +44,9 @@ from abc import ABC, abstractmethod
 
 import numpy.typing as npt
 from typing import (
-    Any, List, Tuple, final, Callable
+    Union, List, Tuple, Callable, Sequence, final
 )
-from ufl.core.expr import Expr as ufl_expr
+from ufl.core.expr import Expr
 
 
 from plots import plot_domain
@@ -62,6 +62,11 @@ res_name = "results"
 ini_name = "initial"
 ext_name = "extensions"
 
+ScalarFunc = Callable[[npt.NDArray[np.float64]], float]
+VectorFunc = Callable[[npt.NDArray[np.float64]], npt.NDArray[np.float64]]
+GenericFunc = ScalarFunc | ScalarFunc
+
+
 class Model(ABC):
     """
     Base class for all user-defined models.
@@ -72,100 +77,190 @@ class Model(ABC):
     space: FunctionSpace
     path: Path
     
-    def __init__(self):
-        pass
+    @abstractmethod
+    def __init__(self, dim: int, domain: Mesh, space: FunctionSpace, path: Path):
+        """
+        Initializes the model.
+
+        Parameters
+        ----------
+        dim : int
+            Domain dimension.
+        domain : Mesh
+            Problem domain.
+        space : FunctionSpace
+            Space for the solution and test functions.
+        path : Path
+            Test path to save the results.
+        """
 
     @abstractmethod
     def pde(
-            self,
-            level_set_func
-        ) -> List[Tuple[ufl_expr, List[DirichletBC]]]:
+        self,
+        level_set_func: Function
+    ) -> List[Tuple[Expr, Sequence[DirichletBC]]] | List[Tuple[Expr, Sequence[DirichletBC], Expr, Coefficient, GenericFunc]]:
         """
-        Returns:
-            A list with elements of the form
-            (wk, bc) or (wk, bc, jac, unk, ini_func)
-        where
-        wk : weak formulation of a state equation
-        bc : the corresponding list of dirichlet boundary conditions
-        jac : jacobian of wk
-        unk : unknown in the nonlinear equation
-        ini_func : callable function to define the initial guess
+        Weak form of the partial differential equations.
+
+        Parameters
+        ----------
+        level_set_func : Function
+            Level set function.
+        
+        Returns
+        -------
+        List[Tuple[Expr, List[DirichletBC]]] | List[Tuple[Expr, List[DirichletBC], Expr, Coefficient, GenericFunc]]
+            List with elements of the form (`wk`, `bc`) or (`wk`, `bc`, `jac`, `unk`, `ini_func`),
+            corresponding to linear or nonlinear problems, respectively, where
+            
+            - `wk` is the weak formulation of a state equation,
+            - `bc` is a list with the dirichlet boundary conditions,
+            - `jac` is the jacobian of `wk`,
+            - `unk` is the unknown in the nonlinear equation,
+            - `ini_func` is a callable function that defines the initial guess.
         """
         pass
         
     @abstractmethod
     def adjoint(
-            self,
-            level_set_func,
-            states
-        ) -> List[Tuple[ufl_expr, List[DirichletBC]]]:
+        self,
+        level_set_func: Function,
+        states: List[Function]
+    ) -> List[Tuple[Expr, List[DirichletBC]]] | List[Tuple[Expr, Sequence[DirichletBC], Expr, Coefficient, GenericFunc]]:
         """
-        Returns:
-            A list with elements of the form
-            (wk, bc) or (wk, bc, jac, unk, ini_func)
-        where
-        wk : weak formulation of the state equation
-        bc : the corresponding list of dirichlet boundary conditions
-        jac : jacobian of wk
-        unk : unknown in the nonlinear equation
-        ini_func : callable function to define the initial guess
+        Weak form of the adjoint equations.
+
+        Parameters
+        ----------
+        level_set_func : Function
+            Level set function.
+        states: List[Function]
+            List of state solutions.
+        
+        Returns
+        -------
+        List[Tuple[Expr, List[DirichletBC]]] | List[Tuple[Expr, List[DirichletBC], Expr, Coefficient, GenericFunc]]
+            List with elements of the form (`wk`, `bc`) or (`wk`, `bc`, `jac`, `unk`, `ini_func`),
+            corresponding to linear or nonlinear problems, respectively, where
+            
+            - `wk` is the weak formulation of a adjoint equation,
+            - `bc` is a list with the dirichlet boundary conditions,
+            - `jac` is the jacobian of `wk`,
+            - `unk` is the unknown in the nonlinear equation,
+            - `ini_func` is a callable function that defines the initial guess.
         """
         pass
 
     @abstractmethod
     def cost(
-            self,
-            level_set_func,
-            states
-        ) -> ufl_expr:
+        self,
+        level_set_func: Function,
+        states: List[Function]
+    ) -> Expr:
         """
-        Returns the cost functional J
+        Cost functional `J`.
+
+        Parameters
+        ----------
+        level_set_func : Function
+            Level set function.
+        states: List[Function]
+            List of state solutions.
+        
+        Returns
+        -------
+        Expr
+            UFL expresion of the cost functional.
         """
         pass
     
     @abstractmethod
     def constraint(
-            self,
-            level_set_func,
-            states
-        ) -> List[ufl_expr]:
+        self,
+        level_set_func: Function,
+        states: List[Function]
+    ) -> List[Expr]:
         """
-        Returns:
-            [C0, C1, ...]
-        where
-        Cj : the form of the j-th equality constraint
+        Constraint functions `C = [C0, C1, ...]`.
+
+        Parameters
+        ----------
+        level_set_func : Function
+            Level set function.
+        states: List[Function]
+            List of state solutions.
+        
+        Returns
+        -------
+        List[Expr]
+            List with the UFL expressions of the constraint functions.
         """
         pass
     
     @abstractmethod
     def derivative(
-            self,
-            level_set_func,
-            states,
-            adjoints
-        ) -> Tuple[Tuple[ufl_expr, List[ufl_expr]], Tuple[ufl_expr, List[ufl_expr]]]:
+        self,
+        level_set_func: Function,
+        states: List[Function],
+        adjoints: List[Function]
+    ) -> Tuple[Tuple[Expr, List[Expr]], Tuple[Expr, List[Expr]]]:
         """
-        Returns:
+        Derivative components of the cost functional `J` and
+        the constraint functions `C = [C0, C1, ...]`.
+        
+        Parameters
+        ----------
+        level_set_func : Function
+            Level set function.
+        states : List[Function]
+            List of state solutions.
+        adjoints : List[Function]
+            List of adjoint solutions.
+        
+        Returns
+        -------
+        Tuple[Tuple[Expr, List[Expr]], Tuple[Expr, List[Expr]]]
+            Two tuples 
+           
             (S0_J, [S0_C0, S0_C1, ...]), (S1_J, [S1_C0, S1_C1, ...])
-        where
-        S0_J, S1_J   : derivative components of J
-        S0_Cj, S1_Cj : derivative components of Cj
+            
+            where
+            
+            `S0_J`, `S1_J` are the UFL expressions
+            of the derivative components of `J`;
+            
+            `S0_Ci`, `S1_Ci` are the UFL expressions
+            of the derivative components of `Ci`.
         """
         pass
     
     @abstractmethod
     def bilinear_form(
-            self,
-            velocity_func,
-            test_func
-        ) -> Tuple[ufl_expr, bool]:
+        self,
+        velocity_func: Function | TrialFunction,
+        test_func: Function | TestFunction
+    ) -> Tuple[Expr, bool]:
         """
-        Returns:
-            the bilinear form B
+        Bilinear form to compute the velocity field.
+
+        Parameters
+        ----------
+        velocity_func : Function | TrialFunction
+            The trial-like function used in the bilinear form.
+        test_func : Function | TestFunction
+            The test-like function used in the bilinear form.
+
+        Returns
+        -------
+        b : Expr
+            The UFL expression representing the bilinear form.
+        flag : bool
+            Whether a homogeneous Dirichlet boundary condition
+            should be applied (True) or not (False).
         """
         pass
     
-    def __verification(self, required_attrs: List[str]):
+    def __verification(self, required_attrs: List[str]) -> None:
         for attr in required_attrs:
             if not hasattr(self, attr):
                 raise NotImplementedError(
@@ -174,28 +269,30 @@ class Model(ABC):
     
     @final
     def create_initial_level(
-            self,
-            centers: npt.NDArray[np.float64],
-            radii: npt.NDArray[np.float64],
-            factor: float = 1.0,
-            ord: int = 2
-        ) -> None:
+        self,
+        centers: npt.NDArray[np.float64],
+        radii: npt.NDArray[np.float64],
+        factor: float = 1.0,
+        ord: int = 2
+    ) -> None:
         """
         Creates a level set funtion to be used as initial guess,
         with ball shaped holes determined by centers and radii.
 
-        Arguments
-        ---------
-        centers : numpy.ndarray
+        Parameters
+        ----------
+        centers : npt.NDArray[np.float64]
             Array of center coordinates
             of shape (N, 2) or (N, 3).
-        radii : numpy.ndarray 
+        radii : npt.NDArray[np.float64]
             Array of radii of shape (N,).
-        factor : float
+        factor : float, default=1.0
             Scaling factor, positive or negative.
-        ord : int
+            The default is 1.0, which implies a domain with holes.
+        ord : int, default=2
             Order of norm. Positive integer
-            grater than 1 or infinity (np.inf).
+            grater than 1 or infinity `np.inf`
+            The dafault is 2, which implies Euclidean norm.
         """
 
         self.ini_lvl = InitialLevel(centers, radii, factor, ord)
@@ -205,8 +302,8 @@ class Model(ABC):
         """
         Saves the initial level set function is a xdmf file.
 
-        Arguments
-        ---------
+        Parameters
+        ----------
         comm : MPI.Comm
             Communicator.
         """
@@ -223,26 +320,26 @@ class Model(ABC):
     
     @final
     def runDP(
-            self,
-            niter: int = 100,
-            dfactor: float = 1e-2,
-            lv_time: Tuple[float, float] = (1e-3, 1e-1),
-            lv_iter: Tuple[int, int] = (8, 16),
-            smooth: bool = False,
-            reinit_step: int | bool = False,
-            reinit_pars: Tuple[int, float] = (8, 1e-1),
-            start_to_check: int = 30,
-            ctrn_tol: float = 1e-2,
-            lgrn_tol: float = 1e-2,
-            cost_tol: float = 1e-2,
-            prev: int = 10,
-            random_pars: Tuple[int, float] = (26, 0.05)
-        ) -> None:
+        self,
+        niter: int = 100,
+        dfactor: float = 1e-2,
+        lv_time: Tuple[float, float] = (1e-3, 1e-1),
+        lv_iter: Tuple[int, int] = (8, 16),
+        smooth: bool = False,
+        reinit_step: int | bool = False,
+        reinit_pars: Tuple[int, float] = (8, 1e-1),
+        start_to_check: int = 30,
+        ctrn_tol: float = 1e-2,
+        lgrn_tol: float = 1e-2,
+        cost_tol: float = 1e-2,
+        prev: int = 10,
+        random_pars: Tuple[int, float] = (26, 0.05)
+    ) -> None:
         """
-        Data Parallelism
+        Data Parallelism.
         
-        Arguments
-        ---------
+        Parameters
+        ----------
         niter : int, default=100
             The number of iterations.
         dfactor : float, default=1e-2
@@ -299,23 +396,23 @@ class Model(ABC):
     
     @final
     def runTP(
-            self,
-            niter: int = 100,
-            reinit_step: int | bool = False,
-            reinit_pars: Tuple[int, float] = (8, 1e-2),
-            dfactor: float = 1e-2,
-            lv_time: Tuple[float, float] = (1e-3, 1.0),
-            lv_iter: Tuple[int, int] = (8, 14),
-            smooth: bool = False,
-            start_to_check: int = 30,
-            ctrn_tol: float = 1e-2,
-            lgrn_tol: float = 1e-2,
-            cost_tol: float = 1e-2,
-            prev: int = 10,
-            random_pars: Tuple[int, float] = (26, 0.05)
-        ) -> None:
+        self,
+        niter: int = 100,
+        dfactor: float = 1e-2,
+        lv_time: Tuple[float, float] = (1e-3, 1e-1),
+        lv_iter: Tuple[int, int] = (8, 16),
+        smooth: bool = False,
+        reinit_step: int | bool = False,
+        reinit_pars: Tuple[int, float] = (8, 1e-1),
+        start_to_check: int = 30,
+        ctrn_tol: float = 1e-2,
+        lgrn_tol: float = 1e-2,
+        cost_tol: float = 1e-2,
+        prev: int = 10,
+        random_pars: Tuple[int, float] = (26, 0.05)
+    ) -> None:
         """
-        Task Parallelism
+        Task Parallelism.
         """
         
         self.__verification(['dim', 'domain', 'space', 'path'])
@@ -328,22 +425,22 @@ class Model(ABC):
     
     @final
     def runMP(
-            self,
-            sub_comm: MPI.Comm,
-            niter: int = 100,
-            reinit_step: int | bool = False,
-            reinit_pars: Tuple[int, float] = (8, 1e-2),
-            dfactor: float = 1e-2,
-            lv_time: Tuple[float, float] = (1e-3, 1.0),
-            lv_iter: Tuple[int, int] = (8, 14),
-            smooth: bool = False,
-            start_to_check: int = 30,
-            ctrn_tol: float = 1e-2,
-            lgrn_tol: float = 1e-2,
-            cost_tol: float = 1e-2,
-            prev: int = 10,
-            random_pars: Tuple[int, float] = (26, 0.05)            
-        ) -> None:
+        self,
+        sub_comm: MPI.Comm,
+        niter: int = 100,
+        dfactor: float = 1e-2,
+        lv_time: Tuple[float, float] = (1e-3, 1e-1),
+        lv_iter: Tuple[int, int] = (8, 16),
+        smooth: bool = False,
+        reinit_step: int | bool = False,
+        reinit_pars: Tuple[int, float] = (8, 1e-1),
+        start_to_check: int = 30,
+        ctrn_tol: float = 1e-2,
+        lgrn_tol: float = 1e-2,
+        cost_tol: float = 1e-2,
+        prev: int = 10,
+        random_pars: Tuple[int, float] = (26, 0.05)
+    ) -> None:
         """
         Mix Parallelism
         """
@@ -366,7 +463,7 @@ class Subdomain:
     -----------
         domain : Mesh
             Problem domain.
-        cond_func : Callable[[npt.NDArray[np.float64]], List[ufl_expr]]
+        cond_func : Callable[[npt.NDArray[np.float64]], List[Expr]]
             Callable function that returns a list of
             ufl expressions of x (coordinate).
             For instance, the subdomain
@@ -396,7 +493,7 @@ class Subdomain:
     def __init__(
             self,
             domain: Mesh,
-            cond_func: Callable[[npt.NDArray[np.float64]], List[ufl_expr]]
+            cond_func: Callable[[npt.NDArray[np.float64]], List[Expr]]
         ):
         
         self.domain = domain
@@ -423,9 +520,21 @@ def region_of(domain: Mesh):
 
 class Save:
     """
-    Class to save "scalar" numerical
-    results: cost values, derivative norms,
-    Lagrange multipliers, etc.
+    This class saves "scalar" numerical results:
+    cost values, derivative norms, Lagrange multipliers, etc.
+
+    Attributes
+    ----------
+    cost : List[float]
+        List with cost values.
+    nder : List[float]
+        List with the derivative norms.
+    ppl_obj : PPL
+        Instance of PPL.
+     
+    Methods
+    -------
+
     """
 
     def __init__(self):
@@ -509,7 +618,7 @@ class InitialLevel:
             ord: int = 2
         ):
         """
-        Arguments
+        Parameters
         ---------
         centers : numpy.ndarray
             Array of center coordinates
@@ -636,7 +745,7 @@ def dirichlet_extension(
     Compute the Dirichlet extensions of a
     list of functions.
 
-    Arguments
+    Parameters
     ---------
     domain : Mesh
         Problem domain.
@@ -684,7 +793,7 @@ def build_gmsh_model_2d(
         quad = False
     ):
     """
-    Arguments
+    Parameters
     ---------
         vertices :
             ...
@@ -1113,7 +1222,30 @@ def create_space(domain, family, rank, degree = 1):
     return functionspace(domain, element)
 
 
-def build_solver(domain, bilinear_form, dirichlet_bcs):
+def build_solver(
+    domain: Mesh,
+    bilinear_form: Form,
+    dirichlet_bcs: Sequence[DirichletBC]
+) -> PETSc.KSP:
+    """
+    Build and configure a PETSc Krylov Subspace Solver
+    for a given bilinear form.
+
+    Parameters
+    ----------
+    domain : Mesh
+        Problem domain.
+    bilinear_form : Form
+        Bilinear form.
+    dirichlet_bcs : Sequence[DirichletBC]
+        A sequence of Dirichlet boundary conditions.
+
+    Returns
+    -------
+    KSP
+        A configured PETSc Krylov Subspace Solver.
+    """
+    
     A = assemble_matrix(bilinear_form, dirichlet_bcs)
     A.assemble()
     solver = PETSc.KSP().create(domain.comm)
@@ -1180,17 +1312,54 @@ def basic_solver(a, L, bcs, uh):
 
 class Velocity:
     """
-    Implements the velocity equation.
+    This class implements the velocity equation.
+
+    Attributes
+    ----------
+    biform : Form
+        Bilinear form.
+    liform : Form
+        Linear functional.
+    bc : List[DirichletBC]
+        List with the homogeneous Dirichlet condition.
+        Can be empty.
+    solver : PETSc.KSP
+        Krylov Subspace Solver
+    
+    Methods
+    -------
+    run(theta: Function) -> None
+        Solves the velocity equation.
     """
     
-    def __init__(self, dim, domain, space, biform, S0, S1):
+    def __init__(
+        self,
+        dim: int,
+        domain: Mesh, 
+        space: FunctionSpace, 
+        biform: Expr,
+        S0: Expr,
+        S1: Expr
+    ) -> None:
         """
-        dim :
-            domain dimension = velocity rank
-        domain :
-            2 or 3 dimensional mesh
-        space :
-            space of vector-valued functions
+        Sets up the linear system for the velocity.
+        Since the bilinear part remains unchanged,
+        it is compiled here.
+
+        Parameters
+        ----------
+        dim : int
+            Domain dimension.
+        domain : Mesh
+            Problem domain.
+        space : FunctionSpace
+            Space of functions.
+        biform : Expr
+            Bilinear form.
+        S0 : Expr
+            S0 component of the shape derivative.
+        S1 : Expr
+            S1 component of the shape derivative.
         """
         
         th = TrialFunction(space)
@@ -1200,29 +1369,20 @@ class Velocity:
         b, dirbc = biform(th, xi)
 
         self.biform = form(b)
-        self.liform = form(
-            -(dot(S0, xi) + inner(S1, grad(xi)))*dx
-        )
+        self.liform = form(-(dot(S0, xi) + inner(S1, grad(xi)))*dx)
+        self.bc = []
+
+        if dirbc:
+            # domain dimension = velocity rank
+            self.bc = homogeneus_boundary(domain, space, dim, dim)           
         
-        if dirbc == True:
-            args = (domain, space, dim, dim)
-            self.bc = homogeneus_boundary(*args)
-        elif dirbc == False:
-            self.bc = []
-        else:
-            pass
-            # Implements a Dirichlet
-            # boundary condition in 2D.
-            # tags, marks = dirbc
-            # self.bc = homogeneous_dirichlet(
-            #     domain, space, tags, marks, dim
-            # )
-        
-        self.solver = build_solver(
-            domain, self.biform, self.bc
-        )
+        self.solver = build_solver(domain, self.biform, self.bc)
     
-    def run(self, theta):
+    def run(self, theta: Function) -> None:
+        """
+        Solves the velocity equation.
+        Only the linear part must be updated.
+        """
         
         L = assemble_vector(self.liform)
         apply_lifting(L, [self.biform], [self.bc])
@@ -1238,13 +1398,56 @@ class Velocity:
 
 class Level:
     """
-    Implements the Petrov Galerkin
-    and Crank-Nicolson methods to solve
+    This class implements the Petrov Galerkin and
+    Crank-Nicolson methods to solve
     the transport equation corresponding
     to the level set function.
+
+    Attributes
+    ----------
+    dt : Constant
+        Time step.
+    domain : Mesh
+        Problem domain.
+    a : Form
+        Bilinear part of the iterative scheme.
+    L : Form
+        Linear part of the iterative scheme.
+    
+    Methods
+    -------
+    run(phi: Function, steps: int, tend: float) -> None
+        Run the iterative method over a fixed number of time steps.
     """
 
-    def __init__(self, domain, space, phi, tht, diam2, smooth):
+    def __init__(
+        self,
+        domain: Mesh,
+        space: FunctionSpace,
+        phi: Function,
+        tht: Function,
+        diam2: float,
+        smooth: bool
+    ) -> None:
+        """
+        Set up the iterative method to solve the level set equation.
+        The bilinear and linear parts are pre-compiled.
+
+        Parameters
+        ----------
+        domain : Mesh
+            Problem domain.
+        space : FunctionSpace
+            Space of functions.
+        phi : Function
+            Level set function.
+        tht : Function
+            Velocity function.
+        diam2 : float
+            Square of the mesh diameter.
+        smooth : bool
+            Flag to add diffusion.
+        """
 
         self.domain = domain
         self.dt = const(domain, 0.0)
@@ -1253,16 +1456,18 @@ class Level:
         u = TrialFunction(space)
         v = TestFunction(space)
 
+        # Petrov-Galerkin test function
         tau = 2.0*sqrt(
             1.0/self.dt**2 +
             dot(tht, tht)/diam2
         )
         new_v = v + dot(grad(v), tht)/tau
 
-        # Weak formulation
+        # Crank-Nicolson weak formulation
         a = (u + (self.dt/2.0)*dot(tht, grad(u)))*new_v*dx
         L = (phi - (self.dt/2.0)*dot(tht, grad(phi)))*new_v*dx
 
+        # Add diffusion
         if smooth:
             a += (self.dt/2.0)*diam2*dot(grad(u), grad(v))*dx
             L -= (self.dt/2.0)*diam2*dot(grad(phi), grad(v))*dx
@@ -1271,7 +1476,22 @@ class Level:
         self.a = form(a)
         self.L = form(L)
 
-    def run(self, phi, steps, tend):
+    def run(self, phi: Function, steps: int, tend: float) -> None:
+        """
+        Run the iterative method over a fixed number of time steps.
+        Since the bilinear part remains unchanged across iterations,
+        it is compiled only once. Therefore, the linear part must be
+        correctly updated.
+
+        Parameters
+        ----------
+        phi : Function
+            Level set function.
+        steps : int
+            Number of time steps.
+        tend : float
+            Final time.
+        """
         
         self.dt.value = tend/steps
         
@@ -1296,50 +1516,124 @@ class Level:
 
 class Reinit:
     """
+    Implement the Petrov Galerkin and
+    two-step Adams-Bashforth methods to solve
+    the diffusive Eikonal equation with
+    fictitious time derivative.
+    
+    Attributes
+    ----------
+    dt : Constant
+        Time step.
+    phi_ini : Function
+        Store the initial level set function to be reinitialized.
+    phi_prev : Function
+        Store the previous iteration.
+    w : Function
+        Auxiliary function.
+    uh : Function
+        Solution function.
+    problem0 : LinearProblem
+        Solver used in the first iteration.
+    problem : LinearProblem
+        Solver used in subsequent iterations.
+    
+    Methods
+    -------
+    run(phi: Function, steps: int, tend: float) -> None
+        Run the iterative method over a fixed number of time steps.
     """
-    def __init__(self, domain, space, phi, diam2):
 
-        self.domain = domain
+    def __init__(
+        self,
+        domain: Mesh,
+        space: FunctionSpace,
+        phi: Function,
+        diam2: float
+    ) -> None:
+        """
+        Set up the reinitialization method.
+        Since the bilinear parts change across iterations
+        (due to the Petrov-Galerkin test function),
+        two solvers are created, which compile
+        the equations at each call.
+
+        Parameters
+        ----------
+        domain : Mesh
+            Problem domain.
+        space : FunctionSpace
+            Space of functions.
+        phi : Function
+            Level set function.
+        diam2 : float
+            Square of the mesh diameter.
+        """
+
         self.dt = const(domain, 0.0)
+        dx = Measure("dx", domain = domain)
+
         self.phi_ini = Function(space)
         self.phi_prev = Function(space)
+        
         self.uh = Function(space)
         self.w = Function(space)
-        dx = Measure("dx", domain = domain) 
 
+        # Sign function
         sign_phi_ini = self.phi_ini/sqrt(self.phi_ini**2 + diam2)
+        # Hamiltonian
         H = lambda p: sign_phi_ini*sqrt(dot(p, p))
+        # Gradient of H
         GradH = lambda p: sign_phi_ini*p/sqrt(dot(p, p))
 
         u = TrialFunction(space)
         v = TestFunction(space)
 
+        # Petrov-Galerkin test function
         tau = 2.0*sqrt(
             1.0/self.dt**2 +
-            dot(GradH(grad(phi)), GradH(grad(phi)))/diam2
-        )
+            sign_phi_ini**2/diam2
+        )        
         new_v = v + dot(grad(v), GradH(grad(phi)))/tau        
-                
-        a = u*new_v*dx #+ diam2*dot(grad(u),grad(v))*dx
+
+        # Adams-Bashforth weak formulation     
+        a = u*new_v*dx
         L = phi*new_v*dx
         L += self.dt*sign_phi_ini*new_v*dx 
         L += (self.dt/2.0)*(H(grad(self.phi_prev)) - 3.0*H(grad(phi)))*new_v*dx
+        # Add diffusion
         L += (self.dt/2.0)*diam2*dot(grad(self.phi_prev - 3.0*phi), grad(v))*dx
 
         self.problem = create_solver(
             form(a), form(L), [], self.uh
         )
 
+        # Explicit Euler weak formulation
         a0 = u*new_v*dx
         L0 = self.dt*sign_phi_ini*new_v*dx 
         L0 += (self.phi_ini - self.dt*H(grad(self.phi_ini)))*new_v*dx
+        # Add diffusion
         L0 -= self.dt*diam2*dot(grad(self.phi_ini), grad(v))*dx
 
         self.problem0 = create_solver(
             form(a0), form(L0), [], self.uh
         )
 
-    def run(self, phi, steps, tend):
+    def run(self, phi: Function, steps: int, tend: float) -> None:
+        """
+        Run the iterative method over a fixed number of time steps.
+        The solver for the first iteration is called only once,
+        and then the main solver is called at each time step. 
+
+        Parameters
+        ----------
+        phi : Function
+            Level set function.
+        steps : int
+            Number of time steps.
+        tend : float
+            Final time.
+        """
         
         self.dt.value = tend/steps
         self.phi_ini.interpolate(phi)
@@ -1522,7 +1816,7 @@ def homogeneous_dirichlet(domain, space, boundary_tags, mrks_dirichlet, rank_dim
     Creates homogeneous Dirichlet boundary conditions 
     over faces of dimension domain.geometry.dim - 1. 
     
-    Arguments
+    Parameters
         domain:
             The domain or mesh.
         space:
@@ -1641,7 +1935,7 @@ class LineSearch:
             noise: float = 0.05
         ):
         """
-        Arguments
+        Parameters
         ---------
         time_bounds:  List[float, float]
             Minimum and maximum allowed final times.
@@ -1661,7 +1955,7 @@ class LineSearch:
         """
         Power function to estimate the number of steps.
 
-        Arguments
+        Parameters
         ---------
         t: float
             Final time.
@@ -1682,7 +1976,7 @@ class LineSearch:
         Reference:
         https://docu.ngsolve.org/latest/i-tutorials/unit-7-optimization/01_Shape_Derivative_Levelset.html
 
-        Arguments
+        Parameters
         ---------
         derivative_norm : float
             Norm of the velocity field.
@@ -1742,7 +2036,7 @@ def dir_extension_from(
         comm: MPI.Comm,
         domain: Mesh,
         space: FunctionSpace,
-        pde: Callable[[Function], List[Tuple[ufl_expr, List[DirichletBC]]]],
+        pde: Callable[[Function], List[Tuple[Expr, List[DirichletBC]]]],
         func: Callable[[npt.NDArray[np.float64]], float],
         path: Path
     ):
@@ -1750,7 +2044,7 @@ def dir_extension_from(
     Calculate the Dirichlet extension of the solutions
     to a set of linear partial differential equations.
 
-    Arguments
+    Parameters
     ---------
         comm : MPI.Comm.
             Communicator.
@@ -1758,7 +2052,7 @@ def dir_extension_from(
             Problem domain.
         space : FunctionSpace
             Space of functions.
-        pde : Callable[[Function], List[Tuple[ufl_expr, List[DirichletBC]]]]
+        pde : Callable[[Function], List[Tuple[Expr, List[DirichletBC]]]]
             Linear partial differential equations.
         func : Callable[[npt.NDArray[np.float64]], float]
             Level set function.
@@ -1808,7 +2102,7 @@ class NonlinearSolverWrapper():
     
     def __init__(self, solver, u, initial):
         """
-        Arguments
+        Parameters
         ---------
         solver : dolfinx.nls.petsc.NewtonSolver
             Non-linear solver.

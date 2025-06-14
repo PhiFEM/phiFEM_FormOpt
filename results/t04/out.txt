@@ -9,7 +9,7 @@ Info    : 16527 elements
 Info    : Done reading '../results/t04/domain.msh'
 Info    : Done reading '../results/t04/domain.msh'
 
-	Multiple load cases (Task Parallelism)
+	Cantilever with two loads I (Task Parallelism)
 
 > Path = ../results/t04
 > Nbr of triangles = 16425
@@ -85,5 +85,5 @@ i =  67 | cost = 1.4358 | cstr = 1.0026 | nder = 1.3688 | steps = 11 | lagr = 2.
 i =  68 | cost = 1.4386 | cstr = 1.0016 | nder = 1.3679 | steps = 12 | lagr = 2.8625 | lm = 1.4217 | mu = 1.4186
 i =  69 | cost = 1.4391 | cstr = 0.9999 | nder = 1.3718 | steps = 13 | lagr = 2.8588 | lm = 1.4198 | mu = 1.4200
 > Stopping condition reached!
-> Assembly time = 6.761536206000073 s
-> Resolution time = 25.759205979999933 s
+> Assembly time = 5.440782562999999 s
+> Resolution time = 25.769007122999994 s

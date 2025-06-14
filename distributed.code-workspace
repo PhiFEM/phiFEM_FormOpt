@@ -5,12 +5,22 @@
 		},
 		{
 			"path": "tex"
+		},
+		{
+			"path": "docs"
 		}
 	],
 	"settings": {
 		"editor.minimap.enabled": false,
+		"[python]": {
+		  "editor.tabSize": 4,
+		  "editor.insertSpaces": true
+		},
+		"cSpell.language": "en",
+		"cSpell.enabled": true,
 		"cSpell.words": [
 			"Bashforth",
+			"Eikonal",
 			"mathbb",
 			"mathcal",
 			"mpirun",
