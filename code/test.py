@@ -612,7 +612,7 @@ def test_06():
     # Create the gmsh domain0.msh
     nbr_tri0 = dib.build_gmsh_model_2d(
         vertices, boundary_parts, 0.6*mesh_size,
-        curve = subdomain,
+        curves = [subdomain],
         filename = filename,
         plot = True
     )
@@ -901,7 +901,7 @@ def test_07():
 
     nbr_tri0 = dib.build_gmsh_model_2d(
         vertices, boundary_parts, 0.6*mesh_size,
-        curve = subdomain,
+        curves = [subdomain],
         filename = filename,
         plot = True
     )
@@ -1189,7 +1189,7 @@ def test_08():
 
     nbr_tri0 = dib.build_gmsh_model_2d(
         vertices, boundary_parts, 0.6*mesh_size,
-        curve = subdomain,
+        curves = [subdomain],
         filename = filename,
         plot = True
     )
@@ -1321,6 +1321,7 @@ def test_08():
         dim,
         rank_dim
     )
+    
     # Boundary to force application
     ds_parts = dib.marked_ds(
         domain,
@@ -1387,6 +1388,7 @@ def test_08():
         sub_comm,
         niter = 200,
         dfactor = 1e-1,
+        lv_time = (1e-3, 1.0),
         cost_tol = 1e-1
     )
 
@@ -2033,6 +2035,7 @@ def test_16():
     test_path = Path("../results/t16/")
     test_14(test_path, r = 100)
 
+
 def test_17(test_path = Path("../results/t17/"), vol = 0.3):
     
     dim = 2
@@ -2096,6 +2099,7 @@ def test_17(test_path = Path("../results/t17/"), vol = 0.3):
         dfactor = 0.1,
         smooth = True
     )
+
 
 def test_18():
     """
@@ -2223,6 +2227,287 @@ def test_18():
         smooth = True
     )
 
+
+def test_19():
+    """
+    Run: mpirun -np <nbr of processes> python test.py 06
+    For instance: mpirun -np 3 python test.py 06
+    """
+
+    test_name = "Elasticity inverse problem II (Data Parallelism)"
+    test_path = Path("../results/t19/")
+    dim = 2
+    rank_dim = 2
+    mesh_size = 0.015
+
+    # Data generation
+
+    def semi_ellipse(a, b, eps, npts):
+        """
+        Coordinates of a ellipse
+        crossing the x-axis
+        """
+        t_ = np.arcsin((b - eps)/b)
+        t = np.linspace(-t_, np.pi + t_, npts)
+        x = a*np.cos(t)
+        y = b*np.sin(t) + (b - eps)
+        return x, y
+    
+    npts = 80 # npts % 4 = 0
+    part = npts//4
+    
+    vertices = np.column_stack(
+        semi_ellipse(0.75, 0.5, 0.2, npts)
+    )
+    
+    dir_idx, dir_mkr = [npts], 1
+    bR_idx, bR_mkr = np.arange(1, part//2 + 1), 2
+    neu_idxA, neu_mkrA = part//2 + np.arange(1, part + 1), 3
+    neu_idxB, neu_mkrB = part//2 + np.arange(part + 1, 2*part + 1), 4
+    neu_idxC, neu_mkrC = part//2 + np.arange(2*part + 1, 3*part + 1), 5
+    bL_idx, bL_mkr = np.arange(part//2 + 3*part + 1, npts), 6
+    
+    boundary_parts = [
+        (dir_idx, dir_mkr, "dir"),
+        (bR_idx, bR_mkr, "bRight"),
+        (neu_idxA, neu_mkrA, "neuA"),
+        (neu_idxB, neu_mkrB, "neuB"),
+        (neu_idxC, neu_mkrC, "neuC"),
+        (bL_idx, bL_mkr, "bLeft"),
+    ]
+
+    def circle(n):
+        """
+        Coordinates of a bean to be used
+        as a subdomain.
+        """
+        r = 0.15
+        angle = np.linspace(0, 2*np.pi, n, endpoint = False)
+        x = r*np.cos(angle) - 0.3
+        y = r*np.sin(angle) + 0.3
+
+        return np.column_stack((x, y))
+
+    def rectangle():
+        """
+        Rectangle subdomain.
+        """
+        x = [0.05, 0.35, 0.35, 0.05]
+        y = [0.3, 0.3, 0.6, 0.6]
+
+        return np.column_stack((x, y))
+
+    subdomain1 = circle(50)
+    subdomain2 = rectangle()
+    
+    if rank == 0:
+        np.save(
+            test_path / "subdomain1.npy",
+            subdomain1
+        )
+
+        np.save(
+            test_path / "subdomain2.npy",
+            subdomain2
+        )
+    
+    filename = test_path / "domain0.msh"
+
+    # Create the gmsh domain0.msh
+    nbr_tri0 = dib.build_gmsh_model_2d(
+        vertices, boundary_parts, 0.6*mesh_size,
+        curves = [subdomain1, subdomain2],
+        filename = filename,
+        plot = True
+    )
+
+    # Read the domain0
+    output = dib.read_gmsh(
+        filename, comm, dim = 2
+    )
+    
+    domain0, _, boundary_tags = output
+
+    # Set all connectivities on domain0
+    dib.all_connectivities(domain0)
+
+    # Space for data generation
+    space0 = dib.create_space(domain0, "CG", rank_dim)
+    # Forces
+    forces = [
+        (-1.0, -1.0),
+        (0.0, -1.0),
+        (1.0, -1.0)
+    ]
+
+    # Dirichlet boundary conditions
+    dirbc_partial = dib.homogeneous_dirichlet(
+        domain0,
+        space0,
+        boundary_tags,
+        [dir_mkr],
+        rank_dim
+    )
+    
+    dirbc_total = dib.homogeneus_boundary(
+        domain0,
+        space0,
+        dim,
+        rank_dim
+    )
+
+    # Create measures to apply Neumman condition
+    ds_parts = dib.marked_ds(
+        domain0,
+        boundary_tags,
+        [bR_mkr, neu_mkrA, neu_mkrB, neu_mkrC, bL_mkr]
+    )
+
+    # Measures for force application
+    ds_forces = [ds_parts[1], ds_parts[2], ds_parts[3]] 
+    
+    # Measure for adjoint problem
+    ds1 = sum(ds_parts[1:], start = ds_parts[0])
+
+    # Instance for data generation
+    # We need the method pde0
+    md0 = InverseElasticity(
+        dim, domain0, space0, forces, ds_forces, ds1,
+        dirbc_partial, dirbc_total, test_path
+    )
+
+    def subdomains(x):
+        
+        r = 0.15
+        phi1 = np.sqrt((x[0] + 0.3)**2 + (x[1] - 0.3)**2) - r  
+
+        phi2 = np.maximum(np.abs(x[0] - 0.2), np.abs(x[1] - 0.45)) - 0.15
+
+        return np.minimum(phi1, phi2)
+    
+    # Dirichlet extensions
+    extensions = dib.dir_extension_from(
+        comm, domain0, space0,
+        md0.pde0, subdomains,
+        test_path
+    )
+
+    npts = 80 # npts % 4 = 0
+    part = npts//4
+    
+    vertices = np.column_stack(
+        semi_ellipse(0.75, 0.5, 0.2, npts)
+    )
+    
+    dir_idx, dir_mkr = [npts], 1
+    bR_idx, bR_mkr = np.arange(1, part//2 + 1), 2
+    neu_idxA, neu_mkrA = part//2 + np.arange(1, part + 1), 3
+    neu_idxB, neu_mkrB = part//2 + np.arange(part + 1, 2*part + 1), 4
+    neu_idxC, neu_mkrC = part//2 + np.arange(2*part + 1, 3*part + 1), 5
+    bL_idx, bL_mkr = np.arange(part//2 + 3*part + 1, npts), 6
+    
+    boundary_parts = [
+        (dir_idx, dir_mkr, "dir"),
+        (bR_idx, bR_mkr, "bRight"),
+        (neu_idxA, neu_mkrA, "neuA"),
+        (neu_idxB, neu_mkrB, "neuB"),
+        (neu_idxC, neu_mkrC, "neuC"),
+        (bL_idx, bL_mkr, "bLeft"),
+    ]
+
+    # Create gmsh domain for Data Parallelism
+    output = dib.create_domain_2d_DP(
+        vertices, boundary_parts, mesh_size,
+        path = test_path,
+        plot = True
+    )
+    
+    domain, nbr_tri, boundary_tags = output
+
+    if rank == 0:
+        print("\n\t" + test_name + "\n")
+        print(f"> Path = {test_path}")
+        print(f"> Nbr of triangles = {nbr_tri}")
+        print(f"> Nbr of triangles for data generation = {nbr_tri0}")
+
+    # Space
+    space = dib.create_space(domain, "CG", rank_dim)
+    # Dirichlet boundary conditions
+    dirbc_partial = dib.homogeneous_dirichlet(
+        domain,
+        space,
+        boundary_tags,
+        [dir_mkr],
+        rank_dim
+    )
+    dirbc_total = dib.homogeneus_boundary(
+        domain,
+        space,
+        dim,
+        rank_dim
+    )
+    # Boundary to apply Neumann conditions
+    ds_parts = dib.marked_ds(
+        domain,
+        boundary_tags,
+        [bR_mkr, neu_mkrA, neu_mkrB, neu_mkrC, bL_mkr]
+    )
+
+    ds_forces = [ds_parts[1], ds_parts[2], ds_parts[3]] 
+    ds1 = sum(ds_parts[1:], start = ds_parts[0])
+    forces = [
+        (-1.0, -1.0),
+        (0.0, -1.0),
+        (1.0, -1.0)
+    ]
+    # Create the model
+    md = InverseElasticity(
+        dim, domain, space, forces, ds_forces, ds1,
+        dirbc_partial, dirbc_total, test_path
+    )
+
+    # Space for interpolation (degree = 2)
+    g_space = dib.create_space(
+        domain, "CG", rank_dim, degree = 2
+    )
+    # Interpolation between different spaces
+    # from different domains
+    g_funcs = dib.space_interpolation(
+        from_space = space0,
+        funcs = extensions,
+        to_space = g_space
+    )
+
+    # To save as P1 functions
+    g_space_1 = dib.create_space(domain, "CG", rank_dim)
+    g_funcs_1 = dib.interpolate(
+        funcs = g_funcs,
+        to_space = g_space_1,
+        name = "g"
+    )
+    dib.save_functions(
+        comm, domain,
+        g_funcs_1, test_path / "gP1.xdmf"
+    )
+
+    md.gs = g_funcs
+
+    # Initial guess: centers and radii
+    centers = np.array([(-0.3, 0.3), (0.2, 0.4)])
+    radii = np.array([0.15, 0.15])
+
+    md.create_initial_level(centers, radii, factor = -1.0, ord=1)
+    md.save_initial_level(comm)
+    
+    # Run Data Parallelism
+    md.runDP(
+        niter = 200,
+        dfactor = 1e-1,
+        lv_time = (1e-3, 1.0),
+        cost_tol = 1e-3
+    )
+
+
 test_functions = {
     "01": test_01,
     "02": test_02,
@@ -2241,7 +2526,8 @@ test_functions = {
     "15": test_15,
     "16": test_16,
     "17": test_17,
-    "18": test_18
+    "18": test_18,
+    "19": test_19
 }
 
 def main():

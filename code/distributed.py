@@ -8,6 +8,8 @@ from dolfinx.io import gmshio, XDMFFile
 import numpy as np
 from numpy.linalg import norm as Norm
 
+from dolfinx.cpp.mesh import MeshTags_int32
+
 from dolfinx.mesh import (
     Mesh, locate_entities_boundary,
     exterior_facet_indices, meshtags
@@ -37,6 +39,8 @@ from ufl import (
     system, conditional,
     inner, grad, dot, sqrt, gt, lt
 )
+
+from ufl.argument import Argument
 
 from dolfinx.nls.petsc import NewtonSolver
 
@@ -237,8 +241,8 @@ class Model(ABC):
     @abstractmethod
     def bilinear_form(
         self,
-        velocity_func: Function | TrialFunction,
-        test_func: Function | TestFunction
+        velocity_func: Function | Argument,
+        test_func: Function | Argument
     ) -> Tuple[Expr, bool]:
         """
         Bilinear form to compute the velocity field.
@@ -336,7 +340,7 @@ class Model(ABC):
         random_pars: Tuple[int, float] = (26, 0.05)
     ) -> None:
         """
-        Data Parallelism.
+        This method implements Data Parallelism.
         
         Parameters
         ----------
@@ -412,7 +416,54 @@ class Model(ABC):
         random_pars: Tuple[int, float] = (26, 0.05)
     ) -> None:
         """
-        Task Parallelism.
+        This method implements Task Parallelism.
+
+        Parameters
+        ----------
+        niter : int, default=100
+            The number of iterations.
+        dfactor : float, default=1e-2
+            A positive scaling factor applied to the inverse of
+            the derivative norm to estimate the final integration
+            time of the level set equation.
+            Values <= 1 are recommended.
+        lv_time : Tuple[float, float], default=(1e-3, 1e-1)
+            A tuple with the minimum and maximum time allowed
+            for the integration of the level set equation.
+        lv_iter : Tuple[int, int], default=(8, 16)
+            A tuple with the minimum and maximum number of
+            iterations allowed for the integration of the level
+            set equation.
+        smooth : bool, default=True
+            If True, a diffusion term is added to the level set
+            equation; if False, the equation is solved without
+            diffusion.
+        reinit_step : bool or int, default=False
+            A positive integer to apply the reinitialization
+            method when the condition
+                iter>start_to_check and reinit_step%iter == 0
+            holds. If False, no reinitialization is applied.
+        reinit_pars : Tuple[int, float], default=(8, 1e-1)
+            A tuple with the number of iterations and the final
+            time for the integration of the reinitialization
+            equation. The argument reinit_step must be a
+            positive integer.
+        start_to_check : int, default=30,
+            A positive integer to verify the stopping condition
+            when current iteration > start_to_check. 
+        ctrn_tol : float, default=1e-2,
+            Tolerance for the error constraint.
+        lgrn_tol : float, default=1e-2,
+            Tolerance for the relative difference
+            of the <prev>-th previous Lagrangian values. 
+        cost_tol : float, default=1e-2,
+            Tolerance for the relative difference
+            of the <prev>-th previous cost values. 
+        prev : int, default=10,
+            Number of previous values to verify the tolerance
+            of the Lagrangian and cost functionals.
+        random_pars : Tuple[int, float], default=(26, 0.05)
+            Seed and noise level in the line search method.
         """
         
         self.__verification(['dim', 'domain', 'space', 'path'])
@@ -442,7 +493,56 @@ class Model(ABC):
         random_pars: Tuple[int, float] = (26, 0.05)
     ) -> None:
         """
-        Mix Parallelism
+        This method implements Mix Parallelism.
+
+        Parameters
+        ----------
+        sub_comm : MPI.Comm
+            Subcommunicator from `Split`.
+        niter : int, default=100
+            The number of iterations.
+        dfactor : float, default=1e-2
+            A positive scaling factor applied to the inverse of
+            the derivative norm to estimate the final integration
+            time of the level set equation.
+            Values <= 1 are recommended.
+        lv_time : Tuple[float, float], default=(1e-3, 1e-1)
+            A tuple with the minimum and maximum time allowed
+            for the integration of the level set equation.
+        lv_iter : Tuple[int, int], default=(8, 16)
+            A tuple with the minimum and maximum number of
+            iterations allowed for the integration of the level
+            set equation.
+        smooth : bool, default=True
+            If True, a diffusion term is added to the level set
+            equation; if False, the equation is solved without
+            diffusion.
+        reinit_step : bool or int, default=False
+            A positive integer to apply the reinitialization
+            method when the condition
+                iter>start_to_check and reinit_step%iter == 0
+            holds. If False, no reinitialization is applied.
+        reinit_pars : Tuple[int, float], default=(8, 1e-1)
+            A tuple with the number of iterations and the final
+            time for the integration of the reinitialization
+            equation. The argument reinit_step must be a
+            positive integer.
+        start_to_check : int, default=30,
+            A positive integer to verify the stopping condition
+            when current iteration > start_to_check. 
+        ctrn_tol : float, default=1e-2,
+            Tolerance for the error constraint.
+        lgrn_tol : float, default=1e-2,
+            Tolerance for the relative difference
+            of the <prev>-th previous Lagrangian values. 
+        cost_tol : float, default=1e-2,
+            Tolerance for the relative difference
+            of the <prev>-th previous cost values. 
+        prev : int, default=10,
+            Number of previous values to verify the tolerance
+            of the Lagrangian and cost functionals.
+        random_pars : Tuple[int, float], default=(26, 0.05)
+            Seed and noise level in the line search method.
         """
         
         self.__verification(['dim', 'domain', 'space', 'path'])
@@ -788,7 +888,7 @@ def dirichlet_extension(
 
 def build_gmsh_model_2d(
         vertices, boundary_parts, mesh_size,
-        holes = None, curve = None,
+        holes = None, curves = None,
         filename = "domain.msh", plot = False,
         quad = False
     ):
@@ -905,44 +1005,84 @@ def build_gmsh_model_2d(
         # Code for add a interior curve that define
         # a subdomain. This part is used to generate
         # data for inverse problems.
-
-        if curve is not None:
-            L = len(curve)
-            gmsh.model.geo.addPoint(
-                x = curve[0][0],
-                y = curve[0][1], 
-                z = 0., 
-                meshSize = 0.1,
-                tag = last_tag + 1
-            )
-            for l in range(1, L):
+        if curves is not None:
+            for curve in curves:
+                L = len(curve)
                 gmsh.model.geo.addPoint(
-                    x = curve[l][0],
-                    y = curve[l][1],
-                    z = 0.,
+                    x = curve[0][0],
+                    y = curve[0][1], 
+                    z = 0.0, 
                     meshSize = 0.1,
-                    tag = last_tag + l + 1
+                    tag = last_tag + 1
                 )
+                for l in range(1, L):
+                    gmsh.model.geo.addPoint(
+                        x = curve[l][0],
+                        y = curve[l][1],
+                        z = 0.0,
+                        meshSize = 0.1,
+                        tag = last_tag + l + 1
+                    )
+                    gmsh.model.geo.addLine(
+                        startTag = last_tag + l,
+                        endTag = last_tag + l + 1, 
+                        tag = last_tag + l
+                    )
                 gmsh.model.geo.addLine(
-                    startTag = last_tag + l,
-                    endTag = last_tag + l + 1, 
-                    tag = last_tag + l
+                    startTag = last_tag + L,
+                    endTag = last_tag + 1,
+                    tag = last_tag + L
                 )
-            gmsh.model.geo.addLine(
-                startTag = last_tag + L,
-                endTag = last_tag + 1,
-                tag = last_tag + L
-            )
 
-            # We have to synchronize before embedding the lines
-            gmsh.model.geo.synchronize()
+                # We have to synchronize before embedding the lines
+                gmsh.model.geo.synchronize()
+            
+                gmsh.model.mesh.embed(
+                    dim = 1, 
+                    tags = [last_tag + l for l in range(1, L + 1)],
+                    inDim = 2,
+                    inTag = surface_tag
+                )
+                last_tag = last_tag + L
+
+
+        # if curve is not None:
+        #     L = len(curve)
+        #     gmsh.model.geo.addPoint(
+        #         x = curve[0][0],
+        #         y = curve[0][1], 
+        #         z = 0., 
+        #         meshSize = 0.1,
+        #         tag = last_tag + 1
+        #     )
+        #     for l in range(1, L):
+        #         gmsh.model.geo.addPoint(
+        #             x = curve[l][0],
+        #             y = curve[l][1],
+        #             z = 0.,
+        #             meshSize = 0.1,
+        #             tag = last_tag + l + 1
+        #         )
+        #         gmsh.model.geo.addLine(
+        #             startTag = last_tag + l,
+        #             endTag = last_tag + l + 1, 
+        #             tag = last_tag + l
+        #         )
+        #     gmsh.model.geo.addLine(
+        #         startTag = last_tag + L,
+        #         endTag = last_tag + 1,
+        #         tag = last_tag + L
+        #     )
+
+        #     # We have to synchronize before embedding the lines
+        #     gmsh.model.geo.synchronize()
         
-            gmsh.model.mesh.embed(
-                dim = 1, 
-                tags = [last_tag + l for l in range(1, L + 1)],
-                inDim = 2,
-                inTag = surface_tag
-            )
+        #     gmsh.model.mesh.embed(
+        #         dim = 1, 
+        #         tags = [last_tag + l for l in range(1, L + 1)],
+        #         inDim = 2,
+        #         inTag = surface_tag
+        #     )
         
         gmsh.model.geo.synchronize()
 
@@ -1049,31 +1189,95 @@ def save_initial_level(comm, domain, func, filename):
     intp_func = interpolate([func], space, name = "phi")
     save_functions(comm, domain, intp_func, filename)
 
-def read_gmsh(filename, comm, dim):
+def read_gmsh(
+    filename: Path,
+    comm: MPI.Comm,
+    dim: int
+) -> Tuple[Mesh, MeshTags_int32, MeshTags_int32]:
+    """
+    This is a simple wrapper around `dolfinx.io.gmshio.read_from_msh`
+    to read a mesh from a Gmsh `.msh` file.
+    
+    Parameters
+    ----------
+    filename : Path
+        Path to the Gmsh `.msh` file.
+    comm : MPI.Comm
+        The MPI communicator.
+    dim : int
+        The geometric dimension of the mesh.
+
+    Returns
+    -------
+    mesh : Mesh
+        The mesh object.
+    cell_tags : MeshTags_int32
+        Integer tags associated with mesh cells (top-dimensional entities).
+    facet_tags : MeshTags_int32
+        Integer tags associated with mesh facets (co-dimension 1 entities).
+    """
     return gmshio.read_from_msh(filename, comm = comm, gdim = dim)
 
 def create_domain_2d_DP(
-        vertices, boundary_parts, mesh_size,
-        holes = None, curve = None, path = Path(""),
-        plot = False
-    ):
+    vertices: npt.NDArray[np.float64],
+    boundary_parts: List[Tuple[Sequence[int], int, str]],
+    mesh_size: float,
+    holes: List[npt.NDArray[np.float64]] = None,
+    curve: List[npt.NDArray[np.float64]] = None,
+    path: Path = Path(""),
+    plot: bool = False
+) -> Tuple[Mesh, int, MeshTags_int32]:
     """
-    Create a polygonal domain with holes
-    and an interior closed curve for
-    data parallelism (DP).
+    This function creates a polygonal domain with holes
+    and interior closed curves for data parallelism (DP).
+    The finite elements are triangles.
+
+    Parameters
+    ----------
+    vertices : npt.NDArray[np.float64]
+        Nx2 numpy array of vertices to define the polygonal domain.
+    boundary_parts : List[Tuple[Sequence[int], int, str]]
+        List of tuples of the form
+        (`Array`, `Mark`, `Name`)
+        to define boundary subsets.
+        `Array` contains the indices (starting at 1) of the
+        boundary faces.
+        `Mark` is a representative integer grater then 0
+        to identify the subset.
+        `Name` is just a tag name for the subset. 
+    mesh_size : float
+        Representative mesh size for Gmsh.
+    holes : List[npt.NDArray[np.float64]]
+        List of Nx2 numpy arrays to define holes.
+    curve : List[npt.NDArray[np.float64]]
+        List of Nx2 numpy arrays to define interior curves.
+    path : Path
+        Test path.
+    plot : bool
+        Flag to plot the mesh.
+
+    Returns
+    -------
+    domain : Mesh
+        Problem domain.
+    nbr_triangles : int
+        Number of finite elements (triangles).
+    facet_tags : MeshTags_int32
+        Integer tags associated with mesh facets (co-dimension 1 entities).    
     """
+
     filename = path / f"{dom_name}.msh"
     nbr_triangles = build_gmsh_model_2d(
         vertices, boundary_parts, mesh_size,
         holes, curve, filename, plot
     )
     
-    # Read and save (.xmdf format) the mesh ======================
+    # To read and save the mesh (.xmdf format) =====================
     comm.barrier()
     domain, _, facet_tags = read_gmsh(filename, comm, 2)
     all_connectivities(domain)
     save_domain(comm, domain, path / f"{dom_name}.xdmf", facet_tags)
-    # ============================================================
+    # ==============================================================
     
     # Plot the distributed mesh
     plot_domain(domain, f"rank = {rank}")
@@ -1110,7 +1314,8 @@ def create_domain_2d_TP(
     return domain, nbr_triangles, facet_tags
 
 def create_domain_2d_MP(
-        sub_comm, color,
+        sub_comm: MPI.Comm,
+        color: int,
         vertices, boundary_parts, mesh_size,
         holes = None, curve = None, path = "",
         plot = False
@@ -1127,13 +1332,13 @@ def create_domain_2d_MP(
         holes, curve, filename, plot
     )
 
-    # Read and save (.xmdf format) the mesh ==============================
+    # Read and save (.xmdf format) the mesh ================================
     comm.barrier()
     domain, _, facet_tags = read_gmsh(filename, sub_comm, 2)
     all_connectivities(domain)
     if color == 0:
         save_domain(sub_comm, domain, path / f"{dom_name}.xdmf", facet_tags)
-    # ====================================================================
+    # ======================================================================
 
     # Plot the identically distributed meshes
     plot_domain(domain, f"rank = {rank}")
@@ -1188,23 +1393,28 @@ def get_diam2(dim, vol, nfems):
     else:
         raise ValueError(f"> Unsupported dimension: {dim}.")
     
-def create_space(domain, family, rank, degree = 1):
+def create_space(
+    domain: Mesh,
+    family: str,
+    rank: int | tuple,
+    degree: int = 1
+) -> FunctionSpace:
     """
-    Creates a function space.
+    Wrapper to create a function space.
 
     Parameters
     ----------
-    domain:
-        The domain.
-    family:
+    domain : Mesh
+        Problem domain.
+    family : str
         The finite element type.
-    degree:
-        The polynomial degree.
-    rank: 
+    rank : int | tuple
         - 0 for scalar functions.
         - An integer `n` for vector-valued functions.
         - A tuple `(m, n, ...)` for tensor-valued functions.
-
+    degree : int
+        The polynomial degree.
+    
     Returns
     -------
         A function space in the given domain.
@@ -1212,9 +1422,11 @@ def create_space(domain, family, rank, degree = 1):
 
     if rank == 1:  # Scalar function space
         element = (family, degree)
-    elif isinstance(rank, int):  # Vector-valued function space of dimension `rank`
+    elif isinstance(rank, int): 
+        # Vector-valued function space of dimension `rank`
         element = (family, degree, (rank, ))
-    elif isinstance(rank, tuple):  # Tensor-valued function space of arbitrary shape
+    elif isinstance(rank, tuple): 
+        # Tensor-valued function space of arbitrary shape
         element = (family, degree, rank)
     else:
         raise ValueError("The 'rank' argument must be an integer or a tuple.")
@@ -1811,28 +2023,35 @@ def dirichlet_with_values(domain, space, boundary_tags, mrks_dirichlet, values):
     
     return bcs
 
-def homogeneous_dirichlet(domain, space, boundary_tags, mrks_dirichlet, rank_dimension):
+def homogeneous_dirichlet(
+    domain: Mesh,
+    space: FunctionSpace,
+    boundary_tags,
+    mrks_dirichlet,
+    rank_dimension
+) -> List[DirichletBC]:
     """
     Creates homogeneous Dirichlet boundary conditions 
     over faces of dimension domain.geometry.dim - 1. 
     
     Parameters
-        domain:
-            The domain or mesh.
-        space:
-            The function space.
-        tags:
-            Markers for the facets of the domain.
-        mrks_dirichlet (List[int]):
-            List of tags corresponding to
-            Dirichlet boundary conditions.
-        rank_dimension:
-            1 scalar, 2 vector 2D, 3 vector 3D,
-            (3, 3) rank-2 tensor in 3D, etc
+    ----------
+    domain:
+        Problem domain.
+    space:
+        Space of functions.
+    tags:
+        Markers for the facets of the domain.
+    mrks_dirichlet (List[int]):
+        List of tags corresponding to
+        Dirichlet boundary conditions.
+    rank_dimension:
+        1 scalar, 2 vector 2D, 3 vector 3D,
+        (3, 3) rank-2 tensor in 3D, etc
 
-    Returns:
+    Returns
+    -------
         A list of Dirichlet boundary conditions.
-    
     """
     if rank_dimension == 1:
         u_zero = PETSc.ScalarType(0)
@@ -2041,7 +2260,7 @@ def dir_extension_from(
         path: Path
     ):
     """
-    Calculate the Dirichlet extension of the solutions
+    It computes the Dirichlet extension of the solutions
     to a set of linear partial differential equations.
 
     Parameters

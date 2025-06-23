@@ -1,5 +1,4 @@
 \documentclass[a4paper, oneside]{article} 
-
 \usepackage[a4paper, left=17mm, right=17mm, top=25mm, bottom=25mm]{geometry}
 \usepackage{amsfonts}
 \usepackage{amsmath}
@@ -11,9 +10,13 @@
 \usepackage{dsfont}
 \usepackage{xparse}
 \usepackage{caption}
-
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{color}
 \usepackage{listings}
 \usepackage{xcolor}
+\usepackage{enumitem}
+
 \lstset{
   language=Python,
   basicstyle=\ttfamily\scriptsize,
@@ -32,7 +35,12 @@
   xleftmargin=1pt,
   framexleftmargin=1pt,
   aboveskip=1em,
-  belowskip=1em
+  belowskip=1em,
+% Color settings
+  keywordstyle=\color{blue!70!black}\bfseries,
+  commentstyle=\color{green!50!black}\itshape,
+  stringstyle=\color{red!60!black},
+  identifierstyle=\color{black},
 }
 
 
@@ -107,19 +115,22 @@ for instance the inverse problem in elasticity. One could add another
 subsection with another model problem, for instance heat equation,
 where one would just show the result with the tensors $S_1,S_0$.
 
-\textbf{Inverse Problem in Linear Elasticity.}
-Let $\Gamma_0$, $\Gamma_1$ subsets of $\Gamma$. 
-The stress and symmetric strain tensors are given by
-\begin{equation*}
-	\sigma(w)=2\mu\,\epsilon(w)+\lambda(\nabla\cdot w)I,\quad  \epsilon(w)=\frac{Dw+{Dw}^{\top}}{2}.
-\end{equation*}
+\textbf{Inverse problem.}
+Let $\Gamma_0$, $\Gamma_1$ subsets of $\Gamma$ such that $\Gamma=\Gamma_1\cup\Gamma_2$.
 Let $H_{\Gamma_0}(\mathcal{D})^d$ be the space of functions
 \begin{equation*}
-	H_{\Gamma_0}(\mathcal{D})^d\coloneqq\left\{ u\in H(\mathcal{D})^{d}\mid u|_{\Gamma_0}=\boldsymbol{0}\right\} 
+H_{\Gamma_0}(\mathcal{D})^d\coloneqq\left\{ u\in H(\mathcal{D})^{d}\mid u|_{\Gamma_0}=\boldsymbol{0}\right\} 
 \end{equation*}
-The optimization problem reads:
+The strain and stress tensors are given by
+\begin{equation*}
+	\epsilon(w)=\frac{Dw+{Dw}^{\top}}{2},\quad\sigma(w)=2\mu\,\epsilon(w)+\lambda(\nabla\cdot w)I,
+\end{equation*}
+where $\mu$ and $\lambda$ are the Lam\'e parameters.
+Let $f$ and $g$ vector-valued functions defined on $\Gamma_1$.
+The shape optimization problem reads:
 \begin{equation} \label{eq:InvProb}
 	\min_{\Omega \subset \mathcal{D}}
+	J(\Omega) = 
 	\frac{\alpha}{2}\int_{\mathcal{D}}\left|u-v\right|^{2} + 
 	\frac{\beta}{2}\int_{\Gamma_{1}}\left|u-v\right|^{2}
 \end{equation}
@@ -128,8 +139,7 @@ where $u$ and $v$ are the solutions to
 	\begin{array}{rcl}
     -\mathrm{div} A_{\Omega} \sigma(u) = 0 & \text{in} & \mathcal{D} \\
                                 u = 0 & \text{on} & \Gamma_{0} \\
-                 A_{\Omega} \sigma(u)n = f & \text{on} & \Gamma_{1} \\
-                 A_{\Omega} \sigma(u)n = 0 & \text{on} & \Gamma \setminus (\Gamma_{1} \cup \Gamma_{1})                     
+                 A_{\Omega} \sigma(u)n = f & \text{on} & \Gamma_{1}                     
 	\end{array}	
 \end{equation}
 and
@@ -137,17 +147,22 @@ and
 	\begin{array}{rcl}
     -\mathrm{div} A_{\Omega} \sigma(v) = 0 & \text{in} & \mathcal{D} \\
                                 v = 0 & \text{on} & \Gamma_{0} \\
-                                v = g & \text{on} & \Gamma_{1} \\
-            A_{\Omega} \sigma(v)n = 0 & \text{on} & \Gamma \setminus (\Gamma_{1} \cup \Gamma_{1})    
+                                v = g & \text{on} & \Gamma_{1}     
 	\end{array}
 \end{equation}
-respectively. The weak formulation of \eqref{eq:f-prob} reads:
+respectively.
+Observe that $u$ and $v$ depend on $\Omega$ due to the presence of $A_\Omega$ in the above equations.
+
+\textbf{The state and adjoint problems.}
+Now we write the weak formulations of \eqref{eq:f-prob} and \eqref{eq:g-prob},
+and of their corresponding adjoint problems.
+The weak formulation of \eqref{eq:f-prob} reads:
 Find $u \in  H^1_{\Gamma_0}(\mathcal{D})^d$ such that
 \begin{equation} \label{eq:w-f}
 	\int_{\mathcal{D}} A_{\Omega}\sigma(u):\epsilon(w) =
 	\int_{\Gamma_1} f \cdot w
 	\quad
-	\forall \, w \in  H^1_{\Gamma_0}(\mathcal{D})^d
+	\forall \, w \in  H^1_{\Gamma_0}(\mathcal{D})^d.
 \end{equation}
 By extending $g$ to the whole domain,
 the weak formulation of \eqref{eq:g-prob}
@@ -157,56 +172,82 @@ Find $v \in  H^1_{\Gamma_0}(\mathcal{D})^d$ such that
 \begin{equation} \label{eq:w-g}
 	\int_{\mathcal{D}} A_{\Omega}\sigma(v + g):\epsilon(w) = 0
 	\quad
-	\forall \, w \in  H^1_{\Gamma_0}(\mathcal{D})^d
+	\forall \, w \in  H^1_{\Gamma_0}(\mathcal{D})^d.
 \end{equation}
-From \eqref{eq:w-f} and \eqref{eq:w-g},
+Thus, ${u + g}$ solves \eqref{eq:g-prob}.
+Considering the cost functional in \eqref{eq:InvProb}
+and the weak formulations, we write
 the Lagrangian functional for \eqref{eq:InvProb}
-is defined by
+as follows:
 \begin{equation} \label{eq:elastic_lag}
-	\mathcal{L}(\Omega,\varphi, \psi, \rho, \varrho) =
+	\mathcal{L}(\Omega, \varphi, \psi, \rho, \varrho) =
 	\mathcal{L}_{\mathrm{cost}} +
 	\mathcal{L}_{\mathrm{state}} +
-	\mathcal{L}_{\mathrm{adjoint}}
+	\mathcal{L}_{\mathrm{adjoint}},
 \end{equation}
+with
 \begin{align*}
-	\mathcal{L}_{\mathrm{cost}}    &= \frac{\alpha}{2}\int_{\mathcal{D}} \left|\varphi-\psi - g\right|^{2} + \frac{\beta}{2}\int_{\Gamma_{1}} \left|\varphi - g \right|^{2} \\
-	\mathcal{L}_{\mathrm{state}}   &= \int_{\mathcal{D}} A_{\Omega} \sigma(\varphi) : \epsilon(\rho) - \int_{\Gamma_{1}} f \cdot \rho \\
-	\mathcal{L}_{\mathrm{adjoint}} &= \int_{\mathcal{D}} A_{\Omega} \sigma(\psi + g) : \epsilon(\varrho)
+	\mathcal{L}_{\mathrm{cost}}    &= \frac{\alpha}{2}\int_{\mathcal{D}} \left|\varphi-\psi - g\right|^{2} + \frac{\beta}{2}\int_{\Gamma_{1}} \left|\varphi - g \right|^{2}, \\
+	\mathcal{L}_{\mathrm{state}}   &= \int_{\mathcal{D}} A_{\Omega} \sigma(\varphi) : \epsilon(\rho) - \int_{\Gamma_{1}} f \cdot \rho, \quad\text{and}\\
+	\mathcal{L}_{\mathrm{adjoint}} &= \int_{\mathcal{D}} A_{\Omega} \sigma(\psi + g) : \epsilon(\varrho),
 \end{align*}
-Deriving $\mathcal{L}$, we obtain the adjoint equations
+where $\Omega\subset\mathcal{D}$ and $\varphi, \psi, \rho, \varrho$ are function in $H^1_{\Gamma_0}(\mathcal{D})^d$.
+By computing $\partial_{\phi}\mathcal{L}(u,v,p,q)(r)=0$ we obtain the first adjoint problem:
+Find $p \in  H^1_{\Gamma_0}(\mathcal{D})^d$ such that
 \begin{align*} \label{eq:f-adj}
 \int_{\mathcal{D}} A_{\Omega}\sigma(p):\epsilon(r) & = -\alpha \int_{\mathcal{D}} (u-v-g) \cdot r \\
 &\quad -\beta \int_{\Gamma_1} (u - g) \cdot r \quad
-\forall \, r \in  H^1_{\Gamma_0}(\mathcal{D})^d	\nonumber
+\forall \, r \in  H^1_{\Gamma_0}(\mathcal{D})^d.
 \end{align*}
-and
+Now from $\partial_{\varphi}\mathcal{L}(u,v,p,q)(r)=0$ we obtain the second adjoint problem:
+Find $q \in  H^1_{\Gamma_0}(\mathcal{D})^d$ such that
 \begin{equation*} \label{eq:g-adj}
 	\int_{\mathcal{D}} A_{\Omega}\sigma(q):\epsilon(r) =
 	\alpha \int_{\mathcal{D}} (u-v-g) \cdot r \quad \forall \, r \in  H^1_0(\mathcal{D})^d.
 \end{equation*}
-In order to obtain the shape derivative of $J$, we define
+
+\textbf{Shape derivative components.}
+In order to obtain the shape derivative of of the cost functional, we define
+the so-called shape-Lagrangian as
 \begin{align*}
 	& \mathcal{G}(t,\varphi,\psi,\rho,\varrho) \coloneqq\\
 	& \mathcal{L}\left(\Omega_{t},\varphi\circ T_{t}^{-1},\psi\circ T_{t}^{-1},\rho\circ T_{t}^{-1},\varrho\circ T_{t}^{-1}\right)
 \end{align*}
-Applying the change of variable $x \mapsto T_t(x)$,
+for all $t\in[0, t_1]$ and all $\varphi,\psi,\rho,\varrho$ in $H^1_{\Gamma_0}(\mathcal{D})^d$.
+For $t\in[0, t_1]$ and $w \in H^1(\mathcal{D})^d$, let
 \begin{equation*}
+	E(t,w)\coloneqq\frac{Dw\,DT_{t}^{-1}+(Dw\,DT_{t}^{-1})^{\top}}{2}.
+\end{equation*}
+It holds that $E(t,w) = \epsilon\left(w\circ T_{t}^{-1}\right)\circ T_{t}$.
+In particular, $E(0, w) = \epsilon(w)$.
+On the other hand, recall that $\sigma = \mathrm{C}\epsilon$,
+where $\mathrm{C}$ is the 4-index stiffness tensor associated to
+$\lambda$ and $\mu$. 
+Applying the change of variable $x \mapsto T_t(x)$, we have
+\begin{equation}
 	\mathcal{G}(t,\varphi,\psi,\rho,\varrho) =
 	\mathcal{G}_{\mathrm{cost}} +
 	\mathcal{G}_{\mathrm{state}} +
 	\mathcal{G}_{\mathrm{adjoint}}
-\end{equation*}
+\end{equation}
+with
 \begin{align*}
-	\mathcal{G}_{\mathrm{cost}}    &= \frac{\alpha}{2}\int_{\mathcal{D}}\left|\phi-\varphi-g\circ T_{t}\right|^{2}\xi(t)+\frac{\beta}{2}\int_{\Gamma_{1}}\left|\phi-g\right|^{2} \\
-	\mathcal{G}_{\mathrm{state}}   &= \int_{\mathcal{D}}A_{\Omega}E(t,\phi):E(t,\rho)\xi(t)-\int_{\Gamma_{1}}f\cdot\rho \\
-	\mathcal{G}_{\mathrm{adjoint}} &= \int_{\mathcal{D}}A_{\Omega}E(t,\varphi + g\circ T_{t}):E(t,\varrho)\xi(t)
+	\mathcal{G}_{\mathrm{cost}}    &= \frac{\alpha}{2}\int_{\mathcal{D}}\left|\phi-\varphi-g\circ T_{t}\right|^{2}\xi(t)+\frac{\beta}{2}\int_{\Gamma_{1}}\left|\phi-g\right|^{2}, \\
+	\mathcal{G}_{\mathrm{state}}   &= \int_{\mathcal{D}}A_{\Omega}\mathrm{C}E(t,\phi):E(t,\rho)\xi(t)-\int_{\Gamma_{1}}f\cdot\rho, \quad \text{and}\\
+	\mathcal{G}_{\mathrm{adjoint}} &= \int_{\mathcal{D}}A_{\Omega}\mathrm{C}E(t,\varphi + g\circ T_{t}):E(t,\varrho)\xi(t).
 \end{align*}
-Since
+Using the fact that
 \begin{equation}
 	dJ(\Omega; \theta) = \partial_{t}\mathcal{G}(0, u, v, p, q),
 \end{equation}
-we derivate $\mathcal{G}$ with respect to $t$ and
-evaluate it at $(0,u,v,p,q)$ to obtain
+and the formulas
+\begin{equation}
+	\mathrm{C}M:N = M\vcentcolon\mathrm{C}N \quad \forall\,M,N\in\mathds{R}^{d\times d}
+\end{equation}
+\begin{equation}
+	\partial_t E(0,w) = -\frac{Dw\,D\theta + (Dw\,D\theta)^\top}{2}
+\end{equation}
+we obtain
 \begin{equation}
 	dJ(\Omega; \theta) = \int_{\mathcal{D}} S_0^J \cdot \theta + S_1^J : D\theta 
 \end{equation}
@@ -223,29 +264,113 @@ and
 			  & \quad + A_{\Omega} \left({Dv}^{\top}\sigma(q) + {Dq}^{\top}\sigma(v+g)\right),
 \end{align*}
 respectively.
-In addition, it is necessary to choose a bilinear form
-in order to find the velocity field to compute the level set function.
-We choose $B:H^1(\mathcal{D})^d \times H^1(\mathcal{D})^d \rightarrow \mathds{R}$
+
+\textbf{Decent direction.}
+In addition, it is necessary to choose a positive bilinear form
+in order to find an velocity field to compute the level set function.
+We choose $B:H_{0}^1(\mathcal{D})^d \times H_{0}^1(\mathcal{D})^d \rightarrow \mathds{R}$
 defined by
 \begin{equation}
-	B(\theta, \xi) = \int_{\mathcal{D}} {10}^{-1}\theta \cdot \xi + D\theta : D\xi 
-\end{equation}
-Find $\theta \in H^1(\mathcal{D})^d$ such that
-\begin{equation}
-	B(\theta, \xi) = - dJ(\Omega; \xi) \quad \forall\, \xi\in H^1(\mathcal{D})^d.
+	B(\theta, \xi) = \int_{\mathcal{D}} {10}^{-1}\theta \cdot \xi + D\theta : D\xi .
 \end{equation}
 %%%%%%%%%%%%%%%%%%%%%%%
 \section{Numerical implementation}
 %%%%%%%%%%%%%%%%%%%%%%%
+\begin{algorithm}[H]
+\caption{Basic Level Set Algorithm}
+\small
+\begin{algorithmic}[1]
+\State \textbf{Initialization:} Choose an initial $\phi^0$.
+\For{$k = 0, 1, 2, \dots$ until convergence}
+	\State Define $\Omega^i = \left\{x\in\mathcal{D}\mid \phi^i(x)<0\right\}$.
+    \State Solve the \textbf{state} problems with $\Omega^i$.
+	\Statex \hspace{3em} Let $U$ be the solutions.
+    \State Solve the \textbf{adjoint} problems with $\Omega^i$ and $U$.
+	\Statex \hspace{3em} Let $P$ be the solutions.
+	\State Use $\Omega^i$ and $U$ to calculate the \textbf{cost} value.
+	\State Use $\Omega^i$ and $U$ to calculate the \textbf{constraint} error.
+	\State Verify convergence.
+	\State Use $\Omega^i$, $U$, $P$ to construct the derivative components
+	\Statex \hspace{1.2em} $S_0^{J}$, $S_1^{J}$ (cost) and $S_0^{C}$, $S_1^{C}$ (constraint).
+	\State Solve the \textbf{velocity} equation with $S_0^{J}$, $S_1^{J}$, $S_0^{C}$, $S_1^{C}$.
+	\Statex \hspace{3em} Let $\theta$ be the solution.
+	\State Solve the \textbf{transport} equation with $\theta$.
+	\Statex \hspace{3em} Let $\phi^{i+1}$ be the solution.
+\EndFor
+\end{algorithmic}
+\end{algorithm}
 
-%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Toolbox structure}
-%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Here explain how the toolbox is organized.
-The folder ``Models'' will contain the files for each model. One for inverse problem in elasticity, one for heat equation, etc ... For each model, what changes is the PDEs, the geometric configuration such as boundary conditions and domain, and the tensors $S_1,S_0$.
-
+The folder ``Models'' will contain the files for each model.
+One for inverse problem in elasticity, one for heat equation, etc ... For each model, what changes is the PDEs, the geometric configuration such as boundary conditions and domain, and the tensors $S_1,S_0$.
 The folder ``Shape'' (?) will contain the files for the shape optimization, this includes in particular the file for the level set method.
+
+The Python module \code{distributed.py} was developed
+to apply the level set method to shape optimization problems.
+It implements parallelism and uses the distributed
+form of the shape derivative. The main classes included
+in \code{distributed.py} are the following:
+
+\begin{itemize}[left=0.0em]
+
+\item \code{Model}: This is an abstract class for the problem equations.
+It serves as a model for user-defined classes which must contain
+the weak formulations of the state and adjoint equations,
+the cost functional, the constraints,
+the distributed shape derivative components, and
+the bilinear form for the velocity, written with exclusively with
+UFL and native Python functions.
+
+\item \code{Velocity}: This class implements the numerical method
+that solves the velocity equation. It uses the shape derivative
+components defined on the model class.
+
+\item \code{Level}: It provides the level set function at each
+iteration by solving a diffusive version of the transport equation.
+The main input is the velocity field.
+
+\item \code{InitialLevel}: This class creates the initial
+level set function from a set of centers and radii.
+
+\item \code{PPL}: It implements the Lagrangian method
+used to deal with the constraints.
+
+\end{itemize}
+
+The following are some help functions also included
+in our module:
+
+\begin{itemize}[left=0.0em]
+\item \code{create\_domain\_2d\_<DP|TP|MP>}:
+This function uses Gmsh to create 2D polygonal domains 
+from a set of vertices, along with marked
+boundaries. Interior holes and curves
+are allowed. \code{DP|TP|MP} refers to the
+parallelism paradigm.
+
+\item \code{create\_space}: It is wrapper to create a function space.
+
+\item \code{homogeneous\_dirichlet}: We use this function
+to creates homogeneous Dirichlet boundary conditions
+over faces of dimension $d - 1$.
+
+\item \code{dir\_extension\_from}: It computes
+the Dirichlet extension of the solutions corresponding
+to a set of partial differential equations.
+\end{itemize}
+
+The usage of the \code{distributed} module comprises
+the following stages:
+\begin{enumerate}
+	\item Creation of a model class with the problem equations.
+	\item Definition of the domain, space, and boundary conditions.
+	\item Model initialization and execution.
+\end{enumerate}
+In all these stages, the parallelism paradigm must be considered.
 
 \subsection{Model construction}
 We start by creating a subclass of \code{Model} class
@@ -303,16 +428,34 @@ UFL and native Python functions. Details of the input and outputs of these metho
 can be view in the documentation of the \code{Model} class. 
 
 
-%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Parallelization}
-%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Here we explain the two modes of parallelization, the mesh and the sources,
 and how the user can play with that. Explain the splitting and the colors.
 
 Cite some parts of the codes to explain that.
 
-Data parallelism, Task parallelism, and Mix parallelism (a mix of previous ones)  
+Our module supports three parallelism paradigms:
+Data parallelism, Task parallelism, and a combination of these
+called Mix parallelism.
+
+Data parallelism refers to solve the problem in a mesh
+that is distributed on several processes. All the weak formulations
+are solved on the this distributed mesh.
+
+In the Task parallelism paradigm each state equation is solved
+in a processes, and then, the same applies to each adjoint equation.
+It is necessary to have the a copy of the same mesh in each processes.
+The velocity field and the level set function are computed
+in the processes 0.
+
+The Mix parallelism paradigm combines the previous ones by
+solving each state equation in a mesh that is distributed in
+a group of subprocesses. The adjoint equations are solving in the same 
+way, while velocity field and the level set function are computed
+in first group of subprocesses.
 
 %%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Augmented Lagrangian}
@@ -627,8 +770,9 @@ Here we need to decide which examples we want to show. Inverse elasticity 2D or 
 
 \subsection{Inverse Elasticity}
 
-We start written the model class for this problem. 
+We start by writing the model class for this problem. 
 We call our model \code{InverseElasticity}:
+
 \begin{lstlisting}
 from distributed import Model
 
@@ -636,12 +780,243 @@ class InverseElasticity(Model):
 	def __init__(self, dim, domain, space, path):
 		pass
 \end{lstlisting}
-We add the following arguments to the initializer:
+
+In addition to the mandatory parameters
+\code{dim}, \code{domain}, \code{space}, and \code{path},
+we add the following to the initializer:
+
 \begin{lstlisting}
 def __init__(self, dim, domain, space, forces, ds_forces, ds1, dirbc_partial, dirbc_total, path):
 \end{lstlisting}
 
+\code{forces} and \code{ds\_forces} are lists with the forces $f$ and the surfaces of application, respectively.
+\code{ds1} correspond to the surface $\Gamma_1$.
+\code{dirbc\_partial} and \code{dirbc\_total} are homogeneous Dirichlet conditions for $\Gamma_0$ and $\Gamma$.
+Note: although in the equations $f$ is applied over $\Gamma_1$, 
+here we consider \code{ds\_forces} because we assume $f=\textbf{0}$ over a subset of $\Gamma_1$.
 
+In \code{\_\_init\_\_} are defined the objects that will be used to write the problem equation.
+For instance, the functions $\sigma(w)$, $\epsilon(w)$, and $A_\Omega(x)$: 
+\begin{lstlisting}
+self.sigma = lambda w: (
+	lm*nabla_div(w)*self.Id + 2.0*mu*self.epsilon(w)
+)
+self.epsilon = lambda w: sym(grad(w))
+self.A = lambda w: conditional(lt(w, 0.0), 10.0, 1.0)
+\end{lstlisting}
+
+\begin{lstlisting}
+def f_prob(self, u, w, phi, f, df):
+	# f-problem
+	su = self.sigma(u)
+	ew = self.epsilon(w)
+	W = self.A(phi)*inner(su, ew)*self.dx
+	W -= dot(f, w)*df
+
+	return [W, self.bcF]
+\end{lstlisting}
+
+\begin{lstlisting}
+def g_prob(self, v, w, phi, g):
+	# g-problem
+	sv = self.sigma(v)
+	sg = self.sigma(g)
+	ew = self.epsilon(w)
+	W = self.A(phi)*inner(sv, ew)*self.dx
+	W += self.A(phi)*inner(sg, ew)*self.dx
+	
+	return [W, self.bcG]
+\end{lstlisting}
+
+\begin{lstlisting}
+def pde(self, phi):
+	a = TrialFunction(self.space)
+	b = TestFunction(self.space)
+	zipf = zip(self.fs, self.dfs)
+	F = [self.f_prob(a,b,phi,f,df) for f, df in zipf]
+	G = [self.g_prob(a,b,phi,g) for g in self.gs]
+
+	return F + G
+\end{lstlisting}
+
+\begin{lstlisting}
+def cost(self, phi, U):
+	uvg = zip(U[:self.N], U[self.N:], self.gs)
+	ug = zip(U[:self.N], self.gs)
+	Ja = [dot(u-v-g,u-v-g)*self.dx for u,v,g in uvg]
+	Jb = [dot(u-g,u-g)*self.ds1 for u,g in ug]
+
+	return 0.5*sum(Ja) + 0.5*sum(Jb)
+\end{lstlisting}
+
+\begin{lstlisting}
+def constraint(self, phi, U):
+	return []
+\end{lstlisting}
+
+\begin{lstlisting}
+def S0(self, u, v, q, g, phi):
+	i, j, k = indices(3)
+	sq = self.sigma(q)
+	eg = self.epsilon(g)
+	s0a = grad(g).T*(u-v-g)
+	s0b = as_vector(sq[i,j]*(grad(eg))[i,j,k], (k))
+	
+	return -0.5*s0a + self.A(phi)*s0b	
+\end{lstlisting}
+
+\begin{lstlisting}
+def S1(self, u, v, p, q, g, phi):
+	su = self.sigma(u)
+	sp = self.sigma(p)
+	sq = self.sigma(q)
+	svg = self.sigma(v + g)
+	ep = self.epsilon(p)
+	eq = self.epsilon(q)
+	uvg = u - v - g
+	s1a = inner(su, ep) + inner(svg, eq)
+	s1a = 0.5*dot(uvg, uvg)/2.0 + self.A(phi)*s1a
+	s1b = grad(u).T*sp + grad(p).T*su 
+	s1b += grad(v).T*sq + grad(q).T*svg
+
+	return s1a*self.Id - self.A(phi)*s1b
+\end{lstlisting}
+
+\begin{lstlisting}
+def derivative(self, phi, U, P):
+	fu = U[:self.N]
+	gv = U[self.N:]
+	fp = P[:self.N]
+	gq = P[self.N:]
+	uvqg = zip(fu, gv, gq, self.gs)
+	uvpqg = zip(fu, gv, fp, gq, self.gs)
+	S0 = [
+		self.S0(u, v, q, g, phi)
+		for u, v, q, g in uvqg
+	]
+	S1 = [
+		self.S1(u, v, p, q, g, phi)
+		for u, v, p, q, g in uvpqg
+	]
+
+	return (sum(S0), []), (sum(S1), [])
+\end{lstlisting}
+    
+\begin{lstlisting}
+def bilinear_form(self, th, xi):
+    biform = 0.1*dot(th, xi)*self.dx
+	biform += inner(grad(th), grad(xi))*self.dx
+    
+	return biform, True
+\end{lstlisting}
+
+\begin{lstlisting}
+comm = MPI.COMM_WORLD
+rank = comm.rank
+size = comm.size
+\end{lstlisting}
+
+\begin{lstlisting}
+nbr_groups = 6
+# size%nbr_groups = 0
+color = rank * nbr_groups // size
+sub_comm = comm.Split(color, rank)
+\end{lstlisting}
+
+\begin{lstlisting}
+test_path = Path("../results/t08/")
+dim = 2
+rank_dim = 2
+mesh_size = 0.015
+\end{lstlisting}
+
+\begin{lstlisting}
+npts = 80
+part = npts//4
+
+vertices = np.column_stack(
+	semi_ellipse(0.75, 0.5, 0.2, npts)
+)
+
+dir_idx, dir_mkr = [npts], 1
+bR_idx = np.arange(1,part//2+1)
+bL_idx = np.arange(part//2+3*part+1, npts)
+bR_mkr, bL_mkr = 2, 6
+neu_idxA = part//2 + np.arange(1, part+1)
+neu_idxB = part//2 + np.arange(part+1, 2*part+1)
+neu_idxC = part//2 + np.arange(2*part+1, 3*part+1)
+neu_mkrA, neu_mkrB, neu_mkrC = 3, 4, 5
+bL_idx = np.arange(part//2+3*part+1, npts)
+
+boundary_parts = [
+	(dir_idx, dir_mkr, "dir"),
+	(bR_idx, bR_mkr, "bRight"),
+	(bL_idx, bL_mkr, "bLeft"),
+	(neu_idxA, neu_mkrA, "neuA"),
+	(neu_idxB, neu_mkrB, "neuB"),
+	(neu_idxC, neu_mkrC, "neuC")
+]
+\end{lstlisting}
+
+\begin{lstlisting}
+output = dib.create_domain_2d_MP(
+	sub_comm, color,
+	vertices, boundary_parts, mesh_size,
+	path = test_path, plot = True
+)
+domain, nbr_tri, boundary_tags = output	
+\end{lstlisting}
+
+\begin{lstlisting}
+space = dib.create_space(domain, "CG", rank_dim)
+dirbc_partial = dib.homogeneous_dirichlet(
+	domain, space, boundary_tags, [dir_mkr], rank_dim
+)
+dirbc_total = dib.homogeneus_boundary(
+	domain, space, dim, rank_dim
+)
+\end{lstlisting}
+
+\begin{lstlisting}
+ds_parts = dib.marked_ds(
+	domain, boundary_tags,
+	[bR_mkr, neu_mkrA, neu_mkrB, neu_mkrC, bL_mkr]
+)
+ds_forces = [ds_parts[1], ds_parts[2], ds_parts[3]] 
+ds1 = sum(ds_parts[1:], start = ds_parts[0])
+forces = [(-1.0, -1.0), (0.0, -1.0), (1.0, -1.0)]
+\end{lstlisting}
+
+\begin{lstlisting}
+md = InverseElasticity(
+	dim, domain, space, forces, ds_forces, ds1,
+	dirbc_partial, dirbc_total, test_path
+)
+\end{lstlisting}
+
+\begin{lstlisting}
+md.gs = dib.get_funcs_from(g_space, g_values[sub_comm.rank])
+\end{lstlisting}
+
+\begin{lstlisting}
+centers = np.array([(0.0, 0.4)])
+radii = np.array([0.15])
+md.create_initial_level(centers, radii, -1.0)
+\end{lstlisting}
+
+\begin{lstlisting}
+md.runMP(
+	sub_comm,
+	niter = 200,
+	dfactor = 1e-1,
+	lv_time = (1e-3, 1.0),
+	cost_tol = 1e-1
+)
+\end{lstlisting}
+
+\begin{lstlisting}
+mpirun -np 12 python test.py 08
+\end{lstlisting}
 
 \subsection{Compliance minimization}
 

@@ -239,22 +239,23 @@ class InverseElasticity(Model):
         self.space = space
         self.path = path
         
-        self.dx = Measure("dx", domain = domain)
         self.fs = [as_vector(f) for f in forces]
         self.dfs = ds_forces
         self.bcF = dirbc_partial
         self.bcG = dirbc_total
-        self.gs = []
         self.ds1 = ds1
+        
+        self.gs = []
         self.N = len(self.fs)
+        self.dx = Measure("dx", domain = domain)
 
         E, nu = 1.0, 0.3
-        lmbda = E*nu/(1.0 + nu)/(1.0 - 2.0*nu)
+        lm = E*nu/(1.0 + nu)/(1.0 - 2.0*nu)
         mu = E/2.0/(1.0 + nu)
         self.zero_vec = as_vector(dim*[0.0])
         self.Id = Identity(dim)
         self.epsilon = lambda w: sym(grad(w))
-        self.sigma = lambda w: lmbda*nabla_div(w)*self.Id + 2.0*mu*self.epsilon(w)
+        self.sigma = lambda w: lm*nabla_div(w)*self.Id + 2.0*mu*self.epsilon(w)
         self.A = lambda w: conditional(lt(w, 0.0), 10.0, 1.0)
         self.alpha = 1.0
         self.beta = 1.0
@@ -358,10 +359,10 @@ class InverseElasticity(Model):
         sq = self.sigma(q)
         eg = self.epsilon(g)
         
-        s0i = grad(g).T*(u - v - g)
-        s0j = as_vector(sq[i, j]*(grad(eg))[i, j, k], (k))
+        s0a = grad(g).T*(u - v - g)
+        s0b = as_vector(sq[i, j]*(grad(eg))[i, j, k], (k))
         
-        return -self.alpha*s0i + self.A(phi)*s0j
+        return -self.alpha*s0a + self.A(phi)*s0b
 
     def S1(self, u, v, p, q, g, phi):
 
@@ -397,7 +398,12 @@ class InverseElasticity(Model):
         return (sum(S0), []), (sum(S1), [])
     
     def bilinear_form(self, th, xi):
-        biform = 0.1*dot(th, xi)*self.dx + inner(grad(th), grad(xi))*self.dx
+        # Bilinear form to compute the velocity,
+        # with Homogeneous Dirichlet boundary condition
+        
+        biform = 0.1*dot(th, xi)*self.dx
+        biform += inner(grad(th), grad(xi))*self.dx
+        
         return biform, True
 
 

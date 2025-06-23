@@ -1,0 +1,158 @@
+Info    : Reading '../results/t08/domain0.msh'...
+Info    : 281 entities
+Info    : 19336 nodes
+Info    : 38670 elements
+Info    : Done reading '../results/t08/domain0.msh'
+Info    : Reading '../results/t08/domain.msh'...
+Info    : 161 entities
+Info    : Reading '../results/t08/domain.msh'...
+Info    : Reading '../results/t08/domain.msh'...
+Info    : 161 entities
+Info    : 161 entities
+Info    : 6503 nodes
+Info    : Reading '../results/t08/domain.msh'...
+Info    : Reading '../results/t08/domain.msh'...
+Info    : Reading '../results/t08/domain.msh'...
+Info    : 161 entities
+Info    : 161 entities
+Info    : 161 entities
+Info    : 6503 nodes
+Info    : 6503 nodes
+Info    : 6503 nodes
+Info    : 6503 nodes
+Info    : 6503 nodes
+Info    : 13004 elements
+Info    : 13004 elements
+Info    : 13004 elements
+Info    : 13004 elements
+Info    : 13004 elements
+Info    : 13004 elements
+Info    : Done reading '../results/t08/domain.msh'
+Info    : Done reading '../results/t08/domain.msh'
+Info    : Done reading '../results/t08/domain.msh'
+Info    : Done reading '../results/t08/domain.msh'
+Info    : Done reading '../results/t08/domain.msh'
+Info    : Done reading '../results/t08/domain.msh'
+
+	Elasticity inverse problem (Mix Parallelism)
+
+> Path = ../results/t08
+> Nbr of triangles = 12713
+> Nbr of triangles for data generation = 38193
+> Iterations:
+i =   0 | cost = 0.078866 | nder = 0.2614 | steps =  0 | 
+i =   1 | cost = 0.058445 | nder = 0.2578 | steps = 15 | 
+i =   2 | cost = 0.037846 | nder = 0.2207 | steps = 15 | 
+i =   3 | cost = 0.021100 | nder = 0.1745 | steps = 15 | 
+i =   4 | cost = 0.009909 | nder = 0.1089 | steps = 16 | 
+i =   5 | cost = 0.004045 | nder = 0.0361 | steps = 16 | 
+i =   6 | cost = 0.003185 | nder = 0.0227 | steps = 15 | 
+i =   7 | cost = 0.002781 | nder = 0.0202 | steps = 16 | 
+i =   8 | cost = 0.002476 | nder = 0.0172 | steps = 16 | 
+i =   9 | cost = 0.002250 | nder = 0.0163 | steps = 16 | 
+i =  10 | cost = 0.002038 | nder = 0.0144 | steps = 16 | 
+i =  11 | cost = 0.001885 | nder = 0.0143 | steps = 16 | 
+i =  12 | cost = 0.001700 | nder = 0.0130 | steps = 16 | 
+i =  13 | cost = 0.001572 | nder = 0.0129 | steps = 16 | 
+i =  14 | cost = 0.001451 | nder = 0.0118 | steps = 16 | 
+i =  15 | cost = 0.001358 | nder = 0.0111 | steps = 16 | 
+i =  16 | cost = 0.001277 | nder = 0.0122 | steps = 15 | 
+i =  17 | cost = 0.001161 | nder = 0.0108 | steps = 16 | 
+i =  18 | cost = 0.001051 | nder = 0.0101 | steps = 16 | 
+i =  19 | cost = 0.000979 | nder = 0.0106 | steps = 15 | 
+i =  20 | cost = 0.000895 | nder = 0.0097 | steps = 16 | 
+i =  21 | cost = 0.000827 | nder = 0.0090 | steps = 16 | 
+i =  22 | cost = 0.000767 | nder = 0.0085 | steps = 15 | 
+i =  23 | cost = 0.000740 | nder = 0.0091 | steps = 16 | 
+i =  24 | cost = 0.000662 | nder = 0.0082 | steps = 16 | 
+i =  25 | cost = 0.000595 | nder = 0.0073 | steps = 16 | 
+i =  26 | cost = 0.000559 | nder = 0.0071 | steps = 15 | 
+i =  27 | cost = 0.000532 | nder = 0.0071 | steps = 16 | 
+i =  28 | cost = 0.000499 | nder = 0.0079 | steps = 16 | 
+i =  29 | cost = 0.000453 | nder = 0.0066 | steps = 16 | 
+i =  30 | cost = 0.000417 | nder = 0.0064 | steps = 16 | 
+i =  31 | cost = 0.000383 | nder = 0.0061 | steps = 16 | 
+i =  32 | cost = 0.000360 | nder = 0.0059 | steps = 15 | 
+i =  33 | cost = 0.000328 | nder = 0.0057 | steps = 15 | 
+i =  34 | cost = 0.000302 | nder = 0.0053 | steps = 15 | 
+i =  35 | cost = 0.000285 | nder = 0.0050 | steps = 16 | 
+i =  36 | cost = 0.000271 | nder = 0.0049 | steps = 16 | 
+i =  37 | cost = 0.000255 | nder = 0.0048 | steps = 16 | 
+i =  38 | cost = 0.000242 | nder = 0.0047 | steps = 16 | 
+i =  39 | cost = 0.000219 | nder = 0.0043 | steps = 16 | 
+i =  40 | cost = 0.000204 | nder = 0.0043 | steps = 16 | 
+i =  41 | cost = 0.000188 | nder = 0.0041 | steps = 15 | 
+i =  42 | cost = 0.000178 | nder = 0.0039 | steps = 16 | 
+i =  43 | cost = 0.000162 | nder = 0.0036 | steps = 16 | 
+i =  44 | cost = 0.000150 | nder = 0.0036 | steps = 16 | 
+i =  45 | cost = 0.000142 | nder = 0.0035 | steps = 16 | 
+i =  46 | cost = 0.000135 | nder = 0.0035 | steps = 15 | 
+i =  47 | cost = 0.000126 | nder = 0.0034 | steps = 16 | 
+i =  48 | cost = 0.000116 | nder = 0.0030 | steps = 16 | 
+i =  49 | cost = 0.000103 | nder = 0.0028 | steps = 15 | 
+i =  50 | cost = 0.000098 | nder = 0.0029 | steps = 16 | 
+i =  51 | cost = 0.000092 | nder = 0.0029 | steps = 16 | 
+i =  52 | cost = 0.000086 | nder = 0.0026 | steps = 16 | 
+i =  53 | cost = 0.000081 | nder = 0.0025 | steps = 15 | 
+i =  54 | cost = 0.000078 | nder = 0.0025 | steps = 16 | 
+i =  55 | cost = 0.000078 | nder = 0.0025 | steps = 16 | 
+i =  56 | cost = 0.000071 | nder = 0.0024 | steps = 16 | 
+i =  57 | cost = 0.000064 | nder = 0.0022 | steps = 16 | 
+i =  58 | cost = 0.000062 | nder = 0.0025 | steps = 16 | 
+i =  59 | cost = 0.000058 | nder = 0.0021 | steps = 15 | 
+i =  60 | cost = 0.000055 | nder = 0.0020 | steps = 15 | 
+i =  61 | cost = 0.000053 | nder = 0.0019 | steps = 16 | 
+i =  62 | cost = 0.000052 | nder = 0.0020 | steps = 16 | 
+i =  63 | cost = 0.000049 | nder = 0.0021 | steps = 16 | 
+i =  64 | cost = 0.000047 | nder = 0.0030 | steps = 16 | 
+i =  65 | cost = 0.000042 | nder = 0.0016 | steps = 16 | 
+i =  66 | cost = 0.000039 | nder = 0.0017 | steps = 16 | 
+i =  67 | cost = 0.000036 | nder = 0.0020 | steps = 15 | 
+i =  68 | cost = 0.000036 | nder = 0.0017 | steps = 16 | 
+i =  69 | cost = 0.000034 | nder = 0.0015 | steps = 16 | 
+i =  70 | cost = 0.000032 | nder = 0.0014 | steps = 16 | 
+i =  71 | cost = 0.000032 | nder = 0.0013 | steps = 15 | 
+i =  72 | cost = 0.000031 | nder = 0.0013 | steps = 16 | 
+i =  73 | cost = 0.000031 | nder = 0.0013 | steps = 15 | 
+i =  74 | cost = 0.000029 | nder = 0.0013 | steps = 16 | 
+i =  75 | cost = 0.000029 | nder = 0.0013 | steps = 16 | 
+i =  76 | cost = 0.000028 | nder = 0.0011 | steps = 15 | 
+i =  77 | cost = 0.000027 | nder = 0.0011 | steps = 16 | 
+i =  78 | cost = 0.000027 | nder = 0.0011 | steps = 16 | 
+i =  79 | cost = 0.000027 | nder = 0.0012 | steps = 16 | 
+i =  80 | cost = 0.000025 | nder = 0.0012 | steps = 16 | 
+i =  81 | cost = 0.000024 | nder = 0.0011 | steps = 16 | 
+i =  82 | cost = 0.000023 | nder = 0.0012 | steps = 16 | 
+i =  83 | cost = 0.000023 | nder = 0.0012 | steps = 16 | 
+i =  84 | cost = 0.000021 | nder = 0.0010 | steps = 15 | 
+i =  85 | cost = 0.000020 | nder = 0.0015 | steps = 16 | 
+i =  86 | cost = 0.000021 | nder = 0.0017 | steps = 16 | 
+i =  87 | cost = 0.000019 | nder = 0.0015 | steps = 16 | 
+i =  88 | cost = 0.000019 | nder = 0.0011 | steps = 15 | 
+i =  89 | cost = 0.000019 | nder = 0.0014 | steps = 15 | 
+i =  90 | cost = 0.000018 | nder = 0.0011 | steps = 16 | 
+i =  91 | cost = 0.000017 | nder = 0.0009 | steps = 15 | 
+i =  92 | cost = 0.000017 | nder = 0.0009 | steps = 16 | 
+i =  93 | cost = 0.000016 | nder = 0.0009 | steps = 15 | 
+i =  94 | cost = 0.000017 | nder = 0.0009 | steps = 16 | 
+i =  95 | cost = 0.000014 | nder = 0.0010 | steps = 16 | 
+i =  96 | cost = 0.000014 | nder = 0.0010 | steps = 16 | 
+i =  97 | cost = 0.000014 | nder = 0.0009 | steps = 15 | 
+i =  98 | cost = 0.000013 | nder = 0.0007 | steps = 16 | 
+i =  99 | cost = 0.000013 | nder = 0.0010 | steps = 16 | 
+i = 100 | cost = 0.000013 | nder = 0.0007 | steps = 16 | 
+i = 101 | cost = 0.000012 | nder = 0.0007 | steps = 16 | 
+i = 102 | cost = 0.000011 | nder = 0.0007 | steps = 16 | 
+i = 103 | cost = 0.000011 | nder = 0.0007 | steps = 16 | 
+i = 104 | cost = 0.000011 | nder = 0.0008 | steps = 15 | 
+i = 105 | cost = 0.000011 | nder = 0.0012 | steps = 15 | 
+i = 106 | cost = 0.000011 | nder = 0.0008 | steps = 16 | 
+i = 107 | cost = 0.000010 | nder = 0.0006 | steps = 16 | 
+i = 108 | cost = 0.000010 | nder = 0.0007 | steps = 16 | 
+i = 109 | cost = 0.000010 | nder = 0.0009 | steps = 15 | 
+i = 110 | cost = 0.000010 | nder = 0.0007 | steps = 16 | 
+i = 111 | cost = 0.000010 | nder = 0.0011 | steps = 15 | 
+i = 112 | cost = 0.000011 | nder = 0.0016 | steps = 15 | 
+> Stopping condition reached!
+> Assembly time = 10.387881773000117 s
+> Resolution time = 26.945206924000104 s

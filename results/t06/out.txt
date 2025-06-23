@@ -1,145 +1,18 @@
-Info    : Reading '../results/t06/domain0.msh'...
+Info    : Reading '../results/t08/domain0.msh'...
 Info    : 281 entities
 Info    : 19336 nodes
 Info    : 38670 elements
-Info    : Done reading '../results/t06/domain0.msh'
-Info    : Reading '../results/t06/domain.msh'...
-Info    : 161 entities
-Info    : 6503 nodes
-Info    : 13004 elements
-Info    : Done reading '../results/t06/domain.msh'
+Info    : Done reading '../results/t08/domain0.msh'
+[mpiexec@free2602] Sending Ctrl-C to processes as requested
+[mpiexec@free2602] Press Ctrl-C again to force abort
 
-	Elasticity inverse problem (Data Parallelism)
-
-> Path = ../results/t06
-> Nbr of triangles = 12713
-> Nbr of triangles for data generation = 38193
-> Iterations:
-i =   0 | cost = 0.078866 | nder = 0.2614 | steps =  0 | 
-i =   1 | cost = 0.058445 | nder = 0.2578 | steps = 15 | 
-i =   2 | cost = 0.037846 | nder = 0.2207 | steps = 15 | 
-i =   3 | cost = 0.021100 | nder = 0.1745 | steps = 15 | 
-i =   4 | cost = 0.009909 | nder = 0.1089 | steps = 16 | 
-i =   5 | cost = 0.004045 | nder = 0.0361 | steps = 16 | 
-i =   6 | cost = 0.003185 | nder = 0.0227 | steps = 15 | 
-i =   7 | cost = 0.002781 | nder = 0.0202 | steps = 16 | 
-i =   8 | cost = 0.002476 | nder = 0.0172 | steps = 16 | 
-i =   9 | cost = 0.002250 | nder = 0.0163 | steps = 16 | 
-i =  10 | cost = 0.002038 | nder = 0.0145 | steps = 16 | 
-i =  11 | cost = 0.001885 | nder = 0.0143 | steps = 16 | 
-i =  12 | cost = 0.001700 | nder = 0.0130 | steps = 16 | 
-i =  13 | cost = 0.001569 | nder = 0.0130 | steps = 16 | 
-i =  14 | cost = 0.001456 | nder = 0.0120 | steps = 16 | 
-i =  15 | cost = 0.001358 | nder = 0.0111 | steps = 16 | 
-i =  16 | cost = 0.001276 | nder = 0.0122 | steps = 15 | 
-i =  17 | cost = 0.001160 | nder = 0.0110 | steps = 16 | 
-i =  18 | cost = 0.001050 | nder = 0.0100 | steps = 16 | 
-i =  19 | cost = 0.000979 | nder = 0.0107 | steps = 15 | 
-i =  20 | cost = 0.000895 | nder = 0.0097 | steps = 16 | 
-i =  21 | cost = 0.000830 | nder = 0.0090 | steps = 16 | 
-i =  22 | cost = 0.000765 | nder = 0.0084 | steps = 15 | 
-i =  23 | cost = 0.000740 | nder = 0.0091 | steps = 16 | 
-i =  24 | cost = 0.000659 | nder = 0.0082 | steps = 16 | 
-i =  25 | cost = 0.000595 | nder = 0.0073 | steps = 16 | 
-i =  26 | cost = 0.000559 | nder = 0.0071 | steps = 15 | 
-i =  27 | cost = 0.000529 | nder = 0.0070 | steps = 16 | 
-i =  28 | cost = 0.000495 | nder = 0.0073 | steps = 16 | 
-i =  29 | cost = 0.000450 | nder = 0.0066 | steps = 16 | 
-i =  30 | cost = 0.000415 | nder = 0.0064 | steps = 16 | 
-i =  31 | cost = 0.000387 | nder = 0.0061 | steps = 16 | 
-i =  32 | cost = 0.000361 | nder = 0.0060 | steps = 15 | 
-i =  33 | cost = 0.000329 | nder = 0.0057 | steps = 15 | 
-i =  34 | cost = 0.000302 | nder = 0.0053 | steps = 15 | 
-i =  35 | cost = 0.000283 | nder = 0.0050 | steps = 16 | 
-i =  36 | cost = 0.000271 | nder = 0.0049 | steps = 16 | 
-i =  37 | cost = 0.000255 | nder = 0.0048 | steps = 16 | 
-i =  38 | cost = 0.000242 | nder = 0.0047 | steps = 16 | 
-i =  39 | cost = 0.000217 | nder = 0.0043 | steps = 16 | 
-i =  40 | cost = 0.000203 | nder = 0.0042 | steps = 16 | 
-i =  41 | cost = 0.000187 | nder = 0.0041 | steps = 15 | 
-i =  42 | cost = 0.000177 | nder = 0.0040 | steps = 16 | 
-i =  43 | cost = 0.000162 | nder = 0.0037 | steps = 16 | 
-i =  44 | cost = 0.000148 | nder = 0.0034 | steps = 16 | 
-i =  45 | cost = 0.000141 | nder = 0.0035 | steps = 16 | 
-i =  46 | cost = 0.000135 | nder = 0.0035 | steps = 15 | 
-i =  47 | cost = 0.000127 | nder = 0.0034 | steps = 16 | 
-i =  48 | cost = 0.000117 | nder = 0.0032 | steps = 16 | 
-i =  49 | cost = 0.000103 | nder = 0.0028 | steps = 15 | 
-i =  50 | cost = 0.000098 | nder = 0.0029 | steps = 16 | 
-i =  51 | cost = 0.000092 | nder = 0.0029 | steps = 16 | 
-i =  52 | cost = 0.000087 | nder = 0.0026 | steps = 16 | 
-i =  53 | cost = 0.000081 | nder = 0.0025 | steps = 15 | 
-i =  54 | cost = 0.000079 | nder = 0.0025 | steps = 16 | 
-i =  55 | cost = 0.000078 | nder = 0.0025 | steps = 16 | 
-i =  56 | cost = 0.000074 | nder = 0.0025 | steps = 16 | 
-i =  57 | cost = 0.000064 | nder = 0.0028 | steps = 16 | 
-i =  58 | cost = 0.000065 | nder = 0.0030 | steps = 16 | 
-i =  59 | cost = 0.000059 | nder = 0.0028 | steps = 15 | 
-i =  60 | cost = 0.000055 | nder = 0.0021 | steps = 15 | 
-i =  61 | cost = 0.000054 | nder = 0.0022 | steps = 16 | 
-i =  62 | cost = 0.000052 | nder = 0.0023 | steps = 16 | 
-i =  63 | cost = 0.000049 | nder = 0.0020 | steps = 16 | 
-i =  64 | cost = 0.000044 | nder = 0.0021 | steps = 16 | 
-i =  65 | cost = 0.000041 | nder = 0.0021 | steps = 16 | 
-i =  66 | cost = 0.000038 | nder = 0.0019 | steps = 16 | 
-i =  67 | cost = 0.000036 | nder = 0.0018 | steps = 15 | 
-i =  68 | cost = 0.000036 | nder = 0.0018 | steps = 16 | 
-i =  69 | cost = 0.000035 | nder = 0.0014 | steps = 16 | 
-i =  70 | cost = 0.000032 | nder = 0.0013 | steps = 16 | 
-i =  71 | cost = 0.000031 | nder = 0.0013 | steps = 15 | 
-i =  72 | cost = 0.000031 | nder = 0.0013 | steps = 16 | 
-i =  73 | cost = 0.000030 | nder = 0.0013 | steps = 15 | 
-i =  74 | cost = 0.000029 | nder = 0.0013 | steps = 16 | 
-i =  75 | cost = 0.000029 | nder = 0.0013 | steps = 16 | 
-i =  76 | cost = 0.000028 | nder = 0.0012 | steps = 15 | 
-i =  77 | cost = 0.000027 | nder = 0.0011 | steps = 16 | 
-i =  78 | cost = 0.000027 | nder = 0.0011 | steps = 16 | 
-i =  79 | cost = 0.000026 | nder = 0.0011 | steps = 16 | 
-i =  80 | cost = 0.000026 | nder = 0.0019 | steps = 16 | 
-i =  81 | cost = 0.000025 | nder = 0.0014 | steps = 16 | 
-i =  82 | cost = 0.000023 | nder = 0.0016 | steps = 16 | 
-i =  83 | cost = 0.000023 | nder = 0.0016 | steps = 16 | 
-i =  84 | cost = 0.000022 | nder = 0.0017 | steps = 15 | 
-i =  85 | cost = 0.000020 | nder = 0.0009 | steps = 16 | 
-i =  86 | cost = 0.000019 | nder = 0.0010 | steps = 16 | 
-i =  87 | cost = 0.000019 | nder = 0.0010 | steps = 16 | 
-i =  88 | cost = 0.000019 | nder = 0.0010 | steps = 15 | 
-i =  89 | cost = 0.000019 | nder = 0.0010 | steps = 15 | 
-i =  90 | cost = 0.000019 | nder = 0.0010 | steps = 16 | 
-i =  91 | cost = 0.000018 | nder = 0.0009 | steps = 15 | 
-i =  92 | cost = 0.000017 | nder = 0.0010 | steps = 16 | 
-i =  93 | cost = 0.000017 | nder = 0.0014 | steps = 15 | 
-i =  94 | cost = 0.000017 | nder = 0.0011 | steps = 16 | 
-i =  95 | cost = 0.000015 | nder = 0.0012 | steps = 16 | 
-i =  96 | cost = 0.000016 | nder = 0.0018 | steps = 16 | 
-i =  97 | cost = 0.000015 | nder = 0.0018 | steps = 15 | 
-i =  98 | cost = 0.000013 | nder = 0.0010 | steps = 16 | 
-i =  99 | cost = 0.000013 | nder = 0.0007 | steps = 16 | 
-i = 100 | cost = 0.000013 | nder = 0.0009 | steps = 16 | 
-i = 101 | cost = 0.000013 | nder = 0.0011 | steps = 16 | 
-i = 102 | cost = 0.000012 | nder = 0.0007 | steps = 16 | 
-i = 103 | cost = 0.000012 | nder = 0.0007 | steps = 16 | 
-i = 104 | cost = 0.000011 | nder = 0.0006 | steps = 15 | 
-i = 105 | cost = 0.000011 | nder = 0.0006 | steps = 15 | 
-i = 106 | cost = 0.000010 | nder = 0.0006 | steps = 16 | 
-i = 107 | cost = 0.000010 | nder = 0.0006 | steps = 16 | 
-i = 108 | cost = 0.000010 | nder = 0.0006 | steps = 16 | 
-i = 109 | cost = 0.000010 | nder = 0.0006 | steps = 15 | 
-i = 110 | cost = 0.000010 | nder = 0.0010 | steps = 16 | 
-i = 111 | cost = 0.000010 | nder = 0.0012 | steps = 15 | 
-i = 112 | cost = 0.000010 | nder = 0.0008 | steps = 15 | 
-i = 113 | cost = 0.000009 | nder = 0.0005 | steps = 16 | 
-i = 114 | cost = 0.000009 | nder = 0.0005 | steps = 16 | 
-i = 115 | cost = 0.000009 | nder = 0.0005 | steps = 16 | 
-i = 116 | cost = 0.000009 | nder = 0.0005 | steps = 15 | 
-i = 117 | cost = 0.000009 | nder = 0.0005 | steps = 15 | 
-i = 118 | cost = 0.000009 | nder = 0.0005 | steps = 16 | 
-i = 119 | cost = 0.000008 | nder = 0.0006 | steps = 16 | 
-i = 120 | cost = 0.000008 | nder = 0.0006 | steps = 16 | 
-i = 121 | cost = 0.000008 | nder = 0.0005 | steps = 16 | 
-i = 122 | cost = 0.000008 | nder = 0.0005 | steps = 16 | 
-i = 123 | cost = 0.000008 | nder = 0.0005 | steps = 15 | 
-i = 124 | cost = 0.000008 | nder = 0.0005 | steps = 15 | 
-> Stopping condition reached!
-> Assembly time = 18.05146110999999 s
-> Resolution time = 50.91891784100005 s
+===================================================================================
+=   BAD TERMINATION OF ONE OF YOUR APPLICATION PROCESSES
+=   PID 35506 RUNNING AT free2602
+=   EXIT CODE: 2
+=   CLEANING UP REMAINING PROCESSES
+=   YOU CAN IGNORE THE BELOW CLEANUP MESSAGES
+===================================================================================
+YOUR APPLICATION TERMINATED WITH THE EXIT STRING: Segmentation fault (signal 11)
+This typically refers to a problem with your application.
+Please see the FAQ page for debugging suggestions
