@@ -1,5 +1,6 @@
 import distributed as dib
 
+# Pre-existing models
 from models import (
     Logistic,
     Compliance, 
@@ -11,16 +12,17 @@ from models import (
 )
 
 import numpy as np
-from mpi4py import MPI
-from pathlib import Path
-from dolfinx.fem import functionspace
+from pathlib import Path # To manage where results are saved
 
+# Necessary for all parallelism modes
+from mpi4py import MPI
 comm = MPI.COMM_WORLD
 rank = comm.rank
 size = comm.size
-comm_self = MPI.COMM_SELF
 
 """
+Tests
+-----
 test_01 : Symmetric cantilever 2D (Data Parallelism)
 test_02 : Symmetric cantilever 3D (Data Parallelism)
 test_03 : Cantilever with two loads I (Data Parallelism)
@@ -341,12 +343,14 @@ def test_04():
     """
     Run: mpirun -np 2 python test.py 04
     """
-    
+
     # Verification
     task_nbr = 2
     if size != task_nbr:
         print(f"Nbr of processes must be = {task_nbr}")
         return
+    
+    comm_self = MPI.COMM_SELF
 
     test_name = "Cantilever with two loads I (Task Parallelism)"
     test_path = Path("../results/t04/")
@@ -827,6 +831,8 @@ def test_07():
     if size != task_nbr:
         print(f"Nbr of processes must be = {task_nbr}")
         return
+    
+    comm_self = MPI.COMM_SELF
 
     test_name = "Elasticity inverse problem (Task Parallelism)"
     test_path = Path("../results/t07/")
@@ -2112,6 +2118,8 @@ def test_18():
         print(f"Nbr of processes must be = {task_nbr}")
         return
 
+    comm_self = MPI.COMM_SELF
+    
     test_name = "Cantilever with two loads II (Task Parallelism)"
     test_path = Path("../results/t18/")
     dim = 2

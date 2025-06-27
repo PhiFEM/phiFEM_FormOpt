@@ -273,67 +273,121 @@ defined by
 \begin{equation}
 	B(\theta, \xi) = \int_{\mathcal{D}} {10}^{-1}\theta \cdot \xi + D\theta : D\xi .
 \end{equation}
-%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Numerical implementation}
-%%%%%%%%%%%%%%%%%%%%%%%
-\begin{algorithm}[H]
-\caption{Basic Level Set Algorithm}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+The Python module \code{distributed.py} was developed
+to apply the level set method to shape optimization problems.
+It implements the basic level set algorithm \eqref{eq:algo_lv}
+using the finite element method to solve
+the weak formulation of all involving problems.
+The shape optimization problem is defined as a model that
+includes all the problem equations and the distributed shape derivatives,
+while the sub-problems are addressed with
+parallel computing methodologies.
+
+In this section, we describe the main classes and functions
+provided by \code{distributed.py},
+the construction of model problem,
+the three parallelism paradigms that were implemented,
+and the numerical methods used to solve the sub-problems.
+
+First, we describe briefly Algorithm \eqref{eq:algo_lv}.
+Given a initial level set function
+$\phi^0:\overline{\mathcal{D}} \rightarrow \mathds{R}$,
+we solve iteratively the state and adjoint equations (steps 4 and 5)
+with the subdomain $\Omega^i$ defined by
+\begin{equation} \label{eq:subdomain}
+	\Omega^i \coloneqq \left\{x\in\mathcal{D}\mid \phi^i(x)<0\right\},
+	\quad
+	\phi^i:\overline{\mathcal{D}} \rightarrow \mathds{R}.
+\end{equation}
+The solutions of these equations are used to construct
+the shape derivative components corresponding to
+the cost functional and constraints (step 9).
+Next, the so-called velocity equation is solved
+(see Subsection \ref{sub:velocity}). This equation uses
+a bilinear form $B$ which must be defined by the user.
+The solution, denoted by $\theta$, is a vector-valued function
+defined on $\overline{\mathcal{D}}$, which is used to update
+the level set function by solving a transport-like equation
+(see Subsection \ref{sub:level}).
+The additional procedures such as reinitialization, stop criterion,
+lagrangian approach to deal with constraints, etc,
+will be explained in the following subsections.
+
+\begin{algorithm}[H] 
+\caption{Basic level set algorithm} \label{eq:algo_lv}
 \small
 \begin{algorithmic}[1]
-\State \textbf{Initialization:} Choose an initial $\phi^0$.
-\For{$k = 0, 1, 2, \dots$ until convergence}
-	\State Define $\Omega^i = \left\{x\in\mathcal{D}\mid \phi^i(x)<0\right\}$.
+\State \textbf{Initialization:} Choose an initial $\phi^0:\overline{\mathcal{D}} \rightarrow \mathds{R}$.
+\For{$k = 0, 1, 2, \dots$}
+	\State Define $\Omega^i \coloneqq \left\{x\in\mathcal{D}\mid \phi^i(x)<0\right\}$.
     \State Solve the \textbf{state} problems with $\Omega^i$.
 	\Statex \hspace{3em} Let $U$ be the solutions.
     \State Solve the \textbf{adjoint} problems with $\Omega^i$ and $U$.
 	\Statex \hspace{3em} Let $P$ be the solutions.
 	\State Use $\Omega^i$ and $U$ to calculate the \textbf{cost} value.
 	\State Use $\Omega^i$ and $U$ to calculate the \textbf{constraint} error.
-	\State Verify convergence.
 	\State Use $\Omega^i$, $U$, $P$ to construct the derivative components
 	\Statex \hspace{1.2em} $S_0^{J}$, $S_1^{J}$ (cost) and $S_0^{C}$, $S_1^{C}$ (constraint).
 	\State Solve the \textbf{velocity} equation with $S_0^{J}$, $S_1^{J}$, $S_0^{C}$, $S_1^{C}$.
-	\Statex \hspace{3em} Let $\theta$ be the solution.
+	\Statex \hspace{3em} Let $\theta:\overline{\mathcal{D}} \rightarrow \mathds{R}^d$ be the solution.
 	\State Solve the \textbf{transport} equation with $\theta$.
-	\Statex \hspace{3em} Let $\phi^{i+1}$ be the solution.
+	\Statex \hspace{3em} Let $\phi^{i+1}:\overline{\mathcal{D}} \rightarrow \mathds{R}$ be the solution.
 \EndFor
 \end{algorithmic}
 \end{algorithm}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Toolbox structure}
+\label{sub:structure}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Here explain how the toolbox is organized.
-The folder ``Models'' will contain the files for each model.
-One for inverse problem in elasticity, one for heat equation, etc ... For each model, what changes is the PDEs, the geometric configuration such as boundary conditions and domain, and the tensors $S_1,S_0$.
-The folder ``Shape'' (?) will contain the files for the shape optimization, this includes in particular the file for the level set method.
+%Here explain how the toolbox is organized.
+%The folder ``Models'' will contain the files for each model.
+%One for inverse problem in elasticity, one for heat equation, etc ...
+%For each model, what changes is the PDEs, the geometric configuration such as boundary conditions and domain, and the tensors $S_1,S_0$.
+%The folder ``Shape'' (?) will contain the files for the shape optimization, this includes in particular the file for the level set method.
 
-The Python module \code{distributed.py} was developed
-to apply the level set method to shape optimization problems.
-It implements parallelism and uses the distributed
-form of the shape derivative. The main classes included
-in \code{distributed.py} are the following:
+The main classes included in \code{distributed.py} are the following:
 
 \begin{itemize}[left=0.0em]
 
-\item \code{Model}: This is an abstract class for the problem equations.
+\item \code{Model}:
+This is an abstract class for the problem equations.
 It serves as a model for user-defined classes which must contain
 the weak formulations of the state and adjoint equations,
 the cost functional, the constraints,
 the distributed shape derivative components, and
 the bilinear form for the velocity, written with exclusively with
 UFL and native Python functions.
+The following methods must be override:
+\begin{lstlisting}
+	s
+\end{lstlisting}
 
-\item \code{Velocity}: This class implements the numerical method
-that solves the velocity equation. It uses the shape derivative
-components defined on the model class.
+\item \code{Velocity}:
+This class builds and solve the velocity equation.
+Since the bilinear form $B$ remains unchanged,
+the initialization of the \code{Velocity} class
+(\code{\_\_init\_\_} method)
+compiles the left-hand side of the corresponding linear system.
+Thus, in each iteration, just the right-hand side
+is updated before solve the system (see the \code{run} method). 
 
-\item \code{Level}: It provides the level set function at each
+\item \code{Level}:
+It provides the level set function at each
 iteration by solving a diffusive version of the transport equation.
-The main input is the velocity field.
+This class pre-compile the corresponding linear system
+when it is initialized (see its \code{\_\_init\_\_} method).
+By calling the method \code{run} of this class
+the level set function is updated.
 
-\item \code{InitialLevel}: This class creates the initial
+\item \code{InitialLevel}:
+This class creates the initial
 level set function from a set of centers and radii.
 
 \item \code{PPL}: It implements the Lagrangian method
@@ -372,7 +426,10 @@ the following stages:
 \end{enumerate}
 In all these stages, the parallelism paradigm must be considered.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Model construction}
+\label{sub:model}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 We start by creating a subclass of \code{Model} class
 with the following necessary attributes and methods:
 \begin{lstlisting}
@@ -432,34 +489,91 @@ can be view in the documentation of the \code{Model} class.
 \subsection{Parallelization}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Here we explain the two modes of parallelization, the mesh and the sources,
-and how the user can play with that. Explain the splitting and the colors.
+%Here we explain the two modes of parallelization, the mesh and the sources,
+%and how the user can play with that. Explain the splitting and the colors.
 
-Cite some parts of the codes to explain that.
+%Cite some parts of the codes to explain that.
 
 Our module supports three parallelism paradigms:
-Data parallelism, Task parallelism, and a combination of these
-called Mix parallelism.
+data parallelism, task parallelism, and a combination of the two,
+known as mixed parallelism.
 
-Data parallelism refers to solve the problem in a mesh
-that is distributed on several processes. All the weak formulations
-are solved on the this distributed mesh.
+Data parallelism refers to solving the problem on a mesh
+that is distributed across multiple processes.
+All the weak formulations are solved on this distributed mesh.
 
-In the Task parallelism paradigm each state equation is solved
-in a processes, and then, the same applies to each adjoint equation.
-It is necessary to have the a copy of the same mesh in each processes.
+In the task parallelism paradigm, each state equation is solved
+in a separate process, and the same applies to each adjoint equation.
+It is necessary to have a copy of the mesh in each process.
 The velocity field and the level set function are computed
-in the processes 0.
+in the first process.
 
-The Mix parallelism paradigm combines the previous ones by
-solving each state equation in a mesh that is distributed in
-a group of subprocesses. The adjoint equations are solving in the same 
+The mixed parallelism paradigm combines the previous two by
+solving each state equation on a mesh distributed across a group
+of subprocesses. The adjoint equations are solving in the same 
 way, while velocity field and the level set function are computed
 in first group of subprocesses.
 
-%%%%%%%%%%%%%%%%%%%%%%%
+We use MPI to implement parallelism.
+The model class and its initialization are independent
+of the parallelism paradigm.
+However, for the creation of the domain, the correct communicator
+must be passed. For instance, for all paradigms,
+we must start by calling
+the MPI communicator (\code{comm}),
+the number of processes (\code{size}), and
+the the current process (\code{rank}):
+\begin{lstlisting}
+from mpi4py import MPI
+comm = MPI.COMM_WORLD
+size = comm.size
+rank = comm.rank
+\end{lstlisting}
+
+To create the domain for data parallelism
+use \code{comm}. For  2D domains, we have written the function
+\code{create\_domain\_2d\_DP}, which use \code{comm}
+internally. You can import it from the module.
+
+Before start task parallelism,
+check that the number of processes is equal to 
+the number of state equations. Here we use the variable
+\code{task\_nbr} to save this number.
+After verification, call the ``self'' communicator:
+\begin{lstlisting}
+if size != task_nbr:
+    return
+comm_self = MPI.COMM_SELF
+\end{lstlisting}
+Then use \code{comm\_self} to create the domain in each process.
+You can import the 
+\code{create\_domain\_2d\_TP} function
+to create 2D domains. It is not necessary to pass 
+\code{comm\_self} to this function.
+
+In the case of mixed parallelism mode,
+the processes are grouped in groups
+of the same size. Thus, the total number of processes
+(\code{size}) must divisible by  the number of groups
+(\code{nbr\_groups}). Verified this,
+we are able to give a \code{color}
+to each process: processes in the same group share tha same
+\code{color}. The the \code{Split} function
+returns the sub communicator corresponding to each group:
+\begin{lstlisting}
+if size%nbr_groups != 0:
+	return
+color = rank * nbr_groups // size
+sub_comm = comm.Split(color, rank)
+\end{lstlisting}
+Using \code{sub\_comm} one creates a domain
+in each group of processes.
+Alternatively, you can use the function
+\code{create\_domain\_2d\_MP}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Augmented Lagrangian}
-%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Here explain how the augmented Lagrangian works for volume constraints 
 
@@ -497,9 +611,10 @@ $\alpha = 2000$, $\beta = 0.5$,
 $z^{0} = 0$, $\lambda^{0} = 0$, and $\lambda^{0} = 0$.
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%
 \subsection{Velocity}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\label{sub:velocity}
+%%%%%%%%%%%%%%%%%%%%%
 The velocity $\theta$ is obtained by solving the following weak formulation:
 Find $\theta\in\mathbb{H}$ such that
 \begin{equation} \label{eq:velocity}
@@ -521,9 +636,9 @@ $$
 $$
 in order to have $\theta\cdot n = 0$ (almost zero) on the boundary.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Level set method}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Level set method} \label{sub:level}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Explain how the level set method is implemented, cite the code.
 We solve the diffusion-transport problem

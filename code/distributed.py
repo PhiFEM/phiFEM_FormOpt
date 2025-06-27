@@ -1524,7 +1524,7 @@ def basic_solver(a, L, bcs, uh):
 
 class Velocity:
     """
-    This class implements the velocity equation.
+    This class build and solve the velocity equation.
 
     Attributes
     ----------
