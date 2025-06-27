@@ -2,6 +2,7 @@ site_name: Distributed
 
 nav:
   - Home: index.md
+  - Model class: model.md
   - Velocity class: velocity.md
   - Level class: level.md
   - Reinit class: reinit.md

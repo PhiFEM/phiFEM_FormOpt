@@ -689,9 +689,9 @@ class InitialLevel:
     
     Attributes
     ----------
-    centers : numpy.ndarray
+    centers : npt.NDArray[np.float64]
         Array of center coordinates.
-    radii : numpy.ndarray
+    radii : npt.NDArray[np.float64]
         Array of radii.
     dim : int
         Problem dimension.
@@ -719,11 +719,11 @@ class InitialLevel:
         ):
         """
         Parameters
-        ---------
-        centers : numpy.ndarray
+        ----------
+        centers : npt.NDArray[np.float64]
             Array of center coordinates
             of shape (N, 2) or (N, 3).
-        radii : numpy.ndarray 
+        radii : npt.NDArray[np.float64]
             Array of radii of shape (N,).
         factor : float
             Scaling factor, positive or negative.
@@ -1862,12 +1862,31 @@ class Reinit:
 
 class PPL:
     """
-    Perturbed Proximal Lagrangian Method
-    Reference:
-    Jong Gwang Kim, A new Lagrangian-based ﬁrst-order
-    method for nonconvex constrained optimization, 2023
+    This class implements the Perturbed Proximal Lagrangian method
+    developed in the paper "A new Lagrangian-based ﬁrst-order
+    method for nonconvex constrained optimization" (Jong Gwang Kim, 2023).
+
+    Attributes
+    ----------
+
+    Methods
+    -------
+    run(cost: float, constraints: List[float]) -> npt.NDArray[npt.float64]
+        Runs one iteration of the method.
+    _lagrangian(cost: float) -> float
+        Returns the value of the Lagrangian functional.
+    see() -> str
+        Returns a string with some variable values.
     """
-    def __init__(self, n, ini_cost, ini_ctrs):
+    def __init__(self, n: int, ini_cost: float, ini_ctrs: List[float]) -> None:
+        """
+        Parameters
+        ----------
+        n : int
+            Number of constraint functions.
+        ini_cost : float
+            
+        """
         
         self.n = n
         self.ones = np.ones(n)
@@ -1880,7 +1899,7 @@ class PPL:
         self.r = 0.999
         self.dl = 0.5
         self.Lg = ini_cost
-        self.ct = ini_ctrs
+        self.ct = np.array(ini_ctrs)
 
         self.list_Lg = [self.Lg]
         self.list_lm = [self.lm]
@@ -1889,7 +1908,10 @@ class PPL:
         self.list_dl = [self.dl]
         self.list_ct = [self.ct]
 
-    def run(self, cost, constraints):
+    def run(self, cost: float, constraints: List[float]) -> npt.NDArray[npt.float64]:
+        """
+        Runs one iteration of the method.
+        """
         
         self.ct = np.array(constraints)
         self.lmu = self.lm - self.mu
@@ -1898,7 +1920,7 @@ class PPL:
         self.zs = (self.lm - self.mu)/self.alpha
         self.dl = self.r*self.dl
 
-        self.Lg = self.lagrangian(cost)
+        self.Lg = self._lagrangian(cost)
 
         self.list_Lg.append(self.Lg)
         self.list_lm.append(self.lm)
@@ -1909,15 +1931,19 @@ class PPL:
 
         return self.lm[:]
     
-    def lagrangian(self, cost):
-        
+    def _lagrangian(self, cost: float) -> float:
+        """
+        Returns the value of the Lagrangian functional.
+        """
         return cost + np.inner(self.lm, self.ct - self.zs) + \
             np.inner(self.mu, self.zs) + \
             self.alpha*np.inner(self.zs, self.zs)/2.0 - \
             self.beta*np.inner(self.lm - self.mu, self.lm - self.mu)/2.0
     
-    def see(self):
-        
+    def see(self) -> str:
+        """
+        Returns a string with some variable values.
+        """
         return (f"lagr = {self.Lg:.4f} | "
             f"lm = {', '.join(f'{val:.4f}' for val in self.lm)} | "
             f"mu = {', '.join(f'{val:.4f}' for val in self.mu)}",)[0]
@@ -2370,21 +2396,21 @@ def create_non_lin_solver(comm, F, bcs, J, u, initial):
     return NonlinearSolverWrapper(solver, u, initial)
 
 def runDP(
-        model: Model,
-        niter: int,
-        reinit_step: int | bool,
-        reinit_pars: Tuple[int, float],
-        dfactor: float,
-        lv_time: Tuple[float, float],
-        lv_iter: Tuple[int, int],
-        smooth: bool,
-        start_to_check: int,
-        ctrn_tol: float,
-        lgrn_tol: float,
-        cost_tol: float,
-        prev: int,
-        random_pars: Tuple[int, float]
-    ) -> None:
+    model: Model,
+    niter: int,
+    reinit_step: int | bool,
+    reinit_pars: Tuple[int, float],
+    dfactor: float,
+    lv_time: Tuple[float, float],
+    lv_iter: Tuple[int, int],
+    smooth: bool,
+    start_to_check: int,
+    ctrn_tol: float,
+    lgrn_tol: float,
+    cost_tol: float,
+    prev: int,
+    random_pars: Tuple[int, float]
+) -> None:
     
     """
     Implements Data Parallelism.

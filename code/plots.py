@@ -529,7 +529,7 @@ def plot_velocity_2D(coords, cells, velocity_values, figsize=(6, 6), fontsize=12
     ax.set_ylim(y_coords.min() - 0.1, y_coords.max() + 0.1)
     ax.set_xlabel("x", fontsize=fontsize)
     ax.set_ylabel("y", fontsize=fontsize)
-    ax.set_title("Velocity Field $\Theta$", fontsize=fontsize + 2)
+    ax.set_title("Velocity Field $\theta$", fontsize=fontsize + 2)
     fig.tight_layout()
     if filename:
         fig.savefig(filename, dpi=dpi, bbox_inches='tight')

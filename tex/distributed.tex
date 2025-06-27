@@ -366,8 +366,26 @@ the bilinear form for the velocity, written with exclusively with
 UFL and native Python functions.
 The following methods must be override:
 \begin{lstlisting}
-	s
+	pde(level_set_func)
+	adjoint(level_set_func, states)
+	cost(level_set_func, states)
+	constraint(level_set_func, states)
+	derivative(level_set_func, states, adjoints)
+	bilinear_form(velocity_func, test_func)
 \end{lstlisting}
+Subclasses of \code{Model} (user-defined) must not override
+the following methods:
+\begin{lstlisting}
+	create_initial_level(centers, radii, ...)
+	get_initial_level()
+	save_initial_level(comm)
+	runDP(...)
+	runTP(...)
+	runMP(...)
+\end{lstlisting}
+We will see in Subsection \ref{sub:parallel} that the methods
+\code{runDP}, \code{runTP}, and \code{runMP}
+implement different modes of parallelism.
 
 \item \code{Velocity}:
 This class builds and solve the velocity equation.
@@ -389,14 +407,21 @@ the level set function is updated.
 \item \code{InitialLevel}:
 This class creates the initial
 level set function from a set of centers and radii.
+Its method \code{func} returns a callable function
+that represents the initial level set function $\phi^0$.
 
-\item \code{PPL}: It implements the Lagrangian method
-used to deal with the constraints.
+\item \code{PPL}:
+It implements the Lagrangian method developed in \cite{MR4589221}
+to deal with the constraints.
+
+\item \code{LineSearch}:
+This class implements a line search method to
+estimate the number of steps and the final time to
+solve the transport equation.
 
 \end{itemize}
 
-The following are some help functions also included
-in our module:
+The following are some help functions:
 
 \begin{itemize}[left=0.0em]
 \item \code{create\_domain\_2d\_<DP|TP|MP>}:
@@ -406,10 +431,10 @@ boundaries. Interior holes and curves
 are allowed. \code{DP|TP|MP} refers to the
 parallelism paradigm.
 
-\item \code{create\_space}: It is wrapper to create a function space.
+\item \code{create\_space}: It is wrapper to create a FEniCSx function space.
 
-\item \code{homogeneous\_dirichlet}: We use this function
-to creates homogeneous Dirichlet boundary conditions
+\item \code{homogeneous\_dirichlet}: This function
+creates homogeneous Dirichlet boundary conditions
 over faces of dimension $d - 1$.
 
 \item \code{dir\_extension\_from}: It computes
@@ -417,12 +442,33 @@ the Dirichlet extension of the solutions corresponding
 to a set of partial differential equations.
 \end{itemize}
 
-The usage of the \code{distributed} module comprises
-the following stages:
+The main functions of \code{distributed.py}
+implements Algorithm \ref{eq:algo_lv} along with
+different modes of parallelization:
+\begin{itemize}[left=0.0em]
+\item \code{runDP} for data parallelism.
+\item \code{runTP} for task parallelism.
+\item \code{runMP} for mixed parallelism.
+\end{itemize}
+
+In addition to \code{distributed.py}, we have written
+several problem models in \code{models.py}. 
+Tests using these models can be found in \code{test.py}.
+Associated to each test there is a folder in \code{results/}
+where the results are saved.
+In \code{load.py} and \code{plots.py} there are secondary codes
+to plot the results. Since the results are written in Xdmf format,
+we recommend Paraview to see them.
+
+Several classes and functions are used internally and the user does not need
+to know how to use them. Below we describe the stages the user must follow,
+along with the classes and function that it must use:
 \begin{enumerate}
-	\item Creation of a model class with the problem equations.
-	\item Definition of the domain, space, and boundary conditions.
-	\item Model initialization and execution.
+	\item Creation of a model class (subclass of class \code{Model}) with the problem equations. 
+	\item Definition of the domain, space, and boundary conditions. To facilitate this part,
+	we have written \code{create\_domain\_2d\_<DP|TP|MP>} and many other functions
+	to set the boundary conditions. 
+	\item Model initialization and execution by calling the method \code{run<DP|TP|MP>}.
 \end{enumerate}
 In all these stages, the parallelism paradigm must be considered.
 
@@ -430,15 +476,16 @@ In all these stages, the parallelism paradigm must be considered.
 \subsection{Model construction}
 \label{sub:model}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-We start by creating a subclass of \code{Model} class
+
+We must start by creating a subclass of \code{Model} class
 with the following necessary attributes and methods:
+
 \begin{lstlisting}
 from distributed import Model
 
 class MyModel(Model):
 
     def __init__(self, dim, domain, space, path):
-
         self.dim = dim
         self.domain = domain
         self.space = space
@@ -462,9 +509,14 @@ class MyModel(Model):
 	def bilinear_form(self, th, xi):
 		pass
 \end{lstlisting}
+
 The attributes \code{dim}, \code{domain}, \code{space}, and \code{path}
 are the dimension of the problem domain $d$, the mesh that represents the domain $\Omega$,
 the space of functions for the problem solutions, and the test path where the results will be saved, respectively. 
+
+\code{phi}, \code{U}, \code{P}
+
+\code{th, xi}
 
 The \code{pde} method models the partial differential equations of the problem.
 It must return a list with elements of the form \code{(wk, bc)},
@@ -487,6 +539,7 @@ can be view in the documentation of the \code{Model} class.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Parallelization}
+\label{sub:parallel}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %Here we explain the two modes of parallelization, the mesh and the sources,
