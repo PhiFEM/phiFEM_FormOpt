@@ -18,29 +18,31 @@
 \usepackage{enumitem}
 
 \lstset{
-  language=Python,
-  basicstyle=\ttfamily\scriptsize,
-  backgroundcolor=\color{gray!5},
-  frame=single,
-  rulecolor=\color{black!20},
-  breaklines=true,
-  breakatwhitespace=true,
-  captionpos=b,
-  tabsize=4,
-  keepspaces=true,
-  showspaces=false,
-  showstringspaces=false,
-  showtabs=false,
-  numbers=none,
-  xleftmargin=1pt,
-  framexleftmargin=1pt,
-  aboveskip=1em,
-  belowskip=1em,
-% Color settings
-  keywordstyle=\color{blue!70!black}\bfseries,
-  commentstyle=\color{green!50!black}\itshape,
-  stringstyle=\color{red!60!black},
-  identifierstyle=\color{black},
+	language=Python,
+	basicstyle=\ttfamily\scriptsize,
+	backgroundcolor=\color{gray!5},
+	frame=single,
+	rulecolor=\color{black!20},
+	breaklines=true,
+	breakatwhitespace=true,
+	captionpos=b,
+	tabsize=4,
+	keepspaces=true,
+	showspaces=false,
+	showstringspaces=false,
+	showtabs=false,
+	numbers=none,
+	xleftmargin=1pt,
+	framexleftmargin=1pt,
+	aboveskip=1em,
+	belowskip=1em,
+	% Color settings
+	keywordstyle=\color{blue!70!black}\bfseries,
+	commentstyle=\color{green!50!black}\itshape,
+	stringstyle=\color{red!60!black},
+	identifierstyle=\color{black},
+	emph={create_initial_level, save_initial_level, pde, adjoint, cost, constraint, derivative, bilinear_form, runDP, runTP, runMP},
+	emphstyle=\color{magenta!70!black}\bfseries
 }
 
 
@@ -278,27 +280,25 @@ defined by
 \section{Numerical implementation}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-The Python module \code{distributed.py} was developed
-to apply the level set method to shape optimization problems.
-It implements the basic level set algorithm \eqref{eq:algo_lv}
-using the finite element method to solve
-the weak formulation of all involving problems.
-The shape optimization problem is defined as a model that
-includes all the problem equations and the distributed shape derivatives,
-while the sub-problems are addressed with
-parallel computing methodologies.
+The Python module \code{distributed.py} was developed to apply
+the level set method to shape optimization problems.
+It implements the basic level set algorithm (see Algorithm \ref{eq:algo_lv}) using
+the finite element method to solve the weak formulations of all problems involved.
+The shape optimization problem is defined as a model that includes
+all relevant equations and the distributed shape derivatives,
+while sub-problems are addressed using parallel computing methodologies.
 
-In this section, we describe the main classes and functions
-provided by \code{distributed.py},
-the construction of model problem,
+This section covers four aspects:
+the main classes and functions provided by \code{distributed.py},
+the construction of the model problem,
 the three parallelism paradigms that were implemented,
 and the numerical methods used to solve the sub-problems.
 
-First, we describe briefly Algorithm \eqref{eq:algo_lv}.
-Given a initial level set function
+First, we briefly describe Algorithm \eqref{eq:algo_lv}.
+Given an initial level set function
 $\phi^0:\overline{\mathcal{D}} \rightarrow \mathds{R}$,
-we solve iteratively the state and adjoint equations (steps 4 and 5)
-with the subdomain $\Omega^i$ defined by
+we iteratively solve the state and adjoint equations (steps 4 and 5)
+using the subdomain $\Omega^i$ defined by
 \begin{equation} \label{eq:subdomain}
 	\Omega^i \coloneqq \left\{x\in\mathcal{D}\mid \phi^i(x)<0\right\},
 	\quad
@@ -311,11 +311,11 @@ Next, the so-called velocity equation is solved
 (see Subsection \ref{sub:velocity}). This equation uses
 a bilinear form $B$ which must be defined by the user.
 The solution, denoted by $\theta$, is a vector-valued function
-defined on $\overline{\mathcal{D}}$, which is used to update
+defined on $\overline{\mathcal{D}}$ and is used to update
 the level set function by solving a transport-like equation
 (see Subsection \ref{sub:level}).
-The additional procedures such as reinitialization, stop criterion,
-lagrangian approach to deal with constraints, etc,
+Additional procedures such as reinitialization, the stopping criterion,
+Lagrangian approach for handling constraints, and others
 will be explained in the following subsections.
 
 \begin{algorithm}[H] 
@@ -324,14 +324,13 @@ will be explained in the following subsections.
 \begin{algorithmic}[1]
 \State \textbf{Initialization:} Choose an initial $\phi^0:\overline{\mathcal{D}} \rightarrow \mathds{R}$.
 \For{$k = 0, 1, 2, \dots$}
-	\State Define $\Omega^i \coloneqq \left\{x\in\mathcal{D}\mid \phi^i(x)<0\right\}$.
-    \State Solve the \textbf{state} problems with $\Omega^i$.
+	\State Solve the \textbf{state} problems with $\Omega^i$.
 	\Statex \hspace{3em} Let $U$ be the solutions.
     \State Solve the \textbf{adjoint} problems with $\Omega^i$ and $U$.
 	\Statex \hspace{3em} Let $P$ be the solutions.
 	\State Use $\Omega^i$ and $U$ to calculate the \textbf{cost} value.
 	\State Use $\Omega^i$ and $U$ to calculate the \textbf{constraint} error.
-	\State Use $\Omega^i$, $U$, $P$ to construct the derivative components
+	\State Use $\Omega^i$, $U$, $P$ to construct the derivative components:
 	\Statex \hspace{1.2em} $S_0^{J}$, $S_1^{J}$ (cost) and $S_0^{C}$, $S_1^{C}$ (constraint).
 	\State Solve the \textbf{velocity} equation with $S_0^{J}$, $S_1^{J}$, $S_0^{C}$, $S_1^{C}$.
 	\Statex \hspace{3em} Let $\theta:\overline{\mathcal{D}} \rightarrow \mathds{R}^d$ be the solution.
@@ -346,25 +345,26 @@ will be explained in the following subsections.
 \label{sub:structure}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%Here explain how the toolbox is organized.
-%The folder ``Models'' will contain the files for each model.
-%One for inverse problem in elasticity, one for heat equation, etc ...
-%For each model, what changes is the PDEs, the geometric configuration such as boundary conditions and domain, and the tensors $S_1,S_0$.
-%The folder ``Shape'' (?) will contain the files for the shape optimization, this includes in particular the file for the level set method.
+% Here explain how the toolbox is organized.
+% The folder ``Models'' will contain the files for each model.
+% One for inverse problem in elasticity, one for heat equation, etc ...
+% For each model, what changes is the PDEs,
+% the geometric configuration such as boundary conditions and domain,
+% and the tensors $S_1,S_0$.
+% The folder ``Shape'' (?) will contain the files for the shape optimization,
+% this includes in particular the file for the level set method.
 
 The main classes included in \code{distributed.py} are the following:
-
 \begin{itemize}[left=0.0em]
-
 \item \code{Model}:
 This is an abstract class for the problem equations.
-It serves as a model for user-defined classes which must contain
+It serves as a base for user-defined classes, which must contain
 the weak formulations of the state and adjoint equations,
 the cost functional, the constraints,
-the distributed shape derivative components, and
-the bilinear form for the velocity, written with exclusively with
+the distributed shape derivative components,and
+the bilinear form for the velocity---written exclusively using
 UFL and native Python functions.
-The following methods must be override:
+The following methods must be overridden:
 \begin{lstlisting}
 	pde(level_set_func)
 	adjoint(level_set_func, states)
@@ -373,113 +373,124 @@ The following methods must be override:
 	derivative(level_set_func, states, adjoints)
 	bilinear_form(velocity_func, test_func)
 \end{lstlisting}
-Subclasses of \code{Model} (user-defined) must not override
-the following methods:
+Subclasses of \code{Model} (i.e., user-defined classes)
+must \textbf{not} override the following methods:
 \begin{lstlisting}
 	create_initial_level(centers, radii, ...)
-	get_initial_level()
 	save_initial_level(comm)
 	runDP(...)
 	runTP(...)
 	runMP(...)
 \end{lstlisting}
-We will see in Subsection \ref{sub:parallel} that the methods
+As we will see in Subsection \ref{sub:parallel}, the methods
 \code{runDP}, \code{runTP}, and \code{runMP}
-implement different modes of parallelism.
+implement different parallelism modes.
 
 \item \code{Velocity}:
-This class builds and solve the velocity equation.
-Since the bilinear form $B$ remains unchanged,
-the initialization of the \code{Velocity} class
-(\code{\_\_init\_\_} method)
-compiles the left-hand side of the corresponding linear system.
-Thus, in each iteration, just the right-hand side
-is updated before solve the system (see the \code{run} method). 
+This class builds and solves the velocity equation \eqref{eq:velocity}.
+Since the bilinear form $B$ remains unchanged, the \code{\_\_init\_\_} method
+compiles the left-hand side of the corresponding linear system during initialization.
+Thus, at each iteration, only the right-hand side is updated before solving
+the linear system (see the \code{run} method). 
 
 \item \code{Level}:
-It provides the level set function at each
-iteration by solving a diffusive version of the transport equation.
-This class pre-compile the corresponding linear system
-when it is initialized (see its \code{\_\_init\_\_} method).
-By calling the method \code{run} of this class
-the level set function is updated.
+This class provides the level set function at each iteration
+by solving a diffusive version of the transport equation.
+The linear system is precompiled during initialization
+(see the \code{\_\_init\_\_} method). 
+Calling the \code{run} method updates the level set function.
+In \code{run}, before starting the time iterations, the right-hand side is compiled,
+and only the left-hand side is updated during these iterations.
 
 \item \code{InitialLevel}:
-This class creates the initial
-level set function from a set of centers and radii.
-Its method \code{func} returns a callable function
-that represents the initial level set function $\phi^0$.
+This class creates the initial level set function $\phi^0$
+from a set of centers and radii.
+Its method \code{func} returns a callable function representing $\phi^0$.
 
 \item \code{PPL}:
-It implements the Lagrangian method developed in \cite{MR4589221}
-to deal with the constraints.
+This class implements the Lagrangian method developed in \cite{MR4589221}
+to handle the constraints.
 
 \item \code{LineSearch}:
 This class implements a line search method to
 estimate the number of steps and the final time to
 solve the transport equation.
-
 \end{itemize}
 
-The following are some help functions:
-
+The following are some helper functions:
 \begin{itemize}[left=0.0em]
 \item \code{create\_domain\_2d\_<DP|TP|MP>}:
 This function uses Gmsh to create 2D polygonal domains 
-from a set of vertices, along with marked
-boundaries. Interior holes and curves
-are allowed. \code{DP|TP|MP} refers to the
-parallelism paradigm.
+from a set of vertices, along with marked boundaries.
+Interior holes and curves (formed by line segments) are supported.
+\code{DP|TP|MP} refers to the parallelism paradigm.
 
-\item \code{create\_space}: It is wrapper to create a FEniCSx function space.
+\item \code{create\_space}:
+This is wrapper function for creating a FEniCSx function space.
 
-\item \code{homogeneous\_dirichlet}: This function
-creates homogeneous Dirichlet boundary conditions
-over faces of dimension $d - 1$.
+\item \code{homogeneous\_dirichlet}:
+This function creates homogeneous Dirichlet boundary conditions
+on faces of dimension $d-1$.
 
-\item \code{dir\_extension\_from}: It computes
-the Dirichlet extension of the solutions corresponding
-to a set of partial differential equations.
+\item \code{dir\_extension\_from}:
+This function computes the Dirichlet extension of the solutions
+corresponding to a set of partial differential equations.
 \end{itemize}
 
-The main functions of \code{distributed.py}
-implements Algorithm \ref{eq:algo_lv} along with
-different modes of parallelization:
+The main functions in \code{distributed.py}
+implement Algorithm \ref{eq:algo_lv} using
+different parallelism modes:
 \begin{itemize}[left=0.0em]
 \item \code{runDP} for data parallelism.
 \item \code{runTP} for task parallelism.
 \item \code{runMP} for mixed parallelism.
 \end{itemize}
+The user-defined subclasses inherit these functions from the \code{Model} class.
 
 In addition to \code{distributed.py}, we have written
-several problem models in \code{models.py}. 
+several problem models in \code{models.py}:
+\begin{itemize}[left=0.0em]
+\item \code{Compliance}: compliance minimization;
+\item \code{CompliancePlus}: similar to \code{Compliance}, but using multiple load cases;
+\item \code{InverseElasticity}: Inverse problem in linear elasticity;
+\item \code{Heat}: heat conduction problem;
+\item \code{HeatPlus}: same as \code{Heat}, but with multiple sinks.
+\end{itemize}
 Tests using these models can be found in \code{test.py}.
-Associated to each test there is a folder in \code{results/}
+For each test, there is a corresponding folder in \code{results/}
 where the results are saved.
-In \code{load.py} and \code{plots.py} there are secondary codes
-to plot the results. Since the results are written in Xdmf format,
-we recommend Paraview to see them.
 
-Several classes and functions are used internally and the user does not need
-to know how to use them. Below we describe the stages the user must follow,
-along with the classes and function that it must use:
-\begin{enumerate}
-	\item Creation of a model class (subclass of class \code{Model}) with the problem equations. 
-	\item Definition of the domain, space, and boundary conditions. To facilitate this part,
-	we have written \code{create\_domain\_2d\_<DP|TP|MP>} and many other functions
-	to set the boundary conditions. 
-	\item Model initialization and execution by calling the method \code{run<DP|TP|MP>}.
+The files \code{load.py} and \code{plots.py} contain auxiliary code
+for visualizing the results. Since the results are saved in XDMF format,
+we recommend ParaView to view them.
+
+Several classes and functions are used internally, and the user does not need
+to understand how to use them. Below, we describe the stages the user must follow,
+along with the classes and function that must be used:
+\begin{enumerate}[left=0.0em]
+\item
+Creation of a model class (a subclass of \code{Model})
+containing the problem equations. 
+\item
+Definition of the domain $\mathcal{D}$, function space, and boundary conditions.
+To facilitate this step, we provide the function
+\code{create\_domain\_2d\_<DP|TP|MP>} and several helper functions
+for setting Dirichlet and Neumann boundary conditions. 
+\item
+Initialization and execution of the model
+by calling the method \code{run<DP|TP|MP>}.
 \end{enumerate}
-In all these stages, the parallelism paradigm must be considered.
+Only in the last two stages does the user need to consider the parallelism paradigm.
+Since the problem model is a subclass of \code{Model},
+no parallelism considerations are needed during its creation.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Model construction}
 \label{sub:model}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-We must start by creating a subclass of \code{Model} class
-with the following necessary attributes and methods:
-
+We begin by creating a subclass of \code{Model}
+with the following required attributes and methods:
 \begin{lstlisting}
 from distributed import Model
 
@@ -509,33 +520,46 @@ class MyModel(Model):
 	def bilinear_form(self, th, xi):
 		pass
 \end{lstlisting}
-
 The attributes \code{dim}, \code{domain}, \code{space}, and \code{path}
-are the dimension of the problem domain $d$, the mesh that represents the domain $\Omega$,
-the space of functions for the problem solutions, and the test path where the results will be saved, respectively. 
+correspond, respectively, to the dimension $d$ of the problem domain $\mathcal{D}$,
+the mesh that represents $\mathcal{D}$,
+the function space for the solutions of the state and adjoint equations
+(we assume the same space for both),
+and the path where the results will be saved. 
 
-\code{phi}, \code{U}, \code{P}
-
-\code{th, xi}
-
-The \code{pde} method models the partial differential equations of the problem.
+The function arguments \code{phi}, \code{U}, \code{P} represent
+the level set function, the state solutions, and the adjoint solutions, respectively.
+The \code{pde} method defines the partial differential equations of the problem.
 It must return a list with elements of the form \code{(wk, bc)},
-where \code{wk} is the weak formulation of the equations
-and \code{bc} is a list with the Dirichlet boundary conditions.
-The \code{adjoint} method model the adjoint equations of the problem.
-It must return a list of similar struct that \code{pde}. 
+where \code{wk} is the weak formulation of the equations,
+and \code{bc} is a list of Dirichlet boundary conditions.
+The \code{adjoint} method defines the adjoint equations of the problem and
+must return a list with the same structure as that of \code{pde}. 
 The \code{cost} method must return the cost functional $J(\Omega)$.
 The \code{constraint} method must return a list with the components of $C(\Omega)$.
 The \code{derivative} method must return two tuples,
-each one with the derivative components $S_0$ and $S_1$, respectively,
+each containing the derivative components $S_0$ and $S_1$,
 corresponding to the cost functional and the constraints.
 Finally, the \code{bilinear\_form} method must return
-the chosen bilinear form $B(\theta, \xi)$.
+the chosen bilinear form $B$, where \code{th} and \code{xi}
+representing the arguments of $B(\theta, \xi)$.
 
-All the content of this class must be written exclusively using
-UFL and native Python functions. Details of the input and outputs of these methods
-can be view in the documentation of the \code{Model} class. 
+By convention, all the contents of this class are written exclusively using
+UFL and native Python functions. For example, the following UFL
+functions were used across all our models (see \code{models.py}):
+\begin{lstlisting}
+from ufl import (
+    TrialFunction, TestFunction,
+    FacetNormal, Identity, Measure,
+    SpatialCoordinate, Coefficient,
+    conditional, indices, as_vector,
+    inner, outer, grad, sym, dot,
+    lt, pi, cos, sqrt, nabla_div
+)	
+\end{lstlisting}
 
+Details about the input and outputs of the required methods
+can be found in the documentation of the \code{Model} class.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Parallelization}
@@ -544,38 +568,33 @@ can be view in the documentation of the \code{Model} class.
 
 %Here we explain the two modes of parallelization, the mesh and the sources,
 %and how the user can play with that. Explain the splitting and the colors.
-
 %Cite some parts of the codes to explain that.
 
 Our module supports three parallelism paradigms:
-data parallelism, task parallelism, and a combination of the two,
-known as mixed parallelism.
+\textit{data parallelism} (\code{DP}),
+\textit{task parallelism} (\code{TP}), and a combination of the two,
+known as \textit{mixed parallelism} (\code{MP}).
 
-Data parallelism refers to solving the problem on a mesh
+\textit{Data parallelism} refers to solving the problem on a mesh
 that is distributed across multiple processes.
 All the weak formulations are solved on this distributed mesh.
-
-In the task parallelism paradigm, each state equation is solved
+In the \textit{task parallelism} paradigm, each state equation is solved
 in a separate process, and the same applies to each adjoint equation.
-It is necessary to have a copy of the mesh in each process.
+In this case, each process must have its own copy of the mesh.
 The velocity field and the level set function are computed
-in the first process.
-
-The mixed parallelism paradigm combines the previous two by
+in the first process (identified as \code{rank = 0}).
+The \textit{mixed parallelism} paradigm combines the previous two by
 solving each state equation on a mesh distributed across a group
-of subprocesses. The adjoint equations are solving in the same 
-way, while velocity field and the level set function are computed
-in first group of subprocesses.
+of subprocesses. The adjoint equations are solved in the same 
+way, while the velocity field and the level set function are computed
+in the first group of subprocesses (identified as \code{color = 0}).
 
 We use MPI to implement parallelism.
-The model class and its initialization are independent
-of the parallelism paradigm.
-However, for the creation of the domain, the correct communicator
-must be passed. For instance, for all paradigms,
-we must start by calling
-the MPI communicator (\code{comm}),
-the number of processes (\code{size}), and
-the the current process (\code{rank}):
+The model problem (i.e., a subclass of \code{Model})
+and its initialization are independent of the parallelism paradigm.
+However, when creating the domain, the appropriate communicator must be passed.
+For all paradigms, we begin by accessing the MPI communicator (\code{comm}),
+the number of processes (\code{size}), and the the current process (\code{rank}):
 \begin{lstlisting}
 from mpi4py import MPI
 comm = MPI.COMM_WORLD
@@ -583,49 +602,57 @@ size = comm.size
 rank = comm.rank
 \end{lstlisting}
 
-To create the domain for data parallelism
-use \code{comm}. For  2D domains, we have written the function
-\code{create\_domain\_2d\_DP}, which use \code{comm}
-internally. You can import it from the module.
+To create the domain for data parallelism, use \code{comm},
+the main communicator that connect all the processes.
+For 2D domains, we provide the function
+\code{create\_domain\_2d\_DP}, which internally uses \code{comm}.
+You can import this function from the module.
 
-Before start task parallelism,
-check that the number of processes is equal to 
-the number of state equations. Here we use the variable
-\code{task\_nbr} to save this number.
-After verification, call the ``self'' communicator:
+Before starting task parallelism,
+check that the number of processes matches
+the number of state equations. We use the variable
+\code{task\_nbr} to store this number.
+After this verification, call the ``self'' communicator
+(used to communicate a process with itself):
 \begin{lstlisting}
 if size != task_nbr:
     return
 comm_self = MPI.COMM_SELF
 \end{lstlisting}
 Then use \code{comm\_self} to create the domain in each process.
-You can import the 
-\code{create\_domain\_2d\_TP} function
-to create 2D domains. It is not necessary to pass 
-\code{comm\_self} to this function.
+Alternatively, you can import the function \code{create\_domain\_2d\_TP}
+to create 2D domains. It is not necessary to pass \code{comm\_self} to this function.
+Note that if adjoint equations are present,
+their number is assumed to be equal to the number of state equations.
+This assumption is particularly important in task parallelism,
+where one process is assigned to each state equation,
+and after they are solved,
+the same applies to the adjoint equations (if present).
 
-In the case of mixed parallelism mode,
-the processes are grouped in groups
-of the same size. Thus, the total number of processes
-(\code{size}) must divisible by  the number of groups
-(\code{nbr\_groups}). Verified this,
-we are able to give a \code{color}
-to each process: processes in the same group share tha same
-\code{color}. The the \code{Split} function
-returns the sub communicator corresponding to each group:
+In the mixed parallelism paradigm,
+processes are divided into groups of equal size.
+Thus, the total number of processes (\code{size}) must be divisible
+by the number of groups (\code{nbr\_groups}), where \code{nbr\_groups}
+corresponds to the number of state equations (and adjoint equations, if present).
+Once this condition is verified, we assign a \code{color} to each process:
+processes in the same group share tha same \code{color}.
+The \code{Split} function returns the sub-communicator associated to each group:
 \begin{lstlisting}
 if size%nbr_groups != 0:
 	return
 color = rank * nbr_groups // size
 sub_comm = comm.Split(color, rank)
 \end{lstlisting}
-Using \code{sub\_comm} one creates a domain
+Using \code{sub\_comm}, one copy of the same domain must be created
 in each group of processes.
-Alternatively, you can use the function
-\code{create\_domain\_2d\_MP}
+Alternatively, you can use the function \code{create\_domain\_2d\_MP},
+passing \code{sub\_comm} as an argument.
+Of course, we expect each group to contain more than one process;
+otherwise, the configuration corresponds to task parallelism.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Augmented Lagrangian}
+\label{sub:lagrangian}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Here explain how the augmented Lagrangian works for volume constraints 

@@ -316,7 +316,7 @@ class Model(ABC):
         self.ini_lvl.save(comm, self.domain, self.path)
 
     @final
-    def get_initial_level(self):
+    def _get_initial_level(self):
         """
         Return the callable initial level set function. 
         """
@@ -2597,7 +2597,7 @@ def runDP(
     # Iteration i = 0 =======
     start_solve = MPI.Wtime()
 
-    phi.interpolate(model.get_initial_level())
+    phi.interpolate(model._get_initial_level())
     
     [p.solve() for p in ste_pbs]
     comm.Barrier()
@@ -2857,7 +2857,7 @@ def runTP(
 
     # --------------------------------------------
     if rank == 0:
-        phi.interpolate(model.get_initial_level())
+        phi.interpolate(model._get_initial_level())
         phi_vls = phi.x.array[:]
     else:
         phi_vls = None
@@ -3175,7 +3175,7 @@ def runMP(
 
     # ------------------------------------
     if color == 0:
-        phi.interpolate(model.get_initial_level())
+        phi.interpolate(model._get_initial_level())
         phi_vls_loc = phi.x.array[:]
     else:
         # Colect None if color is not 0
