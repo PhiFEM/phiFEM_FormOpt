@@ -1,5 +1,4 @@
-# Proyecto PDE Solver
+# `distributed` module
 
-Bienvenido a la documentación del módulo de ecuaciones en PDE.
-
-En la sección **Reinit Class** puedes encontrar la explicación matemática de la clase `Reinit` que está implementada en `code/distributed.py`.
+Welcome to the documentation of `distributed`, a Python module for solving shape optimization problems
+in parallel using distributed shape derivatives.

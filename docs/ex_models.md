@@ -1,12 +1,10 @@
-# Model class
+# Examples of models
 
 This is an abstract class for the problem equations.
 
 ---
 
-## Details
 
-::: code.distributed.Model
 
 
 

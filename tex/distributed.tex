@@ -41,7 +41,7 @@
 	commentstyle=\color{green!50!black}\itshape,
 	stringstyle=\color{red!60!black},
 	identifierstyle=\color{black},
-	emph={create_initial_level, save_initial_level, pde, adjoint, cost, constraint, derivative, bilinear_form, runDP, runTP, runMP},
+	emph={create_initial_level, pde, adjoint, cost, constraint, derivative, bilinear_form, runDP, runTP, runMP},
 	emphstyle=\color{magenta!70!black}\bfseries
 }
 
@@ -357,14 +357,14 @@ will be explained in the following subsections.
 The main classes included in \code{distributed.py} are the following:
 \begin{itemize}[left=0.0em]
 \item \code{Model}:
-This is an abstract class for the problem equations.
-It serves as a base for user-defined classes, which must contain
+This is an abstract class that serves as a base for user-defined classes
+(i.e., subclasses of \code{Model}).
+It must contain
 the weak formulations of the state and adjoint equations,
 the cost functional, the constraints,
-the distributed shape derivative components,and
-the bilinear form for the velocity---written exclusively using
-UFL and native Python functions.
-The following methods must be overridden:
+the distributed shape derivative components, and
+the bilinear form used to compute the velocity $\theta$---all written exclusively using UFL and native Python functions.
+To achieve this, the following methods must be overridden:
 \begin{lstlisting}
 	pde(level_set_func)
 	adjoint(level_set_func, states)
@@ -373,33 +373,32 @@ The following methods must be overridden:
 	derivative(level_set_func, states, adjoints)
 	bilinear_form(velocity_func, test_func)
 \end{lstlisting}
-Subclasses of \code{Model} (i.e., user-defined classes)
-must \textbf{not} override the following methods:
+\code{Model} class provides its subclasses with
+methods to create the initial level set function $\phi^0$
+and to run Algorithm \ref{eq:algo_lv} using
+different parallelism modes:
 \begin{lstlisting}
-	create_initial_level(centers, radii, ...)
-	save_initial_level(comm)
-	runDP(...)
-	runTP(...)
-	runMP(...)
+	create_initial_level(centers, radii)
+	runDP(...) # data parallelism
+	runTP(...) # task parallelism
+	runMP(...) # mixed parallelism
 \end{lstlisting}
-As we will see in Subsection \ref{sub:parallel}, the methods
-\code{runDP}, \code{runTP}, and \code{runMP}
-implement different parallelism modes.
+These methods must \textbf{not} be overridden.
 
 \item \code{Velocity}:
 This class builds and solves the velocity equation \eqref{eq:velocity}.
 Since the bilinear form $B$ remains unchanged, the \code{\_\_init\_\_} method
 compiles the left-hand side of the corresponding linear system during initialization.
 Thus, at each iteration, only the right-hand side is updated before solving
-the linear system (see the \code{run} method). 
+the linear system (see the \code{run} method of this class). 
 
 \item \code{Level}:
 This class provides the level set function at each iteration
-by solving a diffusive version of the transport equation.
+by solving the diffusive version of the transport equation \eqref{eq:transport}.
 The linear system is precompiled during initialization
 (see the \code{\_\_init\_\_} method). 
 Calling the \code{run} method updates the level set function.
-In \code{run}, before starting the time iterations, the right-hand side is compiled,
+Before starting the time iterations, the right-hand side is compiled,
 and only the left-hand side is updated during these iterations.
 
 \item \code{InitialLevel}:
@@ -415,6 +414,10 @@ to handle the constraints.
 This class implements a line search method to
 estimate the number of steps and the final time to
 solve the transport equation.
+
+\item \code{Reinit}:
+This class implements the reinitialization of the level set function
+by approximating the distance function associated to $\Omega^i$.
 \end{itemize}
 
 The following are some helper functions:
@@ -441,23 +444,25 @@ The main functions in \code{distributed.py}
 implement Algorithm \ref{eq:algo_lv} using
 different parallelism modes:
 \begin{itemize}[left=0.0em]
-\item \code{runDP} for data parallelism.
-\item \code{runTP} for task parallelism.
-\item \code{runMP} for mixed parallelism.
+\item \code{runDP} function for data parallelism.
+\item \code{runTP} function for task parallelism.
+\item \code{runMP} function for mixed parallelism.
 \end{itemize}
-The user-defined subclasses inherit these functions from the \code{Model} class.
+We point out that the user-defined subclasses
+inherit these functions from the \code{Model} class.
 
-In addition to \code{distributed.py}, we have written
-several problem models in \code{models.py}:
+In addition to \code{distributed.py}, we have implemented
+several models in \code{models.py}:
 \begin{itemize}[left=0.0em]
 \item \code{Compliance}: compliance minimization;
-\item \code{CompliancePlus}: similar to \code{Compliance}, but using multiple load cases;
-\item \code{InverseElasticity}: Inverse problem in linear elasticity;
+\item \code{CompliancePlus}: similar to \code{Compliance}, but with multiple load cases;
+\item \code{InverseElasticity}: inverse problem in linear elasticity;
 \item \code{Heat}: heat conduction problem;
 \item \code{HeatPlus}: same as \code{Heat}, but with multiple sinks.
 \end{itemize}
+The problem formulation of these models are provided in the documentation.
 Tests using these models can be found in \code{test.py}.
-For each test, there is a corresponding folder in \code{results/}
+For each test, there is a corresponding folder in \code{results/},
 where the results are saved.
 
 The files \code{load.py} and \code{plots.py} contain auxiliary code
@@ -466,7 +471,7 @@ we recommend ParaView to view them.
 
 Several classes and functions are used internally, and the user does not need
 to understand how to use them. Below, we describe the stages the user must follow,
-along with the classes and function that must be used:
+along with the classes and functions that must be used:
 \begin{enumerate}[left=0.0em]
 \item
 Creation of a model class (a subclass of \code{Model})
@@ -650,181 +655,239 @@ passing \code{sub\_comm} as an argument.
 Of course, we expect each group to contain more than one process;
 otherwise, the configuration corresponds to task parallelism.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Augmented Lagrangian}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Lagrangian method}
 \label{sub:lagrangian}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Here explain how the augmented Lagrangian works for volume constraints 
-
+To handle the constraints $C(\Omega)=\boldsymbol{1}$,
+we implement the Lagrangian-based first-order method developed in \cite{MR4589221}.
+We begin by formulating the Proximal-Perturbed Lagrangian
 \begin{equation} \label{eq:lagrangian}
 \begin{aligned}
-	L(\Omega, z, \lambda, \mu) =\,
-	& J(\Omega) + \langle \lambda, C(\Omega) -  \boldsymbol{1} \rangle + \langle \mu, z \rangle \\
-	& + \frac{\alpha}{2} \Vert z \Vert^2 + \frac{\beta}{2} \Vert \lambda - \mu \Vert^2
+L(\Omega, z, \lambda, \mu) \coloneqq\,
+& J(\Omega) + \langle \lambda, C(\Omega) -  \boldsymbol{1} \rangle + {}\\
+&\langle \mu, z \rangle + \frac{\alpha}{2} \vert z \vert^2 + \frac{\beta}{2} \vert \lambda - \mu \vert^2,
 \end{aligned}
 \end{equation}
-
-$S_0$ and $S_1$ in \eqref{eq:velocity} given by
-\[
-	S_0 = S_0^{J} + \lambda^{i} S_0^{C}, \quad S_1 = S_1^{J} + \lambda^{i} S_1^{C} 
-\]
-where $\lambda^{i}$ is updated following the algorithm
-proposed in \cite{MR4589221}: given 
+where $z$ is a perturbation variable,
+$\lambda$ and $\mu$ are Lagrange multipliers,
+$\alpha$ is a penalty parameter, and
+$\beta$ is a proximal parameter.
+Here, $\langle \cdot, \cdot \rangle$ and $\vert \cdot \vert$
+are the standard inner product and norm of $\mathds{R}^n$,
+where $n$ is the number of constraints.
+We then follow Algorithm 1 in \cite{MR4589221}:
+Given the parameters 
 $r\in(0,1)$,
 $\alpha\in(1,\infty)$, $\beta\in(0,1)$, 
-$\delta^{0}\in(0,1]$, and 
-$(z^{0},\lambda^{0},\mu^{0})$
-do
+$\delta^{0}\in(0,1]$, and initial values
+$(z^{0},\lambda^{0},\mu^{0})$,
+the iterations are defined by
 \begin{equation} \label{eq:lag_method}
-	\begin{aligned}
-		\mu^{i+1} & = \mu^{i}+\delta^{i}(\lambda^{i}-\mu^{i})(\left\Vert \lambda^{i}-\mu^{i} \right\Vert^{2} + 1)^{-1}\\
-		\lambda^{i+1} & = \mu^{i+1} + \alpha (1+\alpha \beta)^{-1}(C(\Omega^{i+1})- \boldsymbol{1})\\
-		z^{i+1} & = \alpha^{-1}(\lambda^{i+1}-\mu^{i+1})\\
-		\delta^{i+1} & =r\delta^{i}
-	\end{aligned}
+\begin{aligned}
+\mu^{i} & = \mu^{i-1}+\delta^{i-1}\tfrac{\lambda^{i-1}-\mu^{i-1}}{\left\Vert \lambda^{i-1}-\mu^{i-1} \right\Vert^{2} + 1}\\
+\lambda^{i} & = \mu^{i} + \tfrac{\alpha}{1+\alpha \beta} (C(\Omega^{i})- \boldsymbol{1})\\
+z^{i} & = \tfrac{1}{\alpha}(\lambda^{i}-\mu^{i})\\
+\delta^{i} & =r\delta^{i-1}
+\end{aligned}
 \end{equation}
-for $i=0,1,2,\dots$. Recall that $\Omega^{i+1}$ is obtained in (?).
-For all tests we used
+for $i=1,2,\dots$, where $\Omega^{i}$ is given by \eqref{eq:subdomain}.
+Note that, in our implementation,
+the update of the level set function via the transport equation \eqref{eq:transport}
+replaces the gradient descent step in Algorithm 1 \cite{MR4589221},
+which aims to minimize $L$ with respect to its first primal variable (here $\Omega$).
+
+The Lagrange multiplier $\lambda^i$ is used to construct
+the shape derivative components
+$S_0$ and $S_1$ given by
+\begin{equation} \label{eq:S0andS1}
+S_0 \coloneqq S_0^{J} + \lambda^{i} S_0^{C}, \quad S_1 \coloneqq S_1^{J} + \lambda^{i} S_1^{C} 	
+\end{equation}
+In the initialization of the \code{PPL} class,
+we set the parameters to the same values used in \cite{MR4589221}:
 $r = 0.999$, $\delta^{0} = 0.5$,
 $\alpha = 2000$, $\beta = 0.5$,
-$z^{0} = 0$, $\lambda^{0} = 0$, and $\lambda^{0} = 0$.
+$z^{0} = 0$, $\lambda^{0} = 0$, and $\mu^{0} = 0$.
+These values are also used in all our tests.
 
+Our module recognizes the number of constraints by calling
+the method \code{constraints} of the user-defined class.
+If there are no constraints (i.e., \code{constraints} returns an empty list),
+then the Lagrangian method is not applied, and we simply set
+$S_0 = S_0^J$ and $S_1 = S_1^J$.
 
 %%%%%%%%%%%%%%%%%%%%%
 \subsection{Velocity}
 \label{sub:velocity}
 %%%%%%%%%%%%%%%%%%%%%
-The velocity $\theta$ is obtained by solving the following weak formulation:
+
+The velocity field $\theta$ is obtained by solving the following weak formulation:
 Find $\theta\in\mathbb{H}$ such that
 \begin{equation} \label{eq:velocity}
 	B (\theta, \xi) =
-	- \int_{\mathcal{D}} S_0\cdot\xi + S_1 : D\xi \quad\forall \; \xi \in \mathbb{H}
+	- \int_{\mathcal{D}} S_0\cdot\xi + S_1 : D\xi \quad\forall \; \xi \in \mathbb{H},
 \end{equation}
-with $\mathbb{H} = H^1(\mathcal{D})^d$ or $\mathbb{H} = H_0^1(\mathcal{D})^d$.
-The bilinear form $B$ must be provided as a UFL expression
-in the method \code{bilinear\_form} of the model class.
-This method must return \eqref{eq:velocity}, and
-either \code{False} (if $\mathbb{H} = H^1(\mathcal{D})^d$)
-or \code{True} (if $\mathbb{H} = H_0^1(\mathcal{D})^d$).
-The \code{Velocity} class sets up and solve \eqref{eq:velocity}.
+where $S_0$ and $S_1$ are defined in \eqref{eq:S0andS1}, and
+the Hilbert space $\mathbb{H}$ is either $H^1(\mathcal{D})^d$ or $H_0^1(\mathcal{D})^d$.
 
-If $\mathbb{H} = H^1(\mathcal{D})^d$, consider in $B$
-a term of the form
-$$
-{10}^{5}
-$$
-in order to have $\theta\cdot n = 0$ (almost zero) on the boundary.
+The \code{bilinear\_form} method must return 
+the UFL expression of bilinear form $B$, along with
+a Boolean value indicating whether homogeneous Dirichlet boundary conditions
+should be must be imposed:
+\code{False} if $\mathbb{H} = H^1(\mathcal{D})^d$ and
+\code{True} if $\mathbb{H} = H_0^1(\mathcal{D})^d$.
+In the case $\mathbb{H} = H^1(\mathcal{D})^d$,
+we recommend adding to $B$ a term of the form
+\begin{equation}
+	{10}^4 \int_{\partial \mathcal{D}}  (\theta \cdot n) (\xi \cdot n)
+\end{equation}
+to penalize the normal component of $\theta$ on the boundary.
+This enforces the velocity field $\theta$ to be
+(almost) tangential along the boundary.
+For instance,
+\begin{lstlisting}
+def bilinear_form(self, th, xi):
+	nv = FacetNormal(self.domain)
+	B = 0.1*dot(th, xi)*self.dx
+	B += inner(grad(th), grad(xi))*self.dx
+	B += 1e4*dot(th, nv)*dot(xi, nv)*self.ds
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Level set method} \label{sub:level}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	return B, False	
+\end{lstlisting}
+corresponds to the bilinear form
+\begin{equation*}
+B(\theta, \xi) =  {10}^{-1} \int_{\mathcal{D}} \theta \cdot \xi + 
+	\int_{\mathcal{D}} D\theta : D\xi +
+	{10}^4 \int_{\partial \mathcal{D}}  (\theta \cdot n) (\xi \cdot n),	
+\end{equation*}
+indicating that $\mathbb{H} = H^1(\mathcal{D})^d$.
 
-Explain how the level set method is implemented, cite the code.
-We solve the diffusion-transport problem
+Recall that the \code{Velocity} class sets up and solve \eqref{eq:velocity} internally.
+The outputs of the \code{derivatives} and \code{bilinear\_form} methods
+are sufficient to configure this part. 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Transport equation}
+\label{sub:level}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+We update the level set function by solving the diffusion-transport problem
 \begin{equation} \label{eq:transport}
 \begin{aligned}
-\partial_t \phi+\theta\cdot\nabla\phi - h^2\nabla^2\varphi &= 0 && x\in \mathcal{D},\, t>0, \\
+\partial_t \phi+\theta\cdot\nabla\phi  &= h^2\nabla^2\varphi && x\in \mathcal{D},\, t>0, \\
 										 \partial_{n} \phi &= 0 && x\in \partial\mathcal{D},\, t>0, \\
-												\phi(0, x) &= \phi^{i}(x) && x\in \mathcal{D},
+												\phi(0, x) &= \phi^{i}(x) && x\in \overline{\mathcal{D}},
 \end{aligned}
 \end{equation}
-We choose $\phi^{i+1}(x) = \phi(T,x)$.
-The Petrov-Galerkin method \cite{MR1640142} with the Crank-Nicolson method yields
+where $\theta$ is the velocity field obtained from \eqref{eq:velocity},
+and $h$ is the mesh diameter.
+We apply the Petrov-Galerkin method \cite{MR1640142} to \eqref{eq:transport},
+along with the Crank-Nicolson method to the time derivative.
+This results in iteratively solving the following weak formulation:
+Find $\phi(t+\Delta t,\cdot) \in H^1(\mathcal{D})$ such that
 \begin{align} \label{eq:weak_transport}
 	& \int_{\mathcal{D}} \phi(t+\Delta t,\cdot)\hat{\psi} + \Delta t \, \mathcal{F}(\phi(t+\Delta t,\cdot), \hat{\psi}) = \nonumber \\
 	& \int_{\mathcal{D}} \phi(t,\cdot) \hat{\psi} - \Delta t \, \mathcal{F}(\phi(t,\cdot), \hat{\psi})
-	\quad \forall \, \psi\in H^1(\mathcal{D})
+	\quad \forall \, \psi\in H^1(\mathcal{D}),
 \end{align}
-where $\mathcal{F}(u, v) = \frac{(\theta \cdot \nabla u) v}{2} + h^2\frac{\nabla u \cdot \nabla v}{2}$
+where $\Delta t$ is the time step,
+$\mathcal{F}(u, v) = \frac{(\theta \cdot \nabla u) v}{2} + h^2\frac{\nabla u \cdot \nabla v}{2}$
 and $\hat{\psi}=\psi+\tau \theta\cdot\nabla\psi$, with 
 \begin{equation} \label{eq:tau_lv}
-	\tau = 2\left(\frac{1}{\Delta t^2}  + \frac{|\theta|^2}{h^2}\right)^{-1/2}
+	\tau = 2\left(\frac{1}{\Delta t^2}  + \frac{|\theta|^2}{h^2}\right)^{-1/2}.
 \end{equation}
+We solve \eqref{eq:weak_transport} up to a final time $T$ and
+define the new level set function as $\phi^{i+1}(x) \coloneqq \phi(T,x)$.
 
-$h$ is the diameter associated to the mesh.
-Note that the boundary condition is weakly imposed.
-Alternatively, we add a diffusion term of the form
-$h^2\nabla^2 \phi$ to \eqref{eq:transport}.
+The diffusion term can be omitted by setting the argument \code{smooth=False}
+in \code{run<DP|TP|MP>}. For instance,
+we recommend this configuration for heat conduction problems.
 
+The implementation and resolution of \eqref{eq:weak_transport} are handled
+are in the \code{Level} class. 
 
-%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Other implementation aspects}
-%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-This could be the less important implementation aspects,
-such as line search, reinitialization of level set, stopping criterion,  etc ...
-
-\textbf{Reinitialization.}
-We regularly perform a reinitialization of the level set function $\phi^i$
-by solving the diffusive Eikonal equation with fictitious time derivative
+\textbf{Reinitialization.} We regularly perform a reinitialization of
+the level set function $\phi = \phi(T, \cdot)$ (obtained from \eqref{eq:transport})
+by solving the diffusive Eikonal equation with fictitious time derivative:
 \begin{equation} \label{eq:Eikonal}
 \begin{aligned}
-    \partial_t \varphi - h^2 \nabla^2 \varphi &= S(\phi^i)(1 - |\nabla \varphi|)
+    \partial_t \varphi - h^2 \nabla^2 \varphi &= S(\phi)(1 - |\nabla \varphi|)
     && x\in \mathcal{D},\, t>0, \\
     \partial_n \varphi &= 0
     && x\in \partial\mathcal{D},\, t>0, \\
-	\varphi(0, x) &= \phi^i(x)
+	\varphi(0, x) &= \phi(x)
 	&& x\in \overline{\mathcal{D}},
 \end{aligned}
 \end{equation}
-where $S(\psi):\overline{\mathcal{D}}\rightarrow (-1, 1)$ given by 
+where $S(\phi):\overline{\mathcal{D}}\rightarrow (-1, 1)$ is given by 
 \begin{equation*}
-	S(\psi) = \frac{\psi}{\sqrt{\psi^2 + h^2}}\quad (h= \text{mesh diameter})
+	S(\phi) = \frac{\phi}{\sqrt{\phi^2 + h^2}}\quad (h= \text{mesh diameter}).
 \end{equation*}
-approximates the signed distance function associated to
-the set $\{x\in\overline{\mathcal{D}} \mid \psi(x)<0\}$.
-We write the first equation of \eqref{eq:Eikonal}
-in the form of a Hamilton-Jacobi equation:
+The function $S(\phi)$ approximates the signed distance function associated
+with the set $\{x\in\overline{\mathcal{D}} \mid \phi(x)<0\}$.
+We write the first equation in \eqref{eq:Eikonal}
+as a Hamilton-Jacobi equation:
 \begin{equation} \label{eq:HJ}
 	\varphi_{t} + H(\nabla \varphi) =
-	S(\phi^i) + h^2 \nabla^2\varphi \quad x\in \mathcal{D},\, t>0,
+	S(\phi) + h^2 \nabla^2\varphi \quad x\in \mathcal{D},\, t>0,
 \end{equation}
-where $H(p) = S(\phi^i) |\nabla p|$ is the Hamiltonian.
+where $H(p) = S(\phi) |\nabla p|$ is the Hamiltonian.
 Note that $H$ is homogeneous of degree $1$: $H(\lambda p) = \lambda H(p)$
 for all positive $\lambda$. By Euler's homogeneous function theorem,
-$H(p) = \nabla H (p) \cdot p$, with $\nabla H (p) = S(\phi^i)p/ \left|p\right|$.
+$H(p) = \nabla H (p) \cdot p$, where $\nabla H (p) = S(\phi)p/ \left|p\right|$.
 These observations let us to consider, again,
 the Petrov-Galerkin method developed in \cite{MR1640142}. 
 Discretizing the time derivative with the two-step Adams-Bashforth method,
 we obtain the following iterative scheme:
+Find $\varphi(t + \Delta t, \cdot) \in H^1(\mathcal{D})$ such that
 \begin{align} \label{eq:weak_HJ}
-	& \int_{\mathcal{D}}  \varphi(t + \Delta t, \cdot) \hat{\psi} = \int_{\mathcal{D}} (\varphi(t, \cdot) + {\Delta t} \, S(\phi^i)) \hat{\psi} + {}\nonumber \\
-	& \int_{\mathcal{D}} {\Delta t}\,\mathcal{G}(\varphi(t, \cdot), \varphi(t - \Delta t, \cdot), \hat{\psi}) \quad \forall \, \psi\in H^1(\mathcal{D})
+	& \int_{\mathcal{D}}  \varphi(t + \Delta t, \cdot) \hat{\psi} = \int_{\mathcal{D}} (\varphi(t, \cdot) + {\Delta t} \, S(\phi)) \hat{\psi} + {}\nonumber \\
+	& \int_{\mathcal{D}} {\Delta t}\,\mathcal{G}(\varphi(t, \cdot), \varphi(t - \Delta t, \cdot), \hat{\psi}) \quad \forall \, \psi\in H^1(\mathcal{D}),
 \end{align}
 where $\mathcal{G}(u, v, w) = \tfrac{H(\nabla v)-3H(\nabla u)}{2} w + h^2 \tfrac{\nabla v - 3\nabla u}{2} \cdot \nabla w$
 and $\hat{\psi}=\psi+\tau\nabla H(\nabla \varphi(t, \cdot)) \cdot\nabla\psi $, with 
 \begin{equation}
 	\tau = 2\left(\frac{1}{\Delta t^2}  + \frac{|\nabla H(\nabla \varphi(t, \cdot))|^2}{h^2}\right)^{-1/2}.
 \end{equation}
-Note that $|\nabla H(\nabla \varphi(t, \cdot))| = \left|S(\phi^i)\right|$.
-Hence, as in \eqref{eq:tau_lv}, $\tau$ is time-independent.
-The two-step Adams-Bashforth method provides an explicit scheme
-to the nonlinear equation \eqref{eq:Eikonal}, while the order
-of accuracy in time is $O(\Delta t ^2)$.
-The diffusion term prevents the propagation of
-small instabilities due to $\nabla H(\nabla \varphi (t, \cdot))$:
-although $\varphi$ aims to approximate the distance function
-associated to $\Omega^i$, and
-then $\left|\nabla \varphi\right| \approx 1$,
-$\left|\nabla \varphi\right|$ can be small at the first iterations of \eqref{eq:weak_HJ}
-due to the initial condition.
-In practice, we observed that computing
-the first iteration $\varphi(\Delta t, \cdot)$,
-which is necessary for \eqref{eq:weak_HJ},
-using the explicit Euler method is sufficient.
-Recall that the goal of the reinitialization is to
-keep the function level set non-degenerated along iterations.
-Finally, we point out that, unlike \cite{MR1640142}, inflow fluxes were not considered.
 
-The \code{Reinit} class implements the reinitialization.
+Note that $|\nabla H(\nabla \varphi(t, \cdot))| = \left|S(\phi)\right|$,
+so $\tau$ is time-independent, just as in \eqref{eq:tau_lv}.
+The Adams-Bashforth method provides an explicit scheme
+to the nonlinear equation \eqref{eq:Eikonal},
+with second-order accuracy in time.
+The diffusion term prevents the propagation of
+small instabilities due to $\nabla H(\nabla \varphi (t, \cdot))$.
+Although $\varphi$ approximates the distance function
+associated to $\{x\in\overline{\mathcal{D}} \mid \phi(x)<0\}$, and
+therefore ideally satisfies $\left|\nabla \varphi\right| \approx 1$,
+this may not hold during the first iterations of \eqref{eq:weak_HJ}
+due to the initial condition.
+
+In practice, we observed that computing
+the first iterate $\varphi(\Delta t, \cdot)$
+using the explicit Euler method is sufficient to start the scheme.
+Recall that the goal of the reinitialization is to
+prevent degeneration of the level set function across iterations.
+Finally, we point out that, unlike in \cite{MR1640142}, inflow fluxes were not considered.
+
+Recall that the \code{Reinit} class implements the reinitialization.
 Its constructor creates a precompiled solver for \eqref{eq:weak_HJ},
 and the method \code{run} performs the iterations.
-There are two user-parameters.
-\code{reinit\_step} is either \code{False} or a positive integer.
-If \code{False}, there is no reinitialization; otherwise
-the reinitialization is performed when $\code{reinit\_step} \% \code{iter} = 0$.
-\code{reinit\_pars} is a tuple with the number of iterations and the final time.
+Two user-defined parameters are available in \code{run<DP|TP|MP>}
+to configure the reinitialization:
+\begin{itemize}[left=0.0em]
+	\item \code{reinit\_step}: Either \code{False} or a positive integer.
+	If \code{False}, no reinitialization is performed. Otherwise
+	the reinitialization is performed whenever $\code{reinit\_step\%i=0}$, where
+	\code{i} denotes the current iteration.
+	\item \code{reinit\_pars}:
+	Tuple with the number of iterations and the final time for \eqref{eq:weak_HJ}.
+\end{itemize}
 
 \textbf{Line search method.} 
 The final time in \eqref{eq:transport} 

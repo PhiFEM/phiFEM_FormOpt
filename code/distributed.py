@@ -493,7 +493,7 @@ class Model(ABC):
         random_pars: Tuple[int, float] = (26, 0.05)
     ) -> None:
         """
-        This method implements Mix Parallelism.
+        This method implements Mixed Parallelism.
 
         Parameters
         ----------
