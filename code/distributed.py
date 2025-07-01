@@ -337,7 +337,7 @@ class Model(ABC):
         lgrn_tol: float = 1e-2,
         cost_tol: float = 1e-2,
         prev: int = 10,
-        random_pars: Tuple[int, float] = (26, 0.05)
+        random_pars: Tuple[int, float] = (1, 0.05)
     ) -> None:
         """
         This method implements Data Parallelism.
@@ -413,7 +413,7 @@ class Model(ABC):
         lgrn_tol: float = 1e-2,
         cost_tol: float = 1e-2,
         prev: int = 10,
-        random_pars: Tuple[int, float] = (26, 0.05)
+        random_pars: Tuple[int, float] = (1, 0.05)
     ) -> None:
         """
         This method implements Task Parallelism.
@@ -490,7 +490,7 @@ class Model(ABC):
         lgrn_tol: float = 1e-2,
         cost_tol: float = 1e-2,
         prev: int = 10,
-        random_pars: Tuple[int, float] = (26, 0.05)
+        random_pars: Tuple[int, float] = (1, 0.05)
     ) -> None:
         """
         This method implements Mixed Parallelism.

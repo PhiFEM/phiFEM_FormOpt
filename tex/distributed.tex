@@ -881,43 +881,68 @@ and the method \code{run} performs the iterations.
 Two user-defined parameters are available in \code{run<DP|TP|MP>}
 to configure the reinitialization:
 \begin{itemize}[left=0.0em]
-	\item \code{reinit\_step}: Either \code{False} or a positive integer.
+	\item \code{reinit\_step}:
+	Either \code{False} or a positive integer.
 	If \code{False}, no reinitialization is performed. Otherwise
 	the reinitialization is performed whenever $\code{reinit\_step\%i=0}$, where
-	\code{i} denotes the current iteration.
+	\code{i} denotes the current iteration. By default, \code{reinit\_step=False}.
 	\item \code{reinit\_pars}:
 	Tuple with the number of iterations and the final time for \eqref{eq:weak_HJ}.
+	By default, \code{reinit\_pars=(8,1e-1)}.
 \end{itemize}
 
 \textbf{Line search method.} 
-The final time in \eqref{eq:transport} 
-and the number of steps/iterations in \eqref{eq:weak_transport}
-are chosen as
+The final time and the number of steps/iterations in \eqref{eq:weak_transport}
+are chosen as follows:
 \begin{align}
-    T  & = \frac{\code{dfactor}}{B(\theta, \theta)}\quad\text{and} \label{eq:tend} \\
+    T  & = \tfrac{\code{dfactor}}{B(\theta, \theta)}\quad\text{and} \label{eq:tend} \\
     \hat{s} & =
-	(s_{\max} - s_{\min}) \left( \frac{T - t_{\min}}{t_{\max} - t_{\min}} \right)^{1/6}
+	(s_{\max} - s_{\min}) \left( \tfrac{T - t_{\min}}{t_{\max} - t_{\min}} \right)^{1/6}
 	+ s_{\min}, \label{eq:steps}
 \end{align}
-respectively, with $\code{dfactor}$, $\code{lv\_time} = (t_{\min}, t_{\max})$, and
-$\code{lv\_iter} = (s_{\max}, s_{\max})$ user-chosen parameters.
+respectively, where
+$\theta$ is the velocity field solution to \eqref{eq:velocity}.
+The other parameters are user-defined:
+\begin{itemize}[left=0.0em]
+	\item \code{dfactor}:
+	Positive float to scale the inverse of $B(\theta, \theta)$.
+	We recommend choosing $\code{dfactor}\leq1$.
+	By default, \code{dfactor=1e-2}.
+	\item $\code{lv\_time} = (t_{\min}, t_{\max})$:
+	Tuple with the minimum and maximum times allowed.
+	By default, \code{lv\_time=(1e-3,1e-1)}.
+	\item $\code{lv\_iter} = (s_{\min}, s_{\max})$:
+	Tuple with the minimum and maximum number of steps allowed.
+	By default, \code{lv\_iter=(8,16)}.
+\end{itemize}
+These parameters are configured in \code{run<DP|TP|MP>}.
+
+Note that in \eqref{eq:tend} the final time $T$
+varies inversely with the magnitude of $\theta$,
+which carries information of the shape derivative components.
+In \eqref{eq:steps}, we just apply a concave increasing function
+to $T$ to find the number of steps.
+
 Moreover, randomness can be introduced by specifying
 a seed number $n_\mathrm{seed}$ and a noise level $\vartheta$ in the argument
 $\code{random\_pars} = (n_\mathrm{seed}, \vartheta)$:
 $T$ is scaled by a random factor drawn from the uniform distribution
 $\mathcal{U}(1 - \vartheta, 1 + \vartheta)$
 and $\hat{s}$ is replaced by a sample drawn from the normal distribution
-$\mathcal{N}(\hat{s}, (\vartheta \hat{s})^2) $.
-We consider a minimal value for $B(\theta, \theta)$
+$\mathcal{N}(\hat{s}, (\vartheta \hat{s})^2)$.
+By default, \code{random\_pars=(1, 0.05)}.
+
+A lower bound is imposed on $B(\theta, \theta)$
 to prevent division by zero in \eqref{eq:tend}.
-Before return $T$ and $\hat{s}$, we ensure that
+Before return $T$ and $\hat{s}$, we make sure that
 $t_{\min}\leq T \leq t_{\max}$, $s_{\min}\leq \hat{s} \leq s_{\max}$,
-and $\hat{s}$ be an integer. Internally, the \code{LineSearch} class 
-performs these procedures.
+and $\hat{s}$ is rounded to an integer.
+We recall that the \code{LineSearch} class 
+performs all these procedures.
 
 \textbf{Stopping criterion.}
-We consider the following stopping criterions:
-for each $i>\code{start\_to\_check}$
+We consider the following stopping criterions from a iteration 
+$i>\code{start\_to\_check}$ forward:
 \begin{itemize}
 	\item (problem without constraints) we check
 	the relative error of the cost functional $J$
@@ -939,29 +964,37 @@ where $I(i) = \left\{i-\code{prev}, \dots,i-1\right\}$.
 The parameters \code{cost\_tol}, \code{lgrn\_tol}, and \code{ctrn\_tol} 
 are error tolerances, and \code{prev} is
 the number of previous values considered.
+The default values are
+\code{start\_to\_check=30},
+\code{cost\_tol=1e-2},
+\code{lgrn\_tol=1e-2},
+\code{ctrn\_tol=1e-2},
+and \code{prev=10}.
 
 \textbf{Initial guess.}
-The initial level set function is constructed
+The initial level set function $\phi^0$ is constructed
 using two arrays:  \code{centers} and \code{radii}.
 The array \code{centers} contains coordinates that
 represent centers of balls included in $\mathcal{D}$,
 and the array \code{radii} contains their corresponding radii.
 Then, we define $\phi^0: \mathcal{\overline{D}} \rightarrow \mathds{R}$ as follows:
-\begin{equation}
+\begin{equation} \label{eq:phi0}
 	\phi^0(x)= \code{factor} \cdot \max_k \phi_k(x),	
 \end{equation}
 where each $\phi_k :\mathcal{\overline{D}} \rightarrow \mathds{R}$ is given by
 \begin{equation}
 \phi_k(x) = \code{radii}[k] - \left|x - \code{centers}[k]\right|_{\code{ord}}. 
 \end{equation}
-Here, $\code{factor}$ is non-zero number and \code{ord}
+Here, $\code{factor}$ is non-zero float number and \code{ord}
 is the order of the norm $\left|\cdot\right|_{\code{ord}}$.
-By default, $\code{factor} = 1$ and $\code{ord} = 2$ (Euclidean norm).
+By default, \code{factor=1.0} and \code{ord=2} (Euclidean norm).
 Note that the set
 $\left\{x\in\overline{\mathcal{D}}\mid \code{factor} \cdot \phi_k(x) < 0\right\}$
 determines either the complement of a closed ball
 or an open ball, if \code{factor} is positive or negative, respectively.
-Applying level set operations, we see that the initial domain
+
+From \eqref{eq:phi0}, and applying level set operations,
+we can see that the initial domain
 $\Omega^0=  \left\{x\in\overline{\mathcal{D}}\mid \phi^0(x) < 0\right\}$ is given by
 \[
 \Omega^0 = 
@@ -975,10 +1008,11 @@ centered at $\code{centers}[k]$ with radius $\code{radii}[k]$.
 Thus, $\Omega^0$ can be either
 $\overline{\mathcal{D}}$ with ball shaped holes
 or the union of balls included in $\overline{\mathcal{D}}$.
+
 For instance,
-after instantiating an object of a model class that inherits from $\code{Model}$,
+after instantiating an object of a subclass of $\code{Model}$,
 we can invoke the method \code{create\_initial\_level} to pass
-the arrays that define $\phi^0$:
+the arrays that define the initial level set function $\phi^0$:
 \begin{lstlisting}
 md = MyModel(...)
 md.create_initial_level(centers, radii)	
