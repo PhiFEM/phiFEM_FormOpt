@@ -711,12 +711,12 @@ class InitialLevel:
     """
 
     def __init__(
-            self,
-            centers: npt.NDArray[np.float64],
-            radii: npt.NDArray[np.float64],
-            factor: float = 1.0,
-            ord: int = 2
-        ):
+        self,
+        centers: npt.NDArray[np.float64],
+        radii: npt.NDArray[np.float64],
+        factor: float = 1.0,
+        ord: int = 2
+    ) -> None:
         """
         Parameters
         ----------
@@ -771,7 +771,10 @@ class InitialLevel:
         )
 
 
-def get_funcs_from(space, values):
+def get_funcs_from(
+    space: FunctionSpace,
+    values: npt.NDArray[np.float64]
+) -> List[Function]:
     """
     Returns a list of functions of the given
     values and defined on the given space.
@@ -798,7 +801,7 @@ def space_interpolation(from_space, funcs, to_space):
     return new_funcs
 
 
-def all_connectivities(domain):
+def all_connectivities(domain: Mesh) -> None:
     """
     Creates all basic connectivities.
     """
@@ -846,7 +849,7 @@ def dirichlet_extension(
     list of functions.
 
     Parameters
-    ---------
+    ----------
     domain : Mesh
         Problem domain.
     space : FunctionSpace
@@ -857,7 +860,8 @@ def dirichlet_extension(
         
     Returns
     -------
-    The Dirichlet extensions of the input functions.
+    extensions : List[Function]
+        The Dirichlet extensions of the input functions.
     """
     dx = Measure("dx", domain = domain)
     nbr_fcs = len(funcs)
@@ -2291,21 +2295,22 @@ def dir_extension_from(
 
     Parameters
     ---------
-        comm : MPI.Comm.
-            Communicator.
-        domain : Mesh
-            Problem domain.
-        space : FunctionSpace
-            Space of functions.
-        pde : Callable[[Function], List[Tuple[Expr, List[DirichletBC]]]]
-            Linear partial differential equations.
-        func : Callable[[npt.NDArray[np.float64]], float]
-            Level set function.
-        path : Path
-            Test path.
+    comm : MPI.Comm.
+        Communicator.
+    domain : Mesh
+        Problem domain.
+    space : FunctionSpace
+        Space of functions.
+    pde : Callable[[Function], List[Tuple[Expr, List[DirichletBC]]]]
+        Linear partial differential equations.
+    func : Callable[[npt.NDArray[np.float64]], float]
+        Level set function.
+    path : Path
+        Test path.
 
     Returns
     -------
+    extensions : List[Function]
         Dirichlet extension functions.
     """
     

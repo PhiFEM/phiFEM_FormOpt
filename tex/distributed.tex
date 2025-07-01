@@ -1022,8 +1022,7 @@ provides a callable method that uses the
 \code{centers} and \code{radii} arrays to construct $\phi^0$.
 
 \textbf{Dirichlet extension.}
-Given a function $u\in H^1(\mathcal{D})^{d}$,
-the Dirichlet extension of $u$ is defined 
+The Dirichlet extension of a function $u\in H^1(\mathcal{D})^{d}$ is defined 
 as the solution to the following problem:
 Find $\eta\in H^1(\mathcal{D})^{d}$ such that
 \begin{equation} \label{eq:dir}
@@ -1032,31 +1031,37 @@ Find $\eta\in H^1(\mathcal{D})^{d}$ such that
 	\eta &= u &&\quad \text{on } \Gamma.
 \end{aligned}
 \end{equation}
-The function $\code{dirichlet\_extension}$ implements equation \eqref{eq:dir}.
+The $\code{dirichlet\_extension}$ function 
+sets up and solve \eqref{eq:dir} for a list
+of functions in $H^1(\mathcal{D})^{d}$, and returns
+a list with the corresponding Dirichlet extensions.
+
 By solving \eqref{eq:dir}, we generate the data displacement $g$ used in \eqref{eq:w-g}.
 Since the data displacement must correspond to a force application,
-we define the function $\code{dir\_extension\_from}$, which
+we provide the $\code{dir\_extension\_from}$ function, which
 solves \eqref{eq:w-f} and then extend its solution by calling
 $\code{dirichlet\_extension}$.
 
-
 \textbf{Mesh diameter.}
+We define the mesh diameter $h$ as
 \begin{equation}
-	h =
+	h \coloneqq
 	\begin{cases}
-		4\frac{\left|\mathcal{D}\right|}{N_T\sqrt{3}} & \text{if } d = 2\\
-		\left(6\sqrt{2}\frac{\left|\mathcal{D}\right|}{N_T}\right)^{2/3} & \text{if } d = 3		
+		4\frac{\left|\mathcal{D}\right|}{N_T\sqrt{3}} & \text{if } d = 2,\\
+		\left(6\sqrt{2}\frac{\left|\mathcal{D}\right|}{N_T}\right)^{2/3} & \text{if } d = 3,	
 	\end{cases}
 \end{equation}
-$\left|\mathcal{D}\right|$ denotes the area (or volume) of $\mathcal{D}$
-and $N_T$ denotes the number of triangles (or tetrahedrons).
+where $\left|\mathcal{D}\right|$ denotes the area ($d=2$) or volume ($d=3$)
+of the domain $\mathcal{D}$, and $N_T$ denotes the number of triangles ($d=2$) 
+or tetrahedra ($d=3$).
+This expression provides an approximation of the maximum diameter of the finite elements,
+assuming that the elements are identical equilateral triangles or regular tetrahedra.
 
-\textbf{Subdomains of almost zero velocity.}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Numerical results}
+\label{sec:results}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
-
 
 Here we need to decide which examples we want to show. Inverse elasticity 2D or 3D, Compliance 2D or 3D? Heat equation?
 
