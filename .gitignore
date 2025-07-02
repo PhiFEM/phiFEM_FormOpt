@@ -6,7 +6,6 @@ code/Links
 *.lyx~
 *.npz
 *.npy
-*.png
 *.h5
 *.xdmf
 *.msh
