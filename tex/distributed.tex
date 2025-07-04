@@ -16,6 +16,14 @@
 \usepackage{listings}
 \usepackage{xcolor}
 \usepackage{enumitem}
+\usepackage{hyperref}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    citecolor=blue,
+    urlcolor=blue
+}
 
 \lstset{
 	language=Python,
@@ -153,9 +161,9 @@ and
 	\end{array}
 \end{equation}
 respectively, and
-\begin{equation}
-A_{\Omega}(x) = 10\chi_{\Omega}(x) + \chi_{\overline{\mathcal{D}}\setminus\Omega}(x)
-\quad x\in \overline{\mathcal{D}}
+\begin{equation}\label{eq:AOmega}
+A_{\Omega}(x) = \kappa\chi_{\Omega}(x) + \chi_{\overline{\mathcal{D}}\setminus\Omega}(x)
+\quad \text{for }x\in \overline{\mathcal{D}}.
 \end{equation}
 Observe that $u$ and $v$ depend on $\Omega$ due to
 the presence of $A_\Omega$ in the above equations.
@@ -181,7 +189,7 @@ Find $v \in  H^1_{\Gamma_0}(\mathcal{D})^d$ such that
 	\quad
 	\forall \, w \in  H^1_{\Gamma_0}(\mathcal{D})^d.
 \end{equation}
-Thus, ${u + g}$ solves \eqref{eq:g-prob}.
+Thus, ${v + g}$ solves \eqref{eq:g-prob}.
 Considering the cost functional in \eqref{eq:InvProb}
 and the weak formulations, we write
 the Lagrangian functional for \eqref{eq:InvProb}
@@ -1100,7 +1108,7 @@ The parameters \code{dirbc\_partial} and \code{dirbc\_total} are
 homogeneous Dirichlet conditions for $\Gamma_0$ and $\Gamma$, respectively.
 
 In \code{\_\_init\_\_} are defined the variables and functions
-that will be used to write the problem equation.
+that will be used to write the problem equations.
 For instance, the functions $\sigma$, $\epsilon$, and $A_\Omega$
 are defined as Python lambda functions:
 \begin{lstlisting}
@@ -1110,8 +1118,13 @@ self.sigma = lambda w: (
 self.epsilon = lambda w: sym(grad(w))
 self.A = lambda w: conditional(lt(w, 0.0), 10.0, 1.0)
 \end{lstlisting}
-Note that 
+Here, \code{self.A} is an attribute of the \code{InverseElasticity} class
+and represents $A_\Omega$ with $\kappa = 10$.
+The argument of \code{self.A} will be the level set function:
+if negative, \code{self.A} returns 10, else 1.
 
+The weak formulations \eqref{eq:w-f} and \eqref{eq:w-g}
+are written as  
 \begin{lstlisting}
 def f_prob(self, u, w, phi, f, df):
 	# f-problem
@@ -1122,7 +1135,6 @@ def f_prob(self, u, w, phi, f, df):
 
 	return [W, self.bcF]
 \end{lstlisting}
-
 \begin{lstlisting}
 def g_prob(self, v, w, phi, g):
 	# g-problem
