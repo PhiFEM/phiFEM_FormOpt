@@ -149,7 +149,8 @@ def test_01():
         lv_iter = (10, 16),
         reinit_step = 4,
         reinit_pars = (20, 0.1),
-        smooth = True
+        smooth = True,
+        random_pars = (12, 0.075)
     )
 
 

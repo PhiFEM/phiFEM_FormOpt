@@ -1553,7 +1553,7 @@ class Velocity:
         dim: int,
         domain: Mesh, 
         space: FunctionSpace, 
-        biform: Expr,
+        biform: Callable[[Argument, Argument], Tuple[Expr, bool]],
         S0: Expr,
         S1: Expr
     ) -> None:
@@ -1570,8 +1570,8 @@ class Velocity:
             Problem domain.
         space : FunctionSpace
             Space of functions.
-        biform : Expr
-            Bilinear form.
+        biform : Callable[[Argument, Argument], Tuple[Expr, bool]]
+            Bilinear form method of a subclass of Model.
         S0 : Expr
             S0 component of the shape derivative.
         S1 : Expr
@@ -1732,7 +1732,7 @@ class Level:
 
 class Reinit:
     """
-    Implement the Petrov Galerkin and
+    This class implements the Petrov Galerkin and
     two-step Adams-Bashforth methods to solve
     the diffusive Eikonal equation with
     fictitious time derivative.
@@ -1875,7 +1875,7 @@ class PPL:
 
     Methods
     -------
-    run(cost: float, constraints: List[float]) -> npt.NDArray[npt.float64]
+    run(cost: float, constraints: List[float]) -> npt.NDArray[np.float64]
         Runs one iteration of the method.
     _lagrangian(cost: float) -> float
         Returns the value of the Lagrangian functional.
@@ -1912,7 +1912,7 @@ class PPL:
         self.list_dl = [self.dl]
         self.list_ct = [self.ct]
 
-    def run(self, cost: float, constraints: List[float]) -> npt.NDArray[npt.float64]:
+    def run(self, cost: float, constraints: List[float]) -> npt.NDArray[np.float64]:
         """
         Runs one iteration of the method.
         """

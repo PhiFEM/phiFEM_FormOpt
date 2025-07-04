@@ -117,7 +117,7 @@ class Compliance(Model):
         B += inner(grad(th), grad(xi))*self.dx
         B += 1e4*dot(th, nv)*dot(xi, nv)*self.ds
         for sb in self.sub:
-            B += 1e5*sb*dot(th, xi)*self.dx
+            B += 1e4*sb*dot(th, xi)*self.dx
         
         return B, False
 

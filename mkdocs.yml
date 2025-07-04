@@ -9,15 +9,19 @@ nav:
 
 theme:
   name: material
+  favicon: coffee.ico
+  logo: coffee.ico
   palette:
     - media: "(prefers-color-scheme: dark)"
       scheme: slate
-      primary: cyan
-      accent: light blue
+      primary: teal
+      accent: orange
     - media: "(prefers-color-scheme: light)"
       scheme: default
-      primary: deep purple
-      accent: amber
+      primary: indigo
+      accent: pink
+
+
 
 markdown_extensions:
   - admonition
