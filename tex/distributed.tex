@@ -152,8 +152,13 @@ and
                                 v = g & \text{on} & \Gamma_{1}     
 	\end{array}
 \end{equation}
-respectively.
-Observe that $u$ and $v$ depend on $\Omega$ due to the presence of $A_\Omega$ in the above equations.
+respectively, and
+\begin{equation}
+A_{\Omega}(x) = 10\chi_{\Omega}(x) + \chi_{\overline{\mathcal{D}}\setminus\Omega}(x)
+\quad x\in \overline{\mathcal{D}}
+\end{equation}
+Observe that $u$ and $v$ depend on $\Omega$ due to
+the presence of $A_\Omega$ in the above equations.
 
 \textbf{The state and adjoint problems.}
 Now we write the weak formulations of \eqref{eq:f-prob} and \eqref{eq:g-prob},
@@ -1063,13 +1068,13 @@ assuming that the elements are identical equilateral triangles or regular tetrah
 \label{sec:results}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Here we need to decide which examples we want to show. Inverse elasticity 2D or 3D, Compliance 2D or 3D? Heat equation?
+%Here we need to decide which examples we want to show. 
+%Inverse elasticity 2D or 3D, Compliance 2D or 3D? Heat equation?
 
 \subsection{Inverse Elasticity}
 
 We start by writing the model class for this problem. 
 We call our model \code{InverseElasticity}:
-
 \begin{lstlisting}
 from distributed import Model
 
@@ -1077,23 +1082,27 @@ class InverseElasticity(Model):
 	def __init__(self, dim, domain, space, path):
 		pass
 \end{lstlisting}
-
 In addition to the mandatory parameters
 \code{dim}, \code{domain}, \code{space}, and \code{path},
 we add the following to the initializer:
-
 \begin{lstlisting}
 def __init__(self, dim, domain, space, forces, ds_forces, ds1, dirbc_partial, dirbc_total, path):
 \end{lstlisting}
 
-\code{forces} and \code{ds\_forces} are lists with the forces $f$ and the surfaces of application, respectively.
-\code{ds1} correspond to the surface $\Gamma_1$.
-\code{dirbc\_partial} and \code{dirbc\_total} are homogeneous Dirichlet conditions for $\Gamma_0$ and $\Gamma$.
-Note: although in the equations $f$ is applied over $\Gamma_1$, 
-here we consider \code{ds\_forces} because we assume $f=\textbf{0}$ over a subset of $\Gamma_1$.
+The parameters \code{forces} and \code{ds\_forces} are
+lists with the forces and the surfaces of application, respectively.
+The parameter \code{ds1} correspond to the surface $\Gamma_1$.
+Although in \eqref{eq:f-prob} the forces are applied over the whole $\Gamma_1$,
+here we assume $f\equiv\textbf{0}$ on a subset of $\Gamma_1$,
+so the \code{ds\_forces} list contains surfaces that are subsets of $\Gamma_1$.
 
-In \code{\_\_init\_\_} are defined the objects that will be used to write the problem equation.
-For instance, the functions $\sigma(w)$, $\epsilon(w)$, and $A_\Omega(x)$: 
+The parameters \code{dirbc\_partial} and \code{dirbc\_total} are
+homogeneous Dirichlet conditions for $\Gamma_0$ and $\Gamma$, respectively.
+
+In \code{\_\_init\_\_} are defined the variables and functions
+that will be used to write the problem equation.
+For instance, the functions $\sigma$, $\epsilon$, and $A_\Omega$
+are defined as Python lambda functions:
 \begin{lstlisting}
 self.sigma = lambda w: (
 	lm*nabla_div(w)*self.Id + 2.0*mu*self.epsilon(w)
@@ -1101,6 +1110,7 @@ self.sigma = lambda w: (
 self.epsilon = lambda w: sym(grad(w))
 self.A = lambda w: conditional(lt(w, 0.0), 10.0, 1.0)
 \end{lstlisting}
+Note that 
 
 \begin{lstlisting}
 def f_prob(self, u, w, phi, f, df):
