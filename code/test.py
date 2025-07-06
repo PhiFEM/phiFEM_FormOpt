@@ -23,14 +23,14 @@ size = comm.size
 """
 Tests
 -----
-test_01 : Symmetric cantilever 2D (Data Parallelism)
+test_01 : Symmetric Cantilever 2D - Data Parallelism
 test_02 : Symmetric cantilever 3D (Data Parallelism)
 test_03 : Cantilever with two loads I (Data Parallelism)
 test_04 : Cantilever with two loads I (Task Parallelism)
-test_05 : Cantilever with two loads I (Mix Parallelism)
+test_05 : Cantilever with two loads I (Mixed Parallelism)
 test_06 : Elasticity inverse problem (Data Parallelism)
 test_07 : Elasticity inverse problem (Task Parallelism)
-test_08 : Elasticity inverse problem (Mix Parallelism)
+test_08 : Elasticity inverse problem (Mixed Parallelism)
 test_09 : Heat conduction problem 1 (Data Parallelism)
 test_10 : Heat conduction problem 2 (Data Parallelism)
 test_11 : Heat conduction problem 3 (Data Parallelism)
@@ -46,11 +46,16 @@ test_18 : Cantilever with two loads II (Task Parallelism)
 
 def test_01():
     """
-    Run: mpirun -np <nbr of processes> python test.py 01
-    For instance: mpirun -np 2 python test.py 01
+    Symmetric Cantilever 2D - Data Parallelism
+
+    Run `mpirun -np <nbr of processes> python test.py 01`.
+    For instance, `mpirun -np 2 python test.py 01`.
+    
+    To save the output add `> ../results/t01/out.txt`.
+    To delete the images execute `rm ../results/t01/*.png`.
     """
 
-    test_name = "Symmetric cantilever 2D (Data Parallelism)"
+    test_name = "Symmetric Cantilever 2D - Data Parallelism"
     test_path = Path("../results/t01/")
     dim = 2
     rank_dim = 2
@@ -117,27 +122,34 @@ def test_01():
         ineqs = [
             x[1] - 0.42,
             0.58 - x[1],
-            x[0] - 1.95
+            x[0] - 1.90
         ]
         return ineqs
     
     md.sub = [sub_domain.expression()]
 
     # Initial guess: centers and radii
-    centers = np.array([
-        (0.3, 0.0), (1.0, 0.0),
-        (1.7, 0.0), (2.0, 0.0),
-        (0.3, 1.0), (1.0, 1.0),
-        (1.7, 1.0), (2.0, 1.0),
-        (0.3, 0.5), (1.0, 0.5),
-        (1.7, 0.5), (0.0, 0.25),
-        (0.65, 0.25), (1.35, 0.25),
-        (2.0, 0.35), (0.0, 0.75),
-        (0.65, 0.75), (1.35, 0.75),
-        (2.0, 0.65), (0.0, 0.5)
-    ])
+
+    # First set of centers:
+    # centers = [(2.0, 0.35), (2.0, 0.65), (2.0, 0.0), (2.0, 1.0)]
+    # centers += [(0.0, 0.25), (0.0, 0.5), (0.0, 0.75)]
+    # centers += [(0.3 + i*0.7, 0.0) for i in range(3)]
+    # centers += [(0.65 + i*0.7, 0.25) for i in range(2)]
+    # centers += [(0.3 + i*0.7, 0.5) for i in range(3)]
+    # centers += [(0.65 + i*0.7, 0.75) for i in range(2)]
+    # centers += [(0.3 + i*0.7, 1.0) for i in range(3)]
+
+    # Second set of centers:
+    centers = [(0.0, 0.5), (2.0, 0.35), (2.0, 0.65)]
+    centers += [((1+i)*0.25, 0.0) for i in range(8)]
+    centers += [(i*0.5, 0.25) for i in range(5)]
+    centers += [(0.25 + i*0.5, 0.5) for i in range(4)]
+    centers += [(i*0.5, 0.75) for i in range(5)]
+    centers += [((1+i)*0.25, 1.0) for i in range(8)]
+
     centers = np.array(centers)
     radii = np.repeat(0.1, centers.shape[0])
+
     # Create the initial level set function
     md.create_initial_level(centers, radii)
     # Save as initial.xdmf
@@ -148,9 +160,9 @@ def test_01():
         dfactor = 1e-1,
         lv_iter = (10, 16),
         reinit_step = 4,
-        reinit_pars = (20, 0.1),
+        reinit_pars = (20, 0.08),
         smooth = True,
-        random_pars = (12, 0.075)
+        random_pars = (111, 0.05)
     )
 
 

@@ -48,10 +48,9 @@ from abc import ABC, abstractmethod
 
 import numpy.typing as npt
 from typing import (
-    Union, List, Tuple, Callable, Sequence, final
+    List, Tuple, Callable, Sequence, final
 )
 from ufl.core.expr import Expr
-
 
 from plots import plot_domain
 
@@ -74,13 +73,34 @@ GenericFunc = ScalarFunc | ScalarFunc
 class Model(ABC):
     """
     Base class for all user-defined models.
+    
+    Attributes
+    ----------
+    dim : int
+        Domain dimension.
+    domain : Mesh
+        Problem domain.
+    space : FunctionSpace
+        Space of functions for the solution and test functions.
+    path : Path
+        Test path to save the results.
+    
+    Methods
+    -------
+    pde(level_set_func: Function) -> List[Tuple[Expr, Sequence[DirichletBC]]] | List[Tuple[Expr, Sequence[DirichletBC], Expr, Coefficient, GenericFunc]]
+        Weak form of the partial differential equations.
+    adjoint(level_set_func: Function, states: List[Function]) -> List[Tuple[Expr, Sequence[DirichletBC]]] | List[Tuple[Expr, Sequence[DirichletBC], Expr, Coefficient, GenericFunc]]
+        Weak form of the adjoint equations.
+    cost(level_set_func: Function, states: List[Function]) -> Expr
+        Cost functional.
+    constraint(level_set_func: Function, states: List[Function]) -> List[Expr]
+        Constraint functions.
+    derivative(level_set_func: Function, states: List[Function], adjoints: List[Function]) -> Tuple[Tuple[Expr, List[Expr]], Tuple[Expr, List[Expr]]]
+        Derivative components.
+    bilinear_form(velocity_func: Function | Argument, test_func: Function | Argument) -> Tuple[Expr, bool]
+        Bilinear form to compute the velocity field.
     """
-    
-    dim: int
-    domain: Mesh
-    space: FunctionSpace
-    path: Path
-    
+
     @abstractmethod
     def __init__(self, dim: int, domain: Mesh, space: FunctionSpace, path: Path):
         """
@@ -93,7 +113,7 @@ class Model(ABC):
         domain : Mesh
             Problem domain.
         space : FunctionSpace
-            Space for the solution and test functions.
+            Space of functions for the solution and test functions.
         path : Path
             Test path to save the results.
         """
@@ -130,7 +150,7 @@ class Model(ABC):
         self,
         level_set_func: Function,
         states: List[Function]
-    ) -> List[Tuple[Expr, List[DirichletBC]]] | List[Tuple[Expr, Sequence[DirichletBC], Expr, Coefficient, GenericFunc]]:
+    ) -> List[Tuple[Expr, Sequence[DirichletBC]]] | List[Tuple[Expr, Sequence[DirichletBC], Expr, Coefficient, GenericFunc]]:
         """
         Weak form of the adjoint equations.
 
@@ -245,7 +265,7 @@ class Model(ABC):
         test_func: Function | Argument
     ) -> Tuple[Expr, bool]:
         """
-        Bilinear form to compute the velocity field.
+        Bilinear form `B` to compute the velocity field.
 
         Parameters
         ----------
@@ -556,51 +576,54 @@ class Model(ABC):
 
 class Subdomain:
     """
-    Creates an ufl conditional from a list o inequalities
-    that determine a subdomain of almost zero velocity.
+    This class creates an indicator function
+    from a list o inequalities that determine
+    a subdomain.
     
     Attributtes
     -----------
-        domain : Mesh
-            Problem domain.
-        cond_func : Callable[[npt.NDArray[np.float64]], List[Expr]]
-            Callable function that returns a list of
-            ufl expressions of x (coordinate).
-            For instance, the subdomain
-                {0.42 < y < 0.58 and 1.95 < x}
-            is obtained with the function
-            def sub_domain(x):
-                ineqs = [
-                    x[1] - 0.42,
-                    0.58 - x[1],
-                    x[0] - 1.95
-                ]
-                return ineqs
-            Thus, the elements of ineq read as 
-            positive inequalities:
-                x[1] - 0.42 > 0
-                0.58 - x[1] > 0
-                x[0] - 1.95 > 0
+    domain : Mesh
+        Problem domain.
+    cond_func : Callable[[npt.NDArray[np.float64]], List[Expr]]
+        Callable function that returns a list of
+        inequalities of the form g(x) > 0.
+        For example, the subdomain
+        {(x,y) | 0.42 < y < 0.58, 1.95 < x}
+        is represented with the function
+        ```
+        def sub_domain(x):
+            ineqs = [
+                x[1] - 0.42,
+                0.58 - x[1],
+                x[0] - 1.95
+            ]
+            return ineqs
+        ```
+    
     Methods
     -------
-        expression() :
-            Collect the inequalities from cond_func
-            and returns the ufl expresion correspoding
-            to the indicator function obtained
-            by the intersection of the inequalities.
+    expression() -> Expr
+        Returns the ufl expresion correspoding
+        to the indicator function with subdomain
+        determinied by cond_func.
     """
 
     def __init__(
-            self,
-            domain: Mesh,
-            cond_func: Callable[[npt.NDArray[np.float64]], List[Expr]]
-        ):
-        
+        self,
+        domain: Mesh,
+        cond_func: Callable[[npt.NDArray[np.float64]], List[Expr]]
+    ) -> None:
         self.domain = domain
         self.cond_func = cond_func
 
-    def expression(self):
-        
+    def expression(self) -> Expr:
+        """
+        Returns the ufl expresion correspoding
+        to the indicator function with subdomain
+        determinied by cond_func.
+        The subdomains determined by each inequality
+        are intercepted by multiplying the conditionals.
+        """
         x = SpatialCoordinate(self.domain)
         conditions = self.cond_func(x)
         chi = 1.0
@@ -618,9 +641,99 @@ def region_of(domain: Mesh):
         return Subdomain(domain, func)
     return wrapper
 
+
+class PPL:
+    """
+    This class implements the Perturbed Proximal Lagrangian method
+    developed in the paper "A new Lagrangian-based ﬁrst-order
+    method for nonconvex constrained optimization" (Jong Gwang Kim, 2023).
+
+    Attributes
+    ----------
+
+    Methods
+    -------
+    run(cost: float, constraints: List[float]) -> npt.NDArray[np.float64]
+        Runs one iteration of the method.
+    _lagrangian(cost: float) -> float
+        Returns the value of the Lagrangian functional.
+    see() -> str
+        Returns a string with some variable values.
+    """
+    def __init__(self, n: int, ini_cost: float, ini_ctrs: List[float]) -> None:
+        """
+        Parameters
+        ----------
+        n : int
+            Number of constraint functions.
+        ini_cost : float
+            
+        """
+        
+        self.n = n
+        self.ones = np.ones(n)
+        self.lm = np.repeat(0.0, n)
+        self.mu = np.repeat(0.0, n)
+        self.zs = np.repeat(0.0, n)
+        self.alpha = 2000.0
+        self.beta = 0.5
+        self.rho = self.alpha/(1.0 + self.alpha*self.beta)
+        self.r = 0.999
+        self.dl = 0.5
+        self.Lg = ini_cost
+        self.ct = np.array(ini_ctrs)
+
+        self.list_Lg = [self.Lg]
+        self.list_lm = [self.lm]
+        self.list_mu = [self.mu]
+        self.list_zs = [self.zs]
+        self.list_dl = [self.dl]
+        self.list_ct = [self.ct]
+
+    def run(self, cost: float, constraints: List[float]) -> npt.NDArray[np.float64]:
+        """
+        Runs one iteration of the method.
+        """
+        
+        self.ct = np.array(constraints)
+        self.lmu = self.lm - self.mu
+        self.mu = self.mu + self.dl*self.lmu/(np.inner(self.lmu, self.lmu) + 1)
+        self.lm = self.mu + self.rho*(self.ct - self.ones)
+        self.zs = (self.lm - self.mu)/self.alpha
+        self.dl = self.r*self.dl
+
+        self.Lg = self._lagrangian(cost)
+
+        self.list_Lg.append(self.Lg)
+        self.list_lm.append(self.lm)
+        self.list_mu.append(self.mu)
+        self.list_zs.append(self.zs)
+        self.list_dl.append(self.dl)
+        self.list_ct.append(self.ct)
+
+        return self.lm[:]
+    
+    def _lagrangian(self, cost: float) -> float:
+        """
+        Returns the value of the Lagrangian functional.
+        """
+        return cost + np.inner(self.lm, self.ct - self.zs) + \
+            np.inner(self.mu, self.zs) + \
+            self.alpha*np.inner(self.zs, self.zs)/2.0 - \
+            self.beta*np.inner(self.lm - self.mu, self.lm - self.mu)/2.0
+    
+    def see(self) -> str:
+        """
+        Returns a string with some variable values.
+        """
+        return (f"lagr = {self.Lg:.4f} | "
+            f"lm = {', '.join(f'{val:.4f}' for val in self.lm)} | "
+            f"mu = {', '.join(f'{val:.4f}' for val in self.mu)}",)[0]
+
+
 class Save:
     """
-    This class saves "scalar" numerical results:
+    This class saves scalar numerical results:
     cost values, derivative norms, Lagrange multipliers, etc.
 
     Attributes
@@ -631,30 +744,37 @@ class Save:
         List with the derivative norms.
     ppl_obj : PPL
         Instance of PPL.
-     
+    times : List[float]
+        List with the assembly and resolution times.
+    
     Methods
     -------
-
+    add(cost: float, nder: float) -> None
+        Adds cost and norm derivative values.
+    add_times(assembly: float, resolution: float) -> None
+        Adds assemply and resolution times.
+    add_ppl(ppl_obj: PPL) -> None
+        Adds a PPL object.
+    save(path: Path) -> None
+        Saves the data.
     """
 
-    def __init__(self):
-        
+    def __init__(self) -> None:
         self.cost = []
         self.nder = []
         self.ppl_obj = None
             
-    def add(self, cost, nder):
-        
+    def add(self, cost: float, nder: float) -> None:
         self.cost.append(cost)
         self.nder.append(nder)
     
-    def add_times(self, assembly, resolution):
+    def add_times(self, assembly: float, resolution: float) -> None:
         self.times = [assembly, resolution]
     
-    def add_ppl(self, ppl_obj):
+    def add_ppl(self, ppl_obj: PPL) -> None:
         self.ppl_obj = ppl_obj
 
-    def save(self, path):
+    def save(self, path: Path) -> None:
         if self.ppl_obj is None:
             np.savez(
                 path / f"{dat_name}.npz",
@@ -1538,7 +1658,6 @@ class Velocity:
         Linear functional.
     bc : List[DirichletBC]
         List with the homogeneous Dirichlet condition.
-        Can be empty.
     solver : PETSc.KSP
         Krylov Subspace Solver
     
@@ -1862,95 +1981,6 @@ class Reinit:
             self.problem.solve()
             phi.x.array[:] = self.uh.x.array[:]
             self.phi_prev.x.array[:] = self.w.x.array[:]
-
-
-class PPL:
-    """
-    This class implements the Perturbed Proximal Lagrangian method
-    developed in the paper "A new Lagrangian-based ﬁrst-order
-    method for nonconvex constrained optimization" (Jong Gwang Kim, 2023).
-
-    Attributes
-    ----------
-
-    Methods
-    -------
-    run(cost: float, constraints: List[float]) -> npt.NDArray[np.float64]
-        Runs one iteration of the method.
-    _lagrangian(cost: float) -> float
-        Returns the value of the Lagrangian functional.
-    see() -> str
-        Returns a string with some variable values.
-    """
-    def __init__(self, n: int, ini_cost: float, ini_ctrs: List[float]) -> None:
-        """
-        Parameters
-        ----------
-        n : int
-            Number of constraint functions.
-        ini_cost : float
-            
-        """
-        
-        self.n = n
-        self.ones = np.ones(n)
-        self.lm = np.repeat(0.0, n)
-        self.mu = np.repeat(0.0, n)
-        self.zs = np.repeat(0.0, n)
-        self.alpha = 2000.0
-        self.beta = 0.5
-        self.rho = self.alpha/(1.0 + self.alpha*self.beta)
-        self.r = 0.999
-        self.dl = 0.5
-        self.Lg = ini_cost
-        self.ct = np.array(ini_ctrs)
-
-        self.list_Lg = [self.Lg]
-        self.list_lm = [self.lm]
-        self.list_mu = [self.mu]
-        self.list_zs = [self.zs]
-        self.list_dl = [self.dl]
-        self.list_ct = [self.ct]
-
-    def run(self, cost: float, constraints: List[float]) -> npt.NDArray[np.float64]:
-        """
-        Runs one iteration of the method.
-        """
-        
-        self.ct = np.array(constraints)
-        self.lmu = self.lm - self.mu
-        self.mu = self.mu + self.dl*self.lmu/(np.inner(self.lmu, self.lmu) + 1)
-        self.lm = self.mu + self.rho*(self.ct - self.ones)
-        self.zs = (self.lm - self.mu)/self.alpha
-        self.dl = self.r*self.dl
-
-        self.Lg = self._lagrangian(cost)
-
-        self.list_Lg.append(self.Lg)
-        self.list_lm.append(self.lm)
-        self.list_mu.append(self.mu)
-        self.list_zs.append(self.zs)
-        self.list_dl.append(self.dl)
-        self.list_ct.append(self.ct)
-
-        return self.lm[:]
-    
-    def _lagrangian(self, cost: float) -> float:
-        """
-        Returns the value of the Lagrangian functional.
-        """
-        return cost + np.inner(self.lm, self.ct - self.zs) + \
-            np.inner(self.mu, self.zs) + \
-            self.alpha*np.inner(self.zs, self.zs)/2.0 - \
-            self.beta*np.inner(self.lm - self.mu, self.lm - self.mu)/2.0
-    
-    def see(self) -> str:
-        """
-        Returns a string with some variable values.
-        """
-        return (f"lagr = {self.Lg:.4f} | "
-            f"lm = {', '.join(f'{val:.4f}' for val in self.lm)} | "
-            f"mu = {', '.join(f'{val:.4f}' for val in self.mu)}",)[0]
 
 
 def homogeneus_boundary(domain, space, dim, rank_dimension):

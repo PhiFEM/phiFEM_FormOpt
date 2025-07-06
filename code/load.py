@@ -8,11 +8,6 @@ from plots import (
 
 from pathlib import Path
 
-def test_00():
-
-    test_path = Path("../results/t00/")
-    
-    plot_basic(test_path)
 
 def test_01():
 
@@ -260,7 +255,6 @@ def test_20():
 
 
 test_functions = {
-    "00": test_00,
     "01": test_01,
     "02": test_02,
     "03": test_03,

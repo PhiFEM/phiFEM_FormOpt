@@ -788,12 +788,12 @@ are sufficient to configure this part.
 We update the level set function by solving the diffusion-transport problem
 \begin{equation} \label{eq:transport}
 \begin{aligned}
-\partial_t \phi+\theta\cdot\nabla\phi  &= h^2\nabla^2\varphi && x\in \mathcal{D},\, t>0, \\
-										 \partial_{n} \phi &= 0 && x\in \partial\mathcal{D},\, t>0, \\
-												\phi(0, x) &= \phi^{i}(x) && x\in \overline{\mathcal{D}},
+\partial_t \phi+\theta\cdot\nabla\phi &= h^2\nabla^2\varphi && x\in \mathcal{D},\, t>0, \\
+					\partial_{n} \phi &= 0 && x\in \partial\mathcal{D},\, t>0, \\
+						   \phi(0, x) &= \phi^{i}(x) && x\in \overline{\mathcal{D}},
 \end{aligned}
 \end{equation}
-where $\theta$ is the velocity field obtained from \eqref{eq:velocity},
+where $\theta$ is the velocity field obtained from \eqref{eq:velocity}
 and $h$ is the mesh diameter.
 We apply the Petrov-Galerkin method \cite{MR1640142} to \eqref{eq:transport},
 along with the Crank-Nicolson method to the time derivative.
@@ -805,7 +805,7 @@ Find $\phi(t+\Delta t,\cdot) \in H^1(\mathcal{D})$ such that
 	\quad \forall \, \psi\in H^1(\mathcal{D}),
 \end{align}
 where $\Delta t$ is the time step,
-$\mathcal{F}(u, v) = \frac{(\theta \cdot \nabla u) v}{2} + h^2\frac{\nabla u \cdot \nabla v}{2}$
+$\mathcal{F}(u, v) = \frac{(\theta \cdot \nabla u) v}{2} + h^2\frac{\nabla u \cdot \nabla v}{2}$,
 and $\hat{\psi}=\psi+\tau \theta\cdot\nabla\psi$, with 
 \begin{equation} \label{eq:tau_lv}
 	\tau = 2\left(\frac{1}{\Delta t^2}  + \frac{|\theta|^2}{h^2}\right)^{-1/2}.
@@ -817,11 +817,18 @@ The diffusion term can be omitted by setting the argument \code{smooth=False}
 in \code{run<DP|TP|MP>}. For instance,
 we recommend this configuration for heat conduction problems.
 
+The Neumann boundary condition in \eqref{eq:transport} serves to eliminate
+the boundary integral term of the weak form of the diffusion term.
+Moreover, no inflow boundary condition is considered in \eqref{eq:transport}
+since we assume that the velocity field $\theta$ is either $\theta = 0$ 
+or $\theta \cdot n \approx 0$ on $\Gamma$.
+
 The implementation and resolution of \eqref{eq:weak_transport} are handled
 are in the \code{Level} class. 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Other implementation aspects}
+\label{sub:other}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \textbf{Reinitialization.} We regularly perform a reinitialization of
@@ -1069,6 +1076,8 @@ of the domain $\mathcal{D}$, and $N_T$ denotes the number of triangles ($d=2$)
 or tetrahedra ($d=3$).
 This expression provides an approximation of the maximum diameter of the finite elements,
 assuming that the elements are identical equilateral triangles or regular tetrahedra.
+
+\textbf{.}
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
