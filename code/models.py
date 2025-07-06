@@ -270,7 +270,7 @@ class InverseElasticity(Model):
         W = self.A(phi)*inner(su, ew)*self.dx
         W -= dot(f, w)*df
         
-        return [W, self.bcF]
+        return (W, self.bcF)
     
     def g_prob(self, v, w, phi, g):
         # g-problem
@@ -282,7 +282,7 @@ class InverseElasticity(Model):
         W = self.A(phi)*inner(sv, ew)*self.dx
         W += self.A(phi)*inner(sg, ew)*self.dx
         
-        return [W, self.bcG]
+        return (W, self.bcG)
     
     def adj_f_prob(self, p, r, phi, u, v, g):
         # adjoint of f-problem

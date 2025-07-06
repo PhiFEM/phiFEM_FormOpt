@@ -138,7 +138,7 @@ The strain and stress tensors are given by
 where $\mu$ and $\lambda$ are the Lam\'e parameters.
 Let $f$ and $g$ vector-valued functions defined on $\Gamma_1$.
 The shape optimization problem reads:
-\begin{equation} \label{eq:InvProb}
+\begin{equation} \label{eq:cost}
 	\min_{\Omega \subset \mathcal{D}}
 	J(\Omega) = 
 	\frac{\alpha}{2}\int_{\mathcal{D}}\left|u-v\right|^{2} + 
@@ -182,17 +182,17 @@ Find $u \in  H^1_{\Gamma_0}(\mathcal{D})^d$ such that
 By extending $g$ to the whole domain,
 the weak formulation of \eqref{eq:g-prob}
 is written in such a way that we seek a solution
-in $H^1_{\Gamma_0}(\mathcal{D})^d$:
-Find $v \in  H^1_{\Gamma_0}(\mathcal{D})^d$ such that
+in $H^1_{0}(\mathcal{D})^d$:
+Find $v \in  H^1_{0}(\mathcal{D})^d$ such that
 \begin{equation} \label{eq:w-g}
 	\int_{\mathcal{D}} A_{\Omega}\sigma(v + g):\epsilon(w) = 0
 	\quad
-	\forall \, w \in  H^1_{\Gamma_0}(\mathcal{D})^d.
+	\forall \, w \in  H^1_{0}(\mathcal{D})^d.
 \end{equation}
 Thus, ${v + g}$ solves \eqref{eq:g-prob}.
-Considering the cost functional in \eqref{eq:InvProb}
+Considering the cost functional \eqref{eq:cost}
 and the weak formulations, we write
-the Lagrangian functional for \eqref{eq:InvProb}
+the Lagrangian functional
 as follows:
 \begin{equation} \label{eq:elastic_lag}
 	\mathcal{L}(\Omega, \varphi, \psi, \rho, \varrho) =
@@ -215,7 +215,7 @@ Find $p \in  H^1_{\Gamma_0}(\mathcal{D})^d$ such that
 \forall \, r \in  H^1_{\Gamma_0}(\mathcal{D})^d.
 \end{align*}
 Now from $\partial_{\varphi}\mathcal{L}(u,v,p,q)(r)=0$ we obtain the second adjoint problem:
-Find $q \in  H^1_{\Gamma_0}(\mathcal{D})^d$ such that
+Find $q \in  H^1_{0}(\mathcal{D})^d$ such that
 \begin{equation*} \label{eq:g-adj}
 	\int_{\mathcal{D}} A_{\Omega}\sigma(q):\epsilon(r) =
 	\alpha \int_{\mathcal{D}} (u-v-g) \cdot r \quad \forall \, r \in  H^1_0(\mathcal{D})^d.
@@ -1077,8 +1077,6 @@ or tetrahedra ($d=3$).
 This expression provides an approximation of the maximum diameter of the finite elements,
 assuming that the elements are identical equilateral triangles or regular tetrahedra.
 
-\textbf{.}
-
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Numerical results}
@@ -1132,8 +1130,9 @@ and represents $A_\Omega$ with $\kappa = 10$.
 The argument of \code{self.A} will be the level set function:
 if negative, \code{self.A} returns 10, else 1.
 
-The weak formulations \eqref{eq:w-f} and \eqref{eq:w-g}
-are written as  
+The weak formulations \eqref{eq:w-f} and \eqref{eq:w-g},
+along with their boundary conditions, are returned
+by the methods \code{f\_prob} and \code{g\_prob}:
 \begin{lstlisting}
 def f_prob(self, u, w, phi, f, df):
 	# f-problem
@@ -1141,10 +1140,8 @@ def f_prob(self, u, w, phi, f, df):
 	ew = self.epsilon(w)
 	W = self.A(phi)*inner(su, ew)*self.dx
 	W -= dot(f, w)*df
+	return (W, self.bcF)
 
-	return [W, self.bcF]
-\end{lstlisting}
-\begin{lstlisting}
 def g_prob(self, v, w, phi, g):
 	# g-problem
 	sv = self.sigma(v)
@@ -1152,10 +1149,13 @@ def g_prob(self, v, w, phi, g):
 	ew = self.epsilon(w)
 	W = self.A(phi)*inner(sv, ew)*self.dx
 	W += self.A(phi)*inner(sg, ew)*self.dx
-	
-	return [W, self.bcG]
+	return (W, self.bcG)
 \end{lstlisting}
 
+Using these methods we write the required \code{pde} method.
+It returns a list with the weak formulation
+and boundary condition corresponding
+to each applied force and boundary displacement:
 \begin{lstlisting}
 def pde(self, phi):
 	a = TrialFunction(self.space)
@@ -1163,20 +1163,57 @@ def pde(self, phi):
 	zipf = zip(self.fs, self.dfs)
 	F = [self.f_prob(a,b,phi,f,df) for f, df in zipf]
 	G = [self.g_prob(a,b,phi,g) for g in self.gs]
-
 	return F + G
 \end{lstlisting}
 
+Similarly, we write the methods \code{adj\_f\_prob} and \code{adj\_g\_prob}
+to get the adjoint problems, 
+and collet all of them in the required \code{adjoint} method:
+\begin{lstlisting}
+def adj_f_prob(self, p, r, phi, u, v, g):
+	# adjoint of f-problem
+	sp = self.sigma(p)
+	er = self.epsilon(r)
+	a_g = u - v - g
+	b_g = u - g
+	W = self.A(phi)*inner(sp, er)*self.dx
+	W += self.alpha*dot(a_g, r)*self.dx
+	W += self.beta*dot(b_g, r)*self.ds1
+	return (W, self.bcF)
+
+def adj_g_prob(self, q, r, phi, u, v, g):
+	# adjoint of g-problem
+	sq = self.sigma(q)
+	er = self.epsilon(r)
+	a_g = u - v - g
+	W = self.A(phi)*inner(sq, er)*self.dx
+	W -= self.alpha*dot(a_g, r)*self.dx
+	return (W, self.bcG)	
+\end{lstlisting}
+\begin{lstlisting}
+def adjoint(self, phi, U):
+	a = TrialFunction(self.space)
+	b = TestFunction(self.space)
+	AF, AG = [], []
+	for u,v,g in zip(U[:self.N],U[self.N:],self.gs):
+		AF += [self.adj_f_prob(a,b,phi,u,v,g)]  
+		AG += [self.adj_g_prob(a,b,phi,u,v,g)]
+	return AF + AG
+\end{lstlisting}
+
+The cost functional \eqref{eq:cost}
+is returned by the \code{cost} method:
 \begin{lstlisting}
 def cost(self, phi, U):
 	uvg = zip(U[:self.N], U[self.N:], self.gs)
 	ug = zip(U[:self.N], self.gs)
 	Ja = [dot(u-v-g,u-v-g)*self.dx for u,v,g in uvg]
 	Jb = [dot(u-g,u-g)*self.ds1 for u,g in ug]
-
-	return 0.5*sum(Ja) + 0.5*sum(Jb)
+	return self.alpha*sum(Ja) + self.beta*sum(Jb)
 \end{lstlisting}
 
+Since there are no constraints in this problem,
+the \code{constraint} method returns a empty list:
 \begin{lstlisting}
 def constraint(self, phi, U):
 	return []
@@ -1189,7 +1226,7 @@ def S0(self, u, v, q, g, phi):
 	eg = self.epsilon(g)
 	s0a = grad(g).T*(u-v-g)
 	s0b = as_vector(sq[i,j]*(grad(eg))[i,j,k], (k))
-	
+
 	return -0.5*s0a + self.A(phi)*s0b	
 \end{lstlisting}
 
