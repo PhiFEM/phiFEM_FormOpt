@@ -320,7 +320,7 @@ class InverseElasticity(Model):
         return F
     
     def pde(self, phi):
-
+        # State problems
         a = TrialFunction(self.space)
         b = TestFunction(self.space)
 
@@ -330,7 +330,7 @@ class InverseElasticity(Model):
         return F + G
 
     def adjoint(self, phi, U):
-        
+        # Adjoint problems
         a = TrialFunction(self.space)
         b = TestFunction(self.space)
 
@@ -340,7 +340,7 @@ class InverseElasticity(Model):
         return AF + AG
     
     def cost(self, phi, U):
-        
+        # Cost functional
         uvg = zip(U[:self.N], U[self.N:], self.gs)
         ug = zip(U[:self.N], self.gs)
 
@@ -351,10 +351,11 @@ class InverseElasticity(Model):
         return (self.alpha/2.0)*sum(Ja) + (self.beta/2.0)*sum(Jb)
 
     def constraint(self, phi, U):
+        # Constraint (empty list)
         return []
     
     def S0(self, u, v, q, g, phi):
-        
+        # Derivative component S0
         i, j, k = indices(3)
         sq = self.sigma(q)
         eg = self.epsilon(g)
@@ -365,7 +366,7 @@ class InverseElasticity(Model):
         return -self.alpha*s0a + self.A(phi)*s0b
 
     def S1(self, u, v, p, q, g, phi):
-
+        # Derivative component S1
         su = self.sigma(u)
         sp = self.sigma(p)
         sq = self.sigma(q)

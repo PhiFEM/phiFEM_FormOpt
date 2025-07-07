@@ -461,6 +461,24 @@ different parallelism modes:
 \item \code{runTP} function for task parallelism.
 \item \code{runMP} function for mixed parallelism.
 \end{itemize}
+
+The parameters of these functions are:
+\begin{lstlisting}
+niter: int = 100,
+dfactor: float = 1e-2,
+lv_time: Tuple[float, float] = (1e-3, 1e-1),
+lv_iter: Tuple[int, int] = (8, 16),
+smooth: bool = False,
+reinit_step: int | bool = False,
+reinit_pars: Tuple[int, float] = (8, 1e-1),
+start_to_check: int = 30,
+ctrn_tol: float = 1e-2,
+lgrn_tol: float = 1e-2,
+cost_tol: float = 1e-2,
+prev: int = 10,
+random_pars: Tuple[int, float] = (1, 0.05)
+\end{lstlisting}
+
 We point out that the user-defined subclasses
 inherit these functions from the \code{Model} class.
 
@@ -1200,6 +1218,11 @@ def adjoint(self, phi, U):
 		AG += [self.adj_g_prob(a,b,phi,u,v,g)]
 	return AF + AG
 \end{lstlisting}
+Observe that in the \code{adjoint} method
+we iterate over \code{U}: the sub-lists
+\code{U[:self.N]} and \code{U[self.N:]} 
+shall contain the solutions of \eqref{eq:f-prob} and \eqref{eq:g-prob}, respectively,
+considering \code{self.N} applied forces and \code{self.N} boundary displacements in each case.
 
 The cost functional \eqref{eq:cost}
 is returned by the \code{cost} method:
@@ -1209,7 +1232,7 @@ def cost(self, phi, U):
 	ug = zip(U[:self.N], self.gs)
 	Ja = [dot(u-v-g,u-v-g)*self.dx for u,v,g in uvg]
 	Jb = [dot(u-g,u-g)*self.ds1 for u,g in ug]
-	return self.alpha*sum(Ja) + self.beta*sum(Jb)
+	return (self.alpha*sum(Ja)+self.beta*sum(Jb))/2.0
 \end{lstlisting}
 
 Since there are no constraints in this problem,
@@ -1219,15 +1242,17 @@ def constraint(self, phi, U):
 	return []
 \end{lstlisting}
 
+In order to write the \code{derivative} method,
+we first write the derivative components $S_0$ and $S_1$
+separately in the following methods:
 \begin{lstlisting}
 def S0(self, u, v, q, g, phi):
 	i, j, k = indices(3)
 	sq = self.sigma(q)
 	eg = self.epsilon(g)
-	s0a = grad(g).T*(u-v-g)
+	s0a = grad(g).T*(u - v - g)
 	s0b = as_vector(sq[i,j]*(grad(eg))[i,j,k], (k))
-
-	return -0.5*s0a + self.A(phi)*s0b	
+	return -self.alpha*s0a + self.A(phi)*s0b	
 \end{lstlisting}
 
 \begin{lstlisting}
@@ -1239,14 +1264,15 @@ def S1(self, u, v, p, q, g, phi):
 	ep = self.epsilon(p)
 	eq = self.epsilon(q)
 	uvg = u - v - g
-	s1a = inner(su, ep) + inner(svg, eq)
-	s1a = 0.5*dot(uvg, uvg)/2.0 + self.A(phi)*s1a
-	s1b = grad(u).T*sp + grad(p).T*su 
-	s1b += grad(v).T*sq + grad(q).T*svg
-
-	return s1a*self.Id - self.A(phi)*s1b
+	s1i = inner(su, ep) + inner(svg, eq)
+	s1i = self.alpha*dot(uvg,uvg)/2.0+self.A(phi)*s1i
+	s1j = grad(u).T*sp + grad(p).T*su 
+	s1j += grad(v).T*sq + grad(q).T*svg
+	return s1i*self.Id - self.A(phi)*s1j
 \end{lstlisting}
 
+The \code{derivative} method collect the derivative components
+for each pair of applied force and boundary displacement:
 \begin{lstlisting}
 def derivative(self, phi, U, P):
 	fu = U[:self.N]
@@ -1263,17 +1289,17 @@ def derivative(self, phi, U, P):
 		self.S1(u, v, p, q, g, phi)
 		for u, v, p, q, g in uvpqg
 	]
-
 	return (sum(S0), []), (sum(S1), [])
 \end{lstlisting}
-    
+
+Finally, we write the bilinear form that will be used to compute the velocity field:
 \begin{lstlisting}
 def bilinear_form(self, th, xi):
     biform = 0.1*dot(th, xi)*self.dx
-	biform += inner(grad(th), grad(xi))*self.dx
-    
+	biform += inner(grad(th), grad(xi))*self.dx    
 	return biform, True
 \end{lstlisting}
+By returning \code{True} we are specifying homogeneous Dirichlet boundary condition.
 
 \begin{lstlisting}
 comm = MPI.COMM_WORLD

@@ -28,9 +28,9 @@ test_02 : Symmetric cantilever 3D (Data Parallelism)
 test_03 : Cantilever with two loads I (Data Parallelism)
 test_04 : Cantilever with two loads I (Task Parallelism)
 test_05 : Cantilever with two loads I (Mixed Parallelism)
-test_06 : Elasticity inverse problem (Data Parallelism)
-test_07 : Elasticity inverse problem (Task Parallelism)
-test_08 : Elasticity inverse problem (Mixed Parallelism)
+test_06 : Elasticity Inverse Problem - Data Parallelism
+test_07 : Elasticity Inverse Problem - Task Parallelism
+test_08 : Elasticity Inverse Problem - Mixed Parallelism
 test_09 : Heat conduction problem 1 (Data Parallelism)
 test_10 : Heat conduction problem 2 (Data Parallelism)
 test_11 : Heat conduction problem 3 (Data Parallelism)
@@ -51,8 +51,8 @@ def test_01():
     Run `mpirun -np <nbr of processes> python test.py 01`.
     For instance, `mpirun -np 2 python test.py 01`.
     
-    To save the output add `> ../results/t01/out.txt`.
-    To delete the images execute `rm ../results/t01/*.png`.
+    To save the output, append `> ../results/t01/out.txt`.
+    To delete the images, enter `rm ../results/t01/*.png`.
     """
 
     test_name = "Symmetric Cantilever 2D - Data Parallelism"
@@ -551,11 +551,16 @@ def test_05():
 
 def test_06():
     """
-    Run: mpirun -np <nbr of processes> python test.py 06
-    For instance: mpirun -np 3 python test.py 06
+    Elasticity Inverse Problem - Data Parallelism
+
+    Run `mpirun -np <number of processes> python test.py 06`.
+    For instance, `mpirun -np 3 python test.py 06`.
+
+    To save the output, append `> ../results/t06/out.txt`.
+    To delete the images, enter `rm ../results/t06/*.png`.
     """
 
-    test_name = "Elasticity inverse problem (Data Parallelism)"
+    test_name = "Elasticity Inverse Problem - Data Parallelism"
     test_path = Path("../results/t06/")
     dim = 2
     rank_dim = 2
@@ -830,13 +835,19 @@ def test_06():
         niter = 200,
         dfactor = 1e-1,
         lv_time = (1e-3, 1.0),
-        cost_tol = 1e-1
+        cost_tol = 1e-1,
+        random_pars = (26, 0.05)
     )
 
 
 def test_07():
     """
-    Run: mpirun -np 6 python test.py 07
+    Elasticity Inverse Problem - Task Parallelism
+
+    Run `mpirun -np 6 python test.py 07`.
+
+    To save the output, append `> ../results/t07/out.txt`.
+    To delete the images, enter `rm ../results/t07/*.png`.
     """
 
     # Verification
@@ -847,7 +858,7 @@ def test_07():
     
     comm_self = MPI.COMM_SELF
 
-    test_name = "Elasticity inverse problem (Task Parallelism)"
+    test_name = "Elasticity Inverse Problem - Task Parallelism"
     test_path = Path("../results/t07/")
     dim = 2
     rank_dim = 2
@@ -1121,8 +1132,13 @@ def test_07():
 
 def test_08():
     """
-    Run: mpirun -np <6n> python test.py 08
-    For instance: mpirun -np 12 python test.py 08
+    Elasticity Inverse Problem - Mixed Parallelism
+
+    Run `mpirun -np <6n> python test.py 08`.
+    For instance, `mpirun -np 12 python test.py 08`.
+
+    To save the output, append `> ../results/t08/out.txt`.
+    To delete the images, enter `rm ../results/t08/*.png`.
     """
 
     # Verification
@@ -1135,7 +1151,7 @@ def test_08():
     color = rank * nbr_groups // size
     sub_comm = comm.Split(color, rank)
 
-    test_name = "Elasticity inverse problem (Mix Parallelism)"
+    test_name = "Elasticity Inverse Problem - Mixed Parallelism"
     test_path = Path("../results/t08/")
     dim = 2
     rank_dim = 2
