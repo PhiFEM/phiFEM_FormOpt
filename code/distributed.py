@@ -382,7 +382,7 @@ class Model(ABC):
             If True, a diffusion term is added to the level set
             equation; if False, the equation is solved without
             diffusion.
-        reinit_step : bool or int, default=False
+        reinit_step : int or bool, default=False
             A positive integer to apply the reinitialization
             method when the condition
                 iter>start_to_check and reinit_step%iter == 0
@@ -406,7 +406,7 @@ class Model(ABC):
         prev : int, default=10,
             Number of previous values to verify the tolerance
             of the Lagrangian and cost functionals.
-        random_pars : Tuple[int, float], default=(26, 0.05)
+        random_pars : Tuple[int, float], default=(1, 0.05)
             Seed and noise level in the line search method.
         """
         
@@ -436,8 +436,8 @@ class Model(ABC):
         random_pars: Tuple[int, float] = (1, 0.05)
     ) -> None:
         """
-        This method implements Task Parallelism.
-
+        This method implements Data Parallelism.
+        
         Parameters
         ----------
         niter : int, default=100
@@ -458,7 +458,7 @@ class Model(ABC):
             If True, a diffusion term is added to the level set
             equation; if False, the equation is solved without
             diffusion.
-        reinit_step : bool or int, default=False
+        reinit_step : int or bool, default=False
             A positive integer to apply the reinitialization
             method when the condition
                 iter>start_to_check and reinit_step%iter == 0
@@ -482,7 +482,7 @@ class Model(ABC):
         prev : int, default=10,
             Number of previous values to verify the tolerance
             of the Lagrangian and cost functionals.
-        random_pars : Tuple[int, float], default=(26, 0.05)
+        random_pars : Tuple[int, float], default=(1, 0.05)
             Seed and noise level in the line search method.
         """
         
@@ -514,11 +514,9 @@ class Model(ABC):
     ) -> None:
         """
         This method implements Mixed Parallelism.
-
+        
         Parameters
         ----------
-        sub_comm : MPI.Comm
-            Subcommunicator from `Split`.
         niter : int, default=100
             The number of iterations.
         dfactor : float, default=1e-2
@@ -527,7 +525,7 @@ class Model(ABC):
             time of the level set equation.
             Values <= 1 are recommended.
         lv_time : Tuple[float, float], default=(1e-3, 1e-1)
-            A tuple with the minimum and maximum time allowed
+            A tuple with the minimum and maximum times allowed
             for the integration of the level set equation.
         lv_iter : Tuple[int, int], default=(8, 16)
             A tuple with the minimum and maximum number of
@@ -537,7 +535,7 @@ class Model(ABC):
             If True, a diffusion term is added to the level set
             equation; if False, the equation is solved without
             diffusion.
-        reinit_step : bool or int, default=False
+        reinit_step : int or bool, default=False
             A positive integer to apply the reinitialization
             method when the condition
                 iter>start_to_check and reinit_step%iter == 0
@@ -561,7 +559,7 @@ class Model(ABC):
         prev : int, default=10,
             Number of previous values to verify the tolerance
             of the Lagrangian and cost functionals.
-        random_pars : Tuple[int, float], default=(26, 0.05)
+        random_pars : Tuple[int, float], default=(1, 0.05)
             Seed and noise level in the line search method.
         """
         

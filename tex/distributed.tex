@@ -457,12 +457,12 @@ The main functions in \code{distributed.py}
 implement Algorithm \ref{eq:algo_lv} using
 different parallelism modes:
 \begin{itemize}[left=0.0em]
-\item \code{runDP} function for data parallelism.
-\item \code{runTP} function for task parallelism.
+\item \code{runDP} function for data parallelism,
+\item \code{runTP} function for task parallelism, and
 \item \code{runMP} function for mixed parallelism.
 \end{itemize}
 
-The parameters of these functions are:
+The parameters of these functions, their types, and default values are:
 \begin{lstlisting}
 niter: int = 100,
 dfactor: float = 1e-2,
@@ -478,6 +478,24 @@ cost_tol: float = 1e-2,
 prev: int = 10,
 random_pars: Tuple[int, float] = (1, 0.05)
 \end{lstlisting}
+The \code{runMP} function has a additional parameter:
+\begin{lstlisting}
+sub_comm: MPI.Comm # Without default value
+\end{lstlisting}
+It is a MPI communicator obtained by splitting the processes in groups.
+See Subsection \ref{sub:parallel} for more details.
+
+The \code{niter} parameter is the number of iterations.
+The parameters \code{dfactor}, \code{lv\_time}, \code{lv\_iter}, and \code{smooth}
+are related to the level set equation.
+See Subsection \ref{sub:level} and ``Line search method'' in Subsection \ref{sub:other} for more details.
+The parameters \code{reinit\_step} and \code{reinit\_pars}
+are related to the reinitialization of the level set function.
+See ``Reinitialization'' in Subsection \ref{sub:other} for more details.
+The parameters \code{start\_to\_check}, \code{ctrn\_tol}, \code{lgrn\_tol}, \code{cost\_tol}, and \code{prev}, are related
+to the errors and tolerances to decide when stop the algorithm. See ``Stopping criterion'' in Subsection \ref{sub:other}.
+Finally, the \code{random\_pars} parameter adds randomness to the integration of the level set equation.
+See the last part of ``Line search method'' in Subsection \ref{sub:other} for more details.
 
 We point out that the user-defined subclasses
 inherit these functions from the \code{Model} class.
