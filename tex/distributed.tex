@@ -106,18 +106,29 @@ This will be similar to \cite[Section 2]{MR3843884},
 recalling definitions of distributed and boundary expression of shape derivative.
 
 
-Notations. Let $\mathcal{D}\subset\mathds{R}^d$ be open bounded domain with boundary
-$\Gamma = \partial \mathcal{D}$. Let $n$ denote the outward unit normal vector to $\Gamma$.
-Let $I$ denote the $d$-dimensional identity matrix. $\left|\cdot\right|_{\infty}$ denotes the infinity norm.
+\textbf{Notations.}
+Let $\mathcal{D} \subset \mathds{R}^d$ be an open, bounded domain with boundary
+$\Gamma \coloneqq \partial \mathcal{D}$. Let $n$ denote the outward unit normal vector to $\Gamma$.
+The spaces $H^1(\mathcal{D})$ and $H^1_0(\mathcal{D})$ denote the usual Sobolev spaces.
+Given a set $\Omega \subset \overline{\mathcal{D}}$, $\chi_{\Omega}:\overline{\mathcal{D}} \rightarrow \mathds{R}$ denotes
+the indicator function of $\Omega$.
+Let $I$ denote the $d$-dimensional identity matrix.
+Let $\left|\cdot\right|_{\infty}$ denote the infinity norm.
+Given a vector-valued function $w \in H^1(\mathcal{D})^d$,
+$Dw$ denotes its Jacobian matrix.
+
+
 \begin{equation}
 	dJ(\Omega) \theta = \int_{\mathcal{D}} S_0^J \cdot \theta + S_1^J : D\theta 
 \end{equation}
 \begin{equation}
 	dC(\Omega) \theta = \int_{\mathcal{D}} S_0^C \cdot \theta + S_1^C : D\theta 
 \end{equation}
-%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Shape derivative for a model problem}
-%%%%%%%%%%%%%%%%%%%%%%%
+\label{sec:model_prob}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Here one could show the calculation of the distributed shape derivative for a model problem. 
 One should choose a different problem from \cite[Section 3]{MR3843884},
@@ -129,18 +140,19 @@ where one would just show the result with the tensors $S_1,S_0$.
 Let $\Gamma_0$, $\Gamma_1$ subsets of $\Gamma$ such that $\Gamma=\Gamma_1\cup\Gamma_2$.
 Let $H_{\Gamma_0}(\mathcal{D})^d$ be the space of functions
 \begin{equation*}
-H_{\Gamma_0}(\mathcal{D})^d\coloneqq\left\{ u\in H(\mathcal{D})^{d}\mid u|_{\Gamma_0}=\boldsymbol{0}\right\} 
+	H_{\Gamma_0}(\mathcal{D})^d\coloneqq\left\{ u\in H(\mathcal{D})^{d}\mid u|_{\Gamma_0}=\boldsymbol{0}\right\}. 
 \end{equation*}
 The strain and stress tensors are given by
 \begin{equation*}
-	\epsilon(w)=\frac{Dw+{Dw}^{\top}}{2},\quad\sigma(w)=2\mu\,\epsilon(w)+\lambda(\nabla\cdot w)I,
+	\epsilon(w)\coloneqq\frac{Dw+{Dw}^{\top}}{2},\quad\sigma(w)\coloneqq2\mu\,\epsilon(w)+\lambda\mathrm{div}wI,
 \end{equation*}
 where $\mu$ and $\lambda$ are the Lam\'e parameters.
-Let $f$ and $g$ vector-valued functions defined on $\Gamma_1$.
+Let $f$ and $g$ be vector-valued functions defined on $\Gamma_1$.
+Let $\alpha$ and $\beta$ be positive weights.
 The shape optimization problem reads:
 \begin{equation} \label{eq:cost}
 	\min_{\Omega \subset \mathcal{D}}
-	J(\Omega) = 
+	J(\Omega) \coloneqq
 	\frac{\alpha}{2}\int_{\mathcal{D}}\left|u-v\right|^{2} + 
 	\frac{\beta}{2}\int_{\Gamma_{1}}\left|u-v\right|^{2}
 \end{equation}
@@ -160,12 +172,12 @@ and
                                 v = g & \text{on} & \Gamma_{1}     
 	\end{array}
 \end{equation}
-respectively, and
+respectively, and $A_{\Omega}:\overline{\mathcal{D}} \rightarrow \mathds{R}$ is given by
 \begin{equation}\label{eq:AOmega}
-A_{\Omega}(x) = \kappa\chi_{\Omega}(x) + \chi_{\overline{\mathcal{D}}\setminus\Omega}(x)
-\quad \text{for }x\in \overline{\mathcal{D}}.
+A_{\Omega} = \kappa\chi_{\Omega} + \chi_{\overline{\mathcal{D}}\setminus\Omega}
+\quad \text{with }\kappa>0.
 \end{equation}
-Observe that $u$ and $v$ depend on $\Omega$ due to
+In \eqref{eq:cost}, observe that $u$ and $v$ depend on $\Omega$ due to
 the presence of $A_\Omega$ in the above equations.
 
 \textbf{The state and adjoint problems.}
@@ -197,29 +209,38 @@ as follows:
 \begin{equation} \label{eq:elastic_lag}
 	\mathcal{L}(\Omega, \varphi, \psi, \rho, \varrho) =
 	\mathcal{L}_{\mathrm{cost}} +
-	\mathcal{L}_{\mathrm{state}} +
-	\mathcal{L}_{\mathrm{adjoint}},
+	\mathcal{L}_{\mathrm{state}[f]} +
+	\mathcal{L}_{\mathrm{state}[g]},
 \end{equation}
 with
 \begin{align*}
 	\mathcal{L}_{\mathrm{cost}}    &= \frac{\alpha}{2}\int_{\mathcal{D}} \left|\varphi-\psi - g\right|^{2} + \frac{\beta}{2}\int_{\Gamma_{1}} \left|\varphi - g \right|^{2}, \\
-	\mathcal{L}_{\mathrm{state}}   &= \int_{\mathcal{D}} A_{\Omega} \sigma(\varphi) : \epsilon(\rho) - \int_{\Gamma_{1}} f \cdot \rho, \quad\text{and}\\
-	\mathcal{L}_{\mathrm{adjoint}} &= \int_{\mathcal{D}} A_{\Omega} \sigma(\psi + g) : \epsilon(\varrho),
+	\mathcal{L}_{\mathrm{state}[f]}   &= \int_{\mathcal{D}} A_{\Omega} \sigma(\varphi) : \epsilon(\rho) - \int_{\Gamma_{1}} f \cdot \rho, \quad\text{and}\\
+	\mathcal{L}_{\mathrm{state}[g]} &= \int_{\mathcal{D}} A_{\Omega} \sigma(\psi + g) : \epsilon(\varrho),
 \end{align*}
-where $\Omega\subset\mathcal{D}$ and $\varphi, \psi, \rho, \varrho$ are function in $H^1_{\Gamma_0}(\mathcal{D})^d$.
-By computing $\partial_{\phi}\mathcal{L}(u,v,p,q)(r)=0$ we obtain the first adjoint problem:
+where $\Omega\subset\mathcal{D}$ and $\varphi, \psi, \rho, \varrho$ are functions in $H^1_{\Gamma_0}(\mathcal{D})^d$.
+
+By differentiating $\mathcal{L}$ with respect to $\varphi$ and $\psi$,
+we obtain the adjoint equations:
+Find $p \in  H^1_{\Gamma_0}(\mathcal{D})^d$ and $ q\in H^1_0(\mathcal{D})^d$ such that
+\begin{align*}
+	\partial_{\varphi}\mathcal{L}(u,v,p,q)(r)&=0 & \forall \, r \in  H^1_{\Gamma_0}(\mathcal{D})^d,\\
+	\partial_{\psi}\mathcal{L}(u,v,p,q)(r)&=0 & \forall \, r \in  H^1_0(\mathcal{D})^d.
+\end{align*}
+From the first equation we have the first adjoint problem:
 Find $p \in  H^1_{\Gamma_0}(\mathcal{D})^d$ such that
 \begin{align*} \label{eq:f-adj}
 \int_{\mathcal{D}} A_{\Omega}\sigma(p):\epsilon(r) & = -\alpha \int_{\mathcal{D}} (u-v-g) \cdot r \\
 &\quad -\beta \int_{\Gamma_1} (u - g) \cdot r \quad
 \forall \, r \in  H^1_{\Gamma_0}(\mathcal{D})^d.
 \end{align*}
-Now from $\partial_{\varphi}\mathcal{L}(u,v,p,q)(r)=0$ we obtain the second adjoint problem:
+From the second equation we have the second adjoint problem:
 Find $q \in  H^1_{0}(\mathcal{D})^d$ such that
 \begin{equation*} \label{eq:g-adj}
 	\int_{\mathcal{D}} A_{\Omega}\sigma(q):\epsilon(r) =
 	\alpha \int_{\mathcal{D}} (u-v-g) \cdot r \quad \forall \, r \in  H^1_0(\mathcal{D})^d.
 \end{equation*}
+Observe that both the state and the adjoint problems are linear.
 
 \textbf{Shape derivative components.}
 In order to obtain the shape derivative of of the cost functional, we define
@@ -228,7 +249,7 @@ the so-called shape-Lagrangian as
 	& \mathcal{G}(t,\varphi,\psi,\rho,\varrho) \coloneqq\\
 	& \mathcal{L}\left(\Omega_{t},\varphi\circ T_{t}^{-1},\psi\circ T_{t}^{-1},\rho\circ T_{t}^{-1},\varrho\circ T_{t}^{-1}\right)
 \end{align*}
-for all $t\in[0, t_1]$ and all $\varphi,\psi,\rho,\varrho$ in $H^1_{\Gamma_0}(\mathcal{D})^d$.
+for all $t\in[0, t_1]$, $\varphi,\psi$ in $H^1_{\Gamma_0}(\mathcal{D})^d$, and $\rho,\varrho$ in $H^1_0(\mathcal{D})^d$.
 For $t\in[0, t_1]$ and $w \in H^1(\mathcal{D})^d$, let
 \begin{equation*}
 	E(t,w)\coloneqq\frac{Dw\,DT_{t}^{-1}+(Dw\,DT_{t}^{-1})^{\top}}{2}.
@@ -237,21 +258,25 @@ It holds that $E(t,w) = \epsilon\left(w\circ T_{t}^{-1}\right)\circ T_{t}$.
 In particular, $E(0, w) = \epsilon(w)$.
 On the other hand, recall that $\sigma = \mathrm{C}\epsilon$,
 where $\mathrm{C}$ is the 4-index stiffness tensor associated to
-$\lambda$ and $\mu$. 
-Applying the change of variable $x \mapsto T_t(x)$, we have
+$\lambda$ and $\mu$. In terms of Kronecker symbols,
+\begin{equation}
+	\mathrm{C}_{ijkl} \coloneqq \lambda \delta_{ij} \delta_{kl} + \mu(\delta_{ik}\delta_{jl} + \delta_{il}\delta_{jk}).
+\end{equation}
+Applying the change of variable $x \mapsto T_t(x)$ and the fact that $T_t=I$ on $\Gamma_1$, we have
 \begin{equation}
 	\mathcal{G}(t,\varphi,\psi,\rho,\varrho) =
 	\mathcal{G}_{\mathrm{cost}} +
-	\mathcal{G}_{\mathrm{state}} +
-	\mathcal{G}_{\mathrm{adjoint}}
+	\mathcal{G}_{\mathrm{state}[f]} +
+	\mathcal{G}_{\mathrm{state}[g]}
 \end{equation}
 with
 \begin{align*}
-	\mathcal{G}_{\mathrm{cost}}    &= \frac{\alpha}{2}\int_{\mathcal{D}}\left|\phi-\varphi-g\circ T_{t}\right|^{2}\xi(t)+\frac{\beta}{2}\int_{\Gamma_{1}}\left|\phi-g\right|^{2}, \\
-	\mathcal{G}_{\mathrm{state}}   &= \int_{\mathcal{D}}A_{\Omega}\mathrm{C}E(t,\phi):E(t,\rho)\xi(t)-\int_{\Gamma_{1}}f\cdot\rho, \quad \text{and}\\
-	\mathcal{G}_{\mathrm{adjoint}} &= \int_{\mathcal{D}}A_{\Omega}\mathrm{C}E(t,\varphi + g\circ T_{t}):E(t,\varrho)\xi(t).
+	\mathcal{G}_{\mathrm{cost}}     &= \frac{\alpha}{2}\int_{\mathcal{D}}\left|\phi-\varphi-g\circ T_{t}\right|^{2}\xi(t)+\frac{\beta}{2}\int_{\Gamma_{1}}\left|\phi-g\right|^{2}, \\
+	\mathcal{G}_{\mathrm{state}[f]} &= \int_{\mathcal{D}}A_{\Omega}\mathrm{C}E(t,\phi):E(t,\rho)\xi(t)-\int_{\Gamma_{1}}f\cdot\rho, \;\, \text{and}\\
+	\mathcal{G}_{\mathrm{state}[g]} &= \int_{\mathcal{D}}A_{\Omega}\mathrm{C}E(t,\varphi + g\circ T_{t}):E(t,\varrho)\xi(t),
 \end{align*}
-Using the fact that
+where $\xi(t)=\det DT_t$.
+Using the result
 \begin{equation}
 	dJ(\Omega; \theta) = \partial_{t}\mathcal{G}(0, u, v, p, q),
 \end{equation}
@@ -280,12 +305,13 @@ and
 \end{align*}
 respectively.
 
-\textbf{Decent direction.}
-In addition, it is necessary to choose a positive bilinear form
+\textbf{Bilinear form.}
+In addition to the state/adjoint problems and the derivative components,
+it is necessary to choose a positive bilinear form
 in order to find an velocity field to compute the level set function.
-We choose $B:H_{0}^1(\mathcal{D})^d \times H_{0}^1(\mathcal{D})^d \rightarrow \mathds{R}$
+For this problem we choose $B:H_{0}^1(\mathcal{D})^d \times H_{0}^1(\mathcal{D})^d \rightarrow \mathds{R}$
 defined by
-\begin{equation}
+\begin{equation} \label{eq:biform}
 	B(\theta, \xi) = \int_{\mathcal{D}} {10}^{-1}\theta \cdot \xi + D\theta : D\xi .
 \end{equation}
 
@@ -1309,36 +1335,46 @@ def derivative(self, phi, U, P):
 	]
 	return (sum(S0), []), (sum(S1), [])
 \end{lstlisting}
+Since there are not constraints in this problem, and so derivative components of the constraints functions,
+there are empty lists on the tuples returned by \code{derivative}.
 
-Finally, we write the bilinear form that will be used to compute the velocity field:
+Finally, we write the bilinear form \eqref{eq:biform},
+which will be used to compute the velocity field $\theta$ by solving \eqref{eq:velocity}:
 \begin{lstlisting}
 def bilinear_form(self, th, xi):
     biform = 0.1*dot(th, xi)*self.dx
 	biform += inner(grad(th), grad(xi))*self.dx    
 	return biform, True
 \end{lstlisting}
-By returning \code{True} we are specifying homogeneous Dirichlet boundary condition.
+By returning \code{True} we are specifying homogeneous Dirichlet boundary condition, that is, $\mathbb{H}=H^1_0(\Omega)$.
 
+We are ready to write the test using mixed parallelism.
+We start by calling the MPI communicator:
 \begin{lstlisting}
 comm = MPI.COMM_WORLD
 rank = comm.rank
 size = comm.size
 \end{lstlisting}
-
+Since there are six state problems, we verify that the number of processes be a multiple of six
+and create the sub-communicator:
 \begin{lstlisting}
-nbr_groups = 6
-# size%nbr_groups = 0
+nbr_groups = 6 # size%nbr_groups = 0
 color = rank * nbr_groups // size
 sub_comm = comm.Split(color, rank)
 \end{lstlisting}
-
+Just to have a well-written code, first we write
+the path were the results will be saved, the domain dimension ($d=2$),
+the rank dimension (number of components of state/adjoint solutions), and the mesh size.
 \begin{lstlisting}
 test_path = Path("../results/t08/")
 dim = 2
 rank_dim = 2
 mesh_size = 0.015
 \end{lstlisting}
-
+For this test, the domain $\mathcal{D}$ is a semi-ellipse.
+We use the \code{create\_domain\_2d\_MP}
+to create $\mathcal{D}$. Below we define
+the vertices and the boundary parts:
 \begin{lstlisting}
 npts = 80
 part = npts//4
@@ -1366,7 +1402,7 @@ boundary_parts = [
 	(neu_idxC, neu_mkrC, "neuC")
 ]
 \end{lstlisting}
-
+These variables are passed to \code{create\_domain\_2d\_MP}, along with the sub-communicator
 \begin{lstlisting}
 output = dib.create_domain_2d_MP(
 	sub_comm, color,
@@ -1375,7 +1411,7 @@ output = dib.create_domain_2d_MP(
 )
 domain, nbr_tri, boundary_tags = output	
 \end{lstlisting}
-
+Now we create the space of functions and the Dirichlet boundary conditions
 \begin{lstlisting}
 space = dib.create_space(domain, "CG", rank_dim)
 dirbc_partial = dib.homogeneous_dirichlet(
@@ -1385,7 +1421,7 @@ dirbc_total = dib.homogeneus_boundary(
 	domain, space, dim, rank_dim
 )
 \end{lstlisting}
-
+boundary measures
 \begin{lstlisting}
 ds_parts = dib.marked_ds(
 	domain, boundary_tags,
@@ -1395,24 +1431,24 @@ ds_forces = [ds_parts[1], ds_parts[2], ds_parts[3]]
 ds1 = sum(ds_parts[1:], start = ds_parts[0])
 forces = [(-1.0, -1.0), (0.0, -1.0), (1.0, -1.0)]
 \end{lstlisting}
-
+instance of \code{InverseElasticity} class
 \begin{lstlisting}
 md = InverseElasticity(
 	dim, domain, space, forces, ds_forces, ds1,
 	dirbc_partial, dirbc_total, test_path
 )
 \end{lstlisting}
-
+displacement data
 \begin{lstlisting}
 md.gs = dib.get_funcs_from(g_space, g_values[sub_comm.rank])
 \end{lstlisting}
-
+initial level set function 
 \begin{lstlisting}
 centers = np.array([(0.0, 0.4)])
 radii = np.array([0.15])
 md.create_initial_level(centers, radii, -1.0)
 \end{lstlisting}
-
+\code{runMP} method
 \begin{lstlisting}
 md.runMP(
 	sub_comm,
@@ -1422,7 +1458,7 @@ md.runMP(
 	cost_tol = 1e-1
 )
 \end{lstlisting}
-
+in terminal, execute
 \begin{lstlisting}
 mpirun -np 12 python test.py 08
 \end{lstlisting}
