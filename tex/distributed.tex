@@ -82,10 +82,12 @@ On the other hand, we also implement a parallelization of the source terms in th
 
 
 \section{Introduction}
-Here we emphasize the following points:
 \begin{itemize}
-    \item Literature review: there are many papers to cite. Many recents eductional codes available. \cite{Wegert2025}
-\item The paper is a continuation of \cite{MR3843884}.
+	\item Literature review on sequential  codes: The popular “99 line” Matlab code by Sigmund published
+	in 2001 \cite{Sigmund2014} and following improvments such as \cite{Andreassen2010}. Comparison of algorithms in \cite{Gain2013}. For FreeFEM \cite{MR2252743}.
+    \item Literature review on code with parallel capabilities: Many recents eductional codes available. Julia toolbox \cite{Wegert2025}, a parallel FreeFEM framework \cite{MR4916810}, open-source Python implementation of the Null Space Optimizer for solving Topology Optimization problems \cite{MR4686093}, aFEniCSx implementation for 2D 	and 3D topology optimization \cite{Jia2024}.
+    \item Literature for other methods such as phase-field methods. As the literature on topology optimization is very extensive, we only provide certain illustrative citations, and refer to review papers for a more extensive literature review. 
+\item Here we follow a level set approach. Approach based on shape derivatives \cite{MR2731611,SokZol92} Pioneered in \cite{MR2033390,MR1911658}. Also \cite{Challis2009,MR2459656} The paper is a continuation of \cite{MR3843884}.
 \item The goal is to provide a toolbox that is easy to use and allows to test some shape optimization problems in a fast way. Suited for students and practitioners. The main work for someone using the toolbox is to write an appropriate model (geometry and PDE) and compute $S_1,S_0$.
 \item There are many eductional papers and implementations for structural optimization and topology optimization, but they usually focus on the SIMP method, or an approximation of the level set method (clarify). Here we provide an implementation based on the distributed shape derivative. 
 \item On one hand, the  distributed shape derivative has practical advantages: accuracy and ease of implementation. From the educational point of view, it is a way to learn about shape sensitivity analysis.
