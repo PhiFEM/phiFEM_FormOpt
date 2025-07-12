@@ -56,7 +56,7 @@
 
 \newcommand{\code}[1]{\texttt{#1}}
 
-\title{A FEniCSx toolbox for level set-based shape and topology optimization supporting parallel computing}
+\title{FormOpt: A FEniCSx toolbox for level set-based shape and topology optimization supporting parallel computing}
 \author{
 	Josu\'{e} D. D\'{i}az-Avalos\thanks{Email: \texttt{josue.diazavalos@uni-due.de}} \qquad
 	Antoine Laurain\thanks{Email: \texttt{antoine.laurain@uni-due.de}} \\
@@ -82,16 +82,83 @@ On the other hand, we also implement a parallelization of the source terms in th
 
 
 \section{Introduction}
+
+% 1) What is topology optimization, applications
+% 2) What are the different approaches + literature review
+%- SIMP
+%- Level set
+%- phase field
+% 3) the trend of educational codes + literature
+% 4) We use here the distributed shape derivative approach, why it is good?
+% 5) We extend the previous work in many directions
+% 6) The need for parallel computing, and how FenicsX help + recent trend
+% 7) structure of paper
+
+
+
+% 1) What is topology optimization, applications
+Shape and topology optimization \cite{MR2731611,SokZol92} has built over the years a solid theoretical basis and has found its way in many industrial applications for optimal design thanks to the fast development of computational capacities. 
+The topic has found natural applications first  in structural and fluid mechanics, then has been developed for various other partial differential equations (PDEs) constraints. 
+
+% 2) What are the different approaches + literature review
+Different approaches have been developed for shape and topology optimization. 
+The solid isotropic microstructure with penalty (SIMP) method \cite{MR2008524}, based on a material density approach,  is one of the most popular in structural mechanics and is the basis of many educational codes since the work \cite{Sigmund2014}. 
+It has been extended to different frameworks, beyond structural optimization.
+Another widely used approach is the family level-set based approach, with different variations of the method introduced by Osher and Sethian in \cite{MR965860}. 
+Other important methods include phase-field methods \cite{MR2108636} and topological derivative-based methods \cite{MR2235384}. 
+Reference works for the level set approach in structural optimization are \cite{MR1911658,MR2033390}. 
+As the literature on topology optimization is very extensive, we only provide certain illustrative citations, and refer to review papers for a more extensive literature review. 
+
+
+% 3) the trend of educational codes + literature
+The offer for softwares for shape and topology optimization is growing quickly.
+Along commercial softwares, many open-source softwares have been developed. 
+For topology optimization in structural mechanics, a trend of educational codes started in 2001 with the  “99 line” Matlab code by Sigmund published in 2001 \cite{Sigmund2014} and followed by an improved version in \cite{Andreassen2010}. Another pioneering code is the FreeFEM implementation \cite{MR2252743}.
+Codes for various platforms have been developed, such as NGsolve \cite{Gangl2020} and FEniCS \cite{MR3843884}. 
+An open-source Python implementation of the Null Space Optimizer \cite{MR4686093}.
+We refer to  \cite{Gain2013} for a comparison of algorithms.
+ 
+% 4) We use here the distributed shape derivative approach, why it is good?
+The majority of educational papers and implementations for structural optimization and topology optimization are based on the SIMP method, or a variation of the level set method using a Heaviside function (citation). 
+In this work we follow another variation of the level set approach based on the notion of shape derivatives \cite{MR2731611,SokZol92}. 
+Educational codes following this approach include \cite{Challis2009,MR2459656}.
+More specifically, we base our approach on the so-called {\it distributed shape derivative}.
+In \cite{MR3843884}, an educational code for structural mechanics based on such an approach  was introduced.
+This approach has several advantages, such as higher accuracy \cite{MR2642680,MR3348199} and ease of implementation \cite{MR3535238}. 
+The present work is a natural evolution of \cite{MR3843884}.
+From an educational perspective, it is a way to learn about shape sensitivity analysis.
+Another important feature of our approach is that it emphasizes the optimize-then-discretize approach, as the shape derivative is computed in the infinite-dimensional setting, and a discrete version is then used in the numerical algorithm.
+
+% 5) We extend the previous work in many directions
+
+
+
+% 6) The need for parallel computing, and how FenicsX help + recent trend
+As the computational power steadily increases, parallel computing has become commonplace and is often required for large-scale problems. 
+This trend can also be observed in the topology optimization community, with the developments of many educational codes with parallel capabilities recently. 
+Such work include a Julia toolbox \cite{Wegert2025}, a parallel FreeFEM framework \cite{MR4916810}, and a FEniCSx implementation for 2D and 3D topology optimization \cite{Jia2024}.
+Naturally, we also propose here an evolution of the distributed shape derivative-based \cite{MR3843884} with parallel capabilities.
+Unlike most educational papers on topology optimization which focus on structural mechanics, our objective here is to offer a broader perspective, considering shape optimization problem with general PDE constraints. We also present standard applications involving linear elasticity as a particular case. Another important focus of the present paper is inverse problems, which benefit greatly from the parralelization of the sources.
+
+
+% 7) structure of paper
+
+
+
+
 \begin{itemize}
-	\item Literature review on sequential  codes: The popular “99 line” Matlab code by Sigmund published
-	in 2001 \cite{Sigmund2014} and following improvments such as \cite{Andreassen2010}, based on Matlab. Comparison of algorithms in \cite{Gain2013}. For FreeFEM \cite{MR2252743}.
-    \item Literature review on code with parallel capabilities: Many recents eductional codes available. Julia toolbox \cite{Wegert2025}, a parallel FreeFEM framework \cite{MR4916810}, open-source Python implementation of the Null Space Optimizer for solving Topology Optimization problems \cite{MR4686093}, aFEniCSx implementation for 2D 	and 3D topology optimization \cite{Jia2024}.
-    \item Literature for other methods such as phase-field methods. As the literature on topology optimization is very extensive, we only provide certain illustrative citations, and refer to review papers for a more extensive literature review. 
-\item Here we follow a level set approach. Approach based on shape derivatives \cite{MR2731611,SokZol92} Pioneered in \cite{MR2033390,MR1911658}. Also \cite{Challis2009,MR2459656} The paper is a continuation of \cite{MR3843884}.
+	% \item Literature review on sequential  codes: The popular “99 line” Matlab code by Sigmund published
+	% in 2001 \cite{Sigmund2014} and following improvments such as \cite{Andreassen2010}, based on Matlab. Comparison of algorithms in \cite{Gain2013}. For FreeFEM \cite{MR2252743}.
+	% NGsolve \cite{Gangl2020}.
+    % \item Literature review on code with parallel capabilities: Many recents educational codes available. Julia toolbox \cite{Wegert2025}, a parallel FreeFEM framework \cite{MR4916810}, open-source Python implementation of the Null Space Optimizer for solving Topology Optimization problems \cite{MR4686093}, aFEniCSx implementation for 2D 	and 3D topology optimization \cite{Jia2024}.
+    % \item Literature for other methods such as phase-field methods. As the literature on topology optimization is very extensive, we only provide certain illustrative citations, and refer to review papers for a more extensive literature review. 
+% \item Here we follow a level set approach. Approach based on shape derivatives \cite{MR2731611,SokZol92} Pioneered in \cite{MR2033390,MR1911658}. Also \cite{Challis2009,MR2459656} The paper is a continuation of \cite{MR3843884}.
 \item The goal is to provide a toolbox that is easy to use and allows to test some shape optimization problems in a fast way. Suited for students and practitioners. The main work for someone using the toolbox is to write an appropriate model (geometry and PDE) and compute $S_1,S_0$.
-\item There are many eductional papers and implementations for structural optimization and topology optimization, but they usually focus on the SIMP method, or an approximation of the level set method (clarify). Here we provide an implementation based on the distributed shape derivative. 
-\item On one hand, the  distributed shape derivative has practical advantages: accuracy and ease of implementation. From the educational point of view, it is a way to learn about shape sensitivity analysis.
-\item Unlike similar papers on the topic, we focus here mainly on inverse problems, which benefit greatly from the parralelization of the sources.
+% \item There are many educational papers and implementations for structural optimization and topology optimization, but they usually focus on the SIMP method, or an approximation of the level set method (clarify). Here we provide an implementation based on the distributed shape derivative. 
+% \item In \cite{MR3843884}, an educational acode for structural mechanics based on a  variation of the level set approach using the so-called {\it distributed shape derivative} was introduced.
+% This approach has several advantages, such as higher accuracy \cite{MR2642680,MR3348199} and ease of implementation \cite{MR3535238}. From an educational perspective, it is a way to learn about shape sensitivity analysis.
+% We emphasize the optimize-then-discretize approach.
+% \item Most educational papers on topology optimization focus on structural mechanics. Here our objective is to offer a broader perspective, considering shape optimization problem with general partial differential equations (PDEs) constraints. We also present applications to linear elasticity as a particular case. Another important focus of the present paper is inverse problems, which benefit greatly from the parralelization of the sources.
 \item We also want to explain how the parralelization works, in a pedagogical way.
 \end{itemize}    
 
