@@ -53,7 +53,6 @@
 	emphstyle=\color{magenta!70!black}\bfseries
 }
 
-
 \newcommand{\code}[1]{\texttt{#1}}
 
 \title{A FEniCSx toolbox for level set-based shape and topology optimization supporting parallel computing}
@@ -1529,8 +1528,67 @@ $g = (0, 0, -4)$
 \end{center}
 
 
-
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Heat Conduction}
+\label{sub:heat}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Let $\Gamma_0$, $\Gamma_1$ subsets of $\Gamma$ such that $\Gamma=\Gamma_1\cup\Gamma_2$.
+Let $V$ be a prefixed volume, less than the volume of $\mathcal{D}$.
+\begin{equation} \label{eq:heat_cost}
+	\min_{\Omega \subset \mathcal{D}}
+	J(\Omega) \coloneqq \int_{\mathcal{D}} A_{\Omega}\left|\nabla u\right|^{2}
+\end{equation}
+subject to
+\begin{equation}
+	\int_{\mathcal{D}} \chi_{\Omega} = V,
+\end{equation}
+where $u$ is the solution to
+\begin{equation} \label{eq:heat_prob}
+	\begin{array}{rcl}
+	-\mathrm{div}(A_{\Omega} \nabla u) = f & \text{in} & \mathcal{D}\\
+                                    u  = 0 & \text{on} & \Gamma_{0}\\
+                       \partial_{n} u  = 0 & \text{on} & \Gamma_{1}                     
+	\end{array}	
+\end{equation}
+and $A_{\Omega}:\overline{\mathcal{D}} \rightarrow \mathds{R}$ is given by
+\begin{equation}\label{eq:heat_AOmega}
+A_{\Omega} = \chi_{\Omega} + {10}^{-3}\chi_{\overline{\mathcal{D}}\setminus\Omega}.
+\end{equation}
+According to \eqref{eq:problem}, the constraint function for this problem is written as
+\begin{equation}
+	C(\Omega) = \frac{1}{V} \int_{\mathcal{D}} \chi_{\Omega}.
+\end{equation}
+
+weak formulation:
+Find $u \in  H^1_{\Gamma_0}(\mathcal{D})$ such that
+\begin{equation} \label{eq:heat_weak}
+	\int_{\mathcal{D}} A_{\Omega} \nabla u \cdot \nabla v =
+	\int_{\mathcal{D}} f v
+	\quad
+	\forall \, v \in  H^1_{\Gamma_0}(\mathcal{D}).
+\end{equation}
+
+derivative components
+\begin{align*}
+	S^J_0 &= 2u\nabla f \\
+	S^J_1 &= \left(2uf-A_{\Omega}\left|\nabla u\right|^{2}\right)I+2A_{\Omega}\nabla u\otimes\nabla u
+\end{align*}
+
+\begin{equation*}
+	S^C_0 = \boldsymbol{0},\quad S^C_1 = \frac{1}{V} \chi_\Omega I
+\end{equation*}
+
+bilinear form
+\begin{equation} \label{eq:heat_biform}
+	B(\theta, \xi) = \int_{\mathcal{D}} D\theta : D\xi .
+\end{equation}
+
+multiple load cases
+
+\noindent\textit{Example.}
+
+
 
 %%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Performance investigation}

@@ -31,9 +31,9 @@ test_05 : Cantilever with two loads I (Mixed Parallelism)
 test_06 : Elasticity Inverse Problem - Data Parallelism
 test_07 : Elasticity Inverse Problem - Task Parallelism
 test_08 : Elasticity Inverse Problem - Mixed Parallelism
-test_09 : Heat conduction problem 1 (Data Parallelism)
-test_10 : Heat conduction problem 2 (Data Parallelism)
-test_11 : Heat conduction problem 3 (Data Parallelism)
+test_09 : Heat conduction problem 1 - Data Parallelism
+test_10 : Heat conduction problem 2 - Data Parallelism
+test_11 : Heat conduction problem 3 - Data Parallelism
 test_12 : Heat conduction with two sinks (Data Parallelism)
 test_13 : Heat conduction with one load (Data Parallelism)
 test_14 : Logistic equation, r = 10 (Data Parallelism)
@@ -1430,11 +1430,16 @@ def test_08():
 
 def test_09():
     """
-    Run: mpirun -np <nbr of processes> python test.py 09
-    For instance: mpirun -np 2 python test.py 09
+    Heat conduction 1 - Data Parallelism
+
+    Run `mpirun -np <nbr of processes> python test.py 09`.
+    For instance, `mpirun -np 2 python test.py 09`.
+    
+    To save the output, append `> ../results/t09/out.txt`.
+    To delete the images, enter `rm ../results/t09/*.png`.
     """
 
-    test_name = "Heat conduction 1 (Data Parallelism)"
+    test_name = "Heat conduction 1 - Data Parallelism"
     test_path = Path("../results/t09/")
     dim = 2
     rank_dim = 1
@@ -1518,7 +1523,7 @@ def test_09():
 
     #Run Data Parallelism
     md.runDP(
-        niter = 200,
+        niter = 250,
         dfactor = 1e-2,
         ctrn_tol = 1e-3,
         lgrn_tol = 1e-2
@@ -1527,11 +1532,16 @@ def test_09():
 
 def test_10():
     """
-    Run: mpirun -np <nbr of processes> python test.py 10
-    For instance: mpirun -np 2 python test.py 10
+    Heat conduction with 2 - Data Parallelism
+
+    Run `mpirun -np <nbr of processes> python test.py 10`.
+    For instance, `mpirun -np 2 python test.py 10`.
+    
+    To save the output, append `> ../results/t10/out.txt`.
+    To delete the images, enter `rm ../results/t10/*.png`.
     """
 
-    test_name = "Heat conduction 2 (Data Parallelism)"
+    test_name = "Heat conduction 2 - Data Parallelism"
     test_path = Path("../results/t10/")
     dim = 2
     rank_dim = 1
@@ -1620,11 +1630,10 @@ def test_10():
     md.save_initial_level(comm)
     
     md.runDP(
-        niter = 200,
-        dfactor = 1e-1,
-        ctrn_tol = 1e-3,
-        lgrn_tol = 5e-2,
-        lv_iter = (10, 18)
+        niter=200,
+        dfactor=1e-1,
+        ctrn_tol=1e-3,
+        lgrn_tol=5e-2
     )
 
 
@@ -1892,15 +1901,20 @@ def test_12():
 
 def test_13():
     """
-    Run: mpirun -np <nbr of processes> python test.py 13
-    For instance: mpirun -np 2 python test.py 13
+    Heat conduction with one load - Data Parallelism
+
+    Run `mpirun -np <nbr of processes> python test.py 13`.
+    For instance, `mpirun -np 2 python test.py 13`.
+    
+    To save the output, append `> ../results/t13/out.txt`.
+    To delete the images, enter `rm ../results/t13/*.png`.
     """
 
     test_name = "Heat conduction with one load (Data Parallelism)"
     test_path = Path("../results/t13/")
     dim = 2
     rank_dim = 1
-    mesh_size = 5e-3
+    mesh_size = 1e-2
 
     vertices = np.array([
         [0.0, 0.0],
@@ -1947,38 +1961,33 @@ def test_13():
         dim, domain, space, dirichlet_bcs, area, test_path, "1Load"
     )
 
-    # @dib.region_of(domain)
-    # def sub_domain(x):
-    #     return (0.1**2 - (0.5 - x[0])**2 - (0.5 - x[1])**2, )
-    
-    # md.sub = [sub_domain.expression()]
     centers = []
-    centers += [(0.1, i*0.2 + 0.1) for i in range(5)]
-    centers += [(0.3, i*0.2 + 0.1) for i in range(5)]
-    centers += [(0.5, i*0.2 + 0.1) for i in range(5) if i != 2]
-    centers += [(0.7, i*0.2 + 0.1) for i in range(5)]
-    centers += [(0.9, i*0.2 + 0.1) for i in range(5)]
-    centers += [(0.0, i*0.2) for i in range(6)]
-    centers += [(0.2, i*0.2) for i in range(6)]
-    centers += [(0.4, i*0.2) for i in range(6) if i not in (2, 3)]
-    centers += [(0.6, i*0.2) for i in range(6) if i not in (2, 3)]
-    centers += [(0.8, i*0.2) for i in range(6)]
-    centers += [(1.0, i*0.2) for i in range(6)]
-    
-    
+
+    centers += [(i/3.0, 1.0) for i in range(4)]
+    centers += [(i/3.0, 2.0/3.0) for i in range(4)]
+    centers += [(i/3.0, 1.0/3.0) for i in range(4)]
+    centers += [(i/3.0, 0.0) for i in range(4)]
+
+    # Uncomment to add more holes to the initial condition
+    # Spoilier: the result is different
+    # centers += [(i/6.0, 5.0/6.0) for i in range(1, 6, 2)]
+    # centers += [(i/6.0, 0.5) for i in range(1, 6, 2) if i != 3]
+    # centers += [(i/6.0, 1.0/6.0) for i in range(1, 6, 2)]
+
     centers = np.array(centers)
-    radii = np.repeat(0.05, centers.shape[0])
+    radii = np.repeat(0.08, centers.shape[0])
 
     md.create_initial_level(centers, radii)
     md.save_initial_level(comm)
     
     md.runDP(
-        niter = 200,
-        dfactor = 1.0,
-        ctrn_tol = 1e-3,
-        lgrn_tol = 5e-2,
-        lv_iter = (10, 18),
-        smooth = True
+        niter=250,
+        dfactor=1.0,
+        ctrn_tol=1e-3,
+        lgrn_tol=1e-2,
+        smooth=True,
+        reinit_step=6,
+        reinit_pars=(8, 0.01)
     )
 
 

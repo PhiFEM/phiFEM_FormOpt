@@ -426,7 +426,7 @@ class Heat(Model):
         self.zero_vec = as_vector(dim*[0.0])
         self.Id = Identity(dim)
 
-        self.A = lambda w: conditional(lt(w, 0.0), 1.0, 1e-2)
+        self.A = lambda w: conditional(lt(w, 0.0), 1.0, 1e-3)
         self.chi = lambda w: conditional(lt(w, 0.0), 1.0, 0.0)
         
         self.sc_type = sc_type

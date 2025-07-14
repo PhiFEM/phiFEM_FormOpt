@@ -1,0 +1,90 @@
+Info    : Reading '../results/t13/domain.msh'...
+Info    : 9 entities
+Info    : 46683 nodes
+Info    : 93364 elements
+Info    : Done reading '../results/t13/domain.msh'
+
+	Heat conduction with one load (Data Parallelism)
+
+> Path = ../results/t13
+> Nbr of triangles = 92564
+> Iterations:
+i =   0 | cost = 0.1292 | cstr = 1.2969 | nder = 0.1456 | steps =  0 | lagr = 0.1292 | lm = 0.0000 | mu = 0.0000
+i =   1 | cost = 0.1272 | cstr = 1.3072 | nder = 0.4785 | steps = 16 | lagr = 0.8352 | lm = 0.6137 | mu = 0.0000
+i =   2 | cost = 0.1312 | cstr = 1.2640 | nder = 0.6053 | steps = 15 | lagr = 1.0096 | lm = 0.7501 | mu = 0.2227
+i =   3 | cost = 0.1364 | cstr = 1.2119 | nder = 0.7008 | steps = 15 | lagr = 1.1241 | lm = 0.8520 | mu = 0.4286
+i =   4 | cost = 0.1439 | cstr = 1.1496 | nder = 0.7471 | steps = 15 | lagr = 1.1635 | lm = 0.9064 | mu = 0.6076
+i =   5 | cost = 0.1523 | cstr = 1.0854 | nder = 0.7453 | steps = 16 | lagr = 1.1378 | lm = 0.9148 | mu = 0.7442
+i =   6 | cost = 0.1618 | cstr = 1.0209 | nder = 0.6840 | steps = 15 | lagr = 1.0479 | lm = 0.8684 | mu = 0.8266
+i =   7 | cost = 0.1708 | cstr = 0.9650 | nder = 0.5802 | steps = 16 | lagr = 0.9198 | lm = 0.7774 | mu = 0.8473
+i =   8 | cost = 0.1783 | cstr = 0.9194 | nder = 0.4482 | steps = 16 | lagr = 0.7711 | lm = 0.6518 | mu = 0.8128
+i =   9 | cost = 0.1832 | cstr = 0.8884 | nder = 0.3165 | steps = 16 | lagr = 0.6256 | lm = 0.5120 | mu = 0.7350
+i =  10 | cost = 0.1849 | cstr = 0.8715 | nder = 0.2123 | steps = 16 | lagr = 0.4934 | lm = 0.3729 | mu = 0.6297
+i =  11 | cost = 0.1838 | cstr = 0.8668 | nder = 0.1648 | steps = 16 | lagr = 0.3779 | lm = 0.2444 | mu = 0.5105
+i =  12 | cost = 0.1802 | cstr = 0.8738 | nder = 0.1816 | steps = 16 | lagr = 0.2826 | lm = 0.1354 | mu = 0.3876
+i =  13 | cost = 0.1750 | cstr = 0.8881 | nder = 0.2200 | steps = 16 | lagr = 0.2042 | lm = 0.0469 | mu = 0.2704
+i =  14 | cost = 0.1695 | cstr = 0.9084 | nder = 0.2541 | steps = 16 | lagr = 0.1450 | lm = -0.0177 | mu = 0.1654
+i =  15 | cost = 0.1636 | cstr = 0.9320 | nder = 0.2712 | steps = 15 | lagr = 0.1050 | lm = -0.0579 | mu = 0.0780
+i =  16 | cost = 0.1578 | cstr = 0.9569 | nder = 0.2691 | steps = 15 | lagr = 0.0854 | lm = -0.0738 | mu = 0.0123
+i =  17 | cost = 0.1525 | cstr = 0.9832 | nder = 0.2451 | steps = 16 | lagr = 0.0898 | lm = -0.0634 | mu = -0.0298
+i =  18 | cost = 0.1482 | cstr = 1.0059 | nder = 0.2082 | steps = 16 | lagr = 0.1134 | lm = -0.0345 | mu = -0.0463
+i =  19 | cost = 0.1447 | cstr = 1.0249 | nder = 0.1627 | steps = 16 | lagr = 0.1535 | lm = 0.0092 | mu = -0.0405
+i =  20 | cost = 0.1422 | cstr = 1.0381 | nder = 0.1190 | steps = 15 | lagr = 0.2029 | lm = 0.0599 | mu = -0.0162
+i =  21 | cost = 0.1404 | cstr = 1.0463 | nder = 0.0893 | steps = 16 | lagr = 0.2570 | lm = 0.1135 | mu = 0.0209
+i =  22 | cost = 0.1396 | cstr = 1.0490 | nder = 0.0894 | steps = 16 | lagr = 0.3089 | lm = 0.1637 | mu = 0.0658
+i =  23 | cost = 0.1395 | cstr = 1.0457 | nder = 0.1083 | steps = 16 | lagr = 0.3514 | lm = 0.2046 | mu = 0.1133
+i =  24 | cost = 0.1399 | cstr = 1.0397 | nder = 0.1295 | steps = 16 | lagr = 0.3846 | lm = 0.2369 | mu = 0.1575
+i =  25 | cost = 0.1404 | cstr = 1.0320 | nder = 0.1465 | steps = 16 | lagr = 0.4077 | lm = 0.2600 | mu = 0.1960
+i =  26 | cost = 0.1413 | cstr = 1.0212 | nder = 0.1525 | steps = 16 | lagr = 0.4161 | lm = 0.2695 | mu = 0.2271
+i =  27 | cost = 0.1424 | cstr = 1.0097 | nder = 0.1490 | steps = 16 | lagr = 0.4121 | lm = 0.2672 | mu = 0.2477
+i =  28 | cost = 0.1435 | cstr = 0.9974 | nder = 0.1353 | steps = 16 | lagr = 0.3949 | lm = 0.2520 | mu = 0.2572
+i =  29 | cost = 0.1442 | cstr = 0.9894 | nder = 0.1213 | steps = 16 | lagr = 0.3750 | lm = 0.2334 | mu = 0.2547
+i =  30 | cost = 0.1448 | cstr = 0.9821 | nder = 0.1056 | steps = 16 | lagr = 0.3493 | lm = 0.2085 | mu = 0.2443
+i =  31 | cost = 0.1449 | cstr = 0.9775 | nder = 0.0937 | steps = 16 | lagr = 0.3224 | lm = 0.1821 | mu = 0.2270
+i =  32 | cost = 0.4492 | cstr = 1.0020 | nder = 24.8433 | steps = 16 | lagr = 0.6590 | lm = 0.2093 | mu = 0.2053
+i =  33 | cost = 0.4305 | cstr = 1.0169 | nder = 58.7495 | steps = 13 | lagr = 0.6753 | lm = 0.2411 | mu = 0.2072
+i =  34 | cost = 0.6257 | cstr = 1.0179 | nder = 459.1834 | steps = 13 | lagr = 0.8893 | lm = 0.2593 | mu = 0.2236
+i =  35 | cost = 0.6530 | cstr = 1.0164 | nder = 507.9320 | steps = 12 | lagr = 0.9309 | lm = 0.2737 | mu = 0.2408
+i =  36 | cost = 0.8439 | cstr = 1.0190 | nder = 791.9812 | steps = 11 | lagr = 1.1437 | lm = 0.2946 | mu = 0.2567
+i =  37 | cost = 0.7290 | cstr = 1.0188 | nder = 561.8460 | steps = 12 | lagr = 1.0470 | lm = 0.3125 | mu = 0.2749
+i =  38 | cost = 0.5804 | cstr = 1.0149 | nder = 463.4240 | steps = 11 | lagr = 0.9076 | lm = 0.3227 | mu = 0.2930
+i =  39 | cost = 0.5988 | cstr = 1.0153 | nder = 621.5366 | steps = 12 | lagr = 0.9415 | lm = 0.3378 | mu = 0.3073
+i =  40 | cost = 0.4177 | cstr = 0.9908 | nder = 13.2220 | steps = 14 | lagr = 0.7184 | lm = 0.3036 | mu = 0.3219
+i =  41 | cost = 0.4627 | cstr = 0.9910 | nder = 76.5637 | steps = 15 | lagr = 0.7551 | lm = 0.2951 | mu = 0.3131
+i =  42 | cost = 0.4734 | cstr = 0.9940 | nder = 137.7763 | steps = 12 | lagr = 0.7641 | lm = 0.2925 | mu = 0.3045
+i =  43 | cost = 0.3837 | cstr = 0.9952 | nder = 23.8279 | steps = 16 | lagr = 0.6714 | lm = 0.2891 | mu = 0.2988
+i =  44 | cost = 0.3743 | cstr = 1.0071 | nder = 11.8856 | steps = 16 | lagr = 0.6846 | lm = 0.3082 | mu = 0.2941
+i =  45 | cost = 0.3980 | cstr = 1.0168 | nder = 53.0661 | steps = 14 | lagr = 0.7378 | lm = 0.3344 | mu = 0.3009
+i =  46 | cost = 0.3631 | cstr = 1.0213 | nder = 24.8911 | steps = 15 | lagr = 0.7298 | lm = 0.3595 | mu = 0.3169
+i =  47 | cost = 0.3483 | cstr = 1.0277 | nder = 58.4419 | steps = 14 | lagr = 0.7509 | lm = 0.3925 | mu = 0.3372
+i =  48 | cost = 0.3370 | cstr = 1.0069 | nder = 33.4026 | steps = 14 | lagr = 0.7169 | lm = 0.3773 | mu = 0.3635
+i =  49 | cost = 0.3299 | cstr = 1.0108 | nder = 71.6174 | steps = 14 | lagr = 0.7256 | lm = 0.3916 | mu = 0.3701
+i =  50 | cost = 0.3789 | cstr = 1.0221 | nder = 28.3084 | steps = 15 | lagr = 0.8123 | lm = 0.4245 | mu = 0.3803
+i =  51 | cost = 0.3646 | cstr = 1.0321 | nder = 98.6197 | steps = 14 | lagr = 0.8439 | lm = 0.4654 | mu = 0.4013
+i =  52 | cost = 0.3275 | cstr = 1.0029 | nder = 61.7293 | steps = 14 | lagr = 0.7663 | lm = 0.4375 | mu = 0.4317
+i =  53 | cost = 0.3146 | cstr = 1.0077 | nder = 25.0836 | steps = 15 | lagr = 0.7679 | lm = 0.4499 | mu = 0.4344
+i =  54 | cost = 0.3669 | cstr = 1.0154 | nder = 217.2997 | steps = 13 | lagr = 0.8464 | lm = 0.4724 | mu = 0.4417
+i =  55 | cost = 0.5367 | cstr = 1.0143 | nder = 1758.4535 | steps =  8 | lagr = 1.0284 | lm = 0.4849 | mu = 0.4563
+i =  56 | cost = 0.3767 | cstr = 1.0081 | nder = 27.0774 | steps = 15 | lagr = 0.8665 | lm = 0.4860 | mu = 0.4698
+i =  57 | cost = 0.3909 | cstr = 1.0100 | nder = 43.2015 | steps = 14 | lagr = 0.8932 | lm = 0.4974 | mu = 0.4774
+i =  58 | cost = 0.3806 | cstr = 1.0152 | nder = 114.4531 | steps = 14 | lagr = 0.9055 | lm = 0.5173 | mu = 0.4869
+i =  59 | cost = 0.5050 | cstr = 1.0117 | nder = 350.7224 | steps = 13 | lagr = 1.0356 | lm = 0.5246 | mu = 0.5012
+i =  60 | cost = 0.3537 | cstr = 1.0020 | nder = 35.0600 | steps = 14 | lagr = 0.8709 | lm = 0.5162 | mu = 0.5122
+i =  61 | cost = 0.3607 | cstr = 1.0032 | nder = 45.1177 | steps = 14 | lagr = 0.8829 | lm = 0.5205 | mu = 0.5141
+i =  62 | cost = 0.4124 | cstr = 1.0050 | nder = 114.0198 | steps = 13 | lagr = 0.9422 | lm = 0.5271 | mu = 0.5171
+i =  63 | cost = 0.3532 | cstr = 1.0091 | nder = 69.6878 | steps = 14 | lagr = 0.8981 | lm = 0.5400 | mu = 0.5218
+i =  64 | cost = 0.3375 | cstr = 1.0037 | nder = 15.5949 | steps = 15 | lagr = 0.8771 | lm = 0.5377 | mu = 0.5304
+i =  65 | cost = 0.3194 | cstr = 1.0130 | nder = 23.3683 | steps = 15 | lagr = 0.8863 | lm = 0.5598 | mu = 0.5338
+i =  66 | cost = 0.3013 | cstr = 1.0258 | nder = 25.2502 | steps = 15 | lagr = 0.9135 | lm = 0.5975 | mu = 0.5460
+i =  67 | cost = 0.3079 | cstr = 1.0302 | nder = 17.8681 | steps = 16 | lagr = 0.9563 | lm = 0.6303 | mu = 0.5700
+i =  68 | cost = 0.3828 | cstr = 1.0057 | nder = 20.3146 | steps = 15 | lagr = 0.9956 | lm = 0.6094 | mu = 0.5981
+i =  69 | cost = 0.3507 | cstr = 1.0090 | nder = 42.4444 | steps = 14 | lagr = 0.9774 | lm = 0.6213 | mu = 0.6034
+i =  70 | cost = 0.3871 | cstr = 1.0101 | nder = 119.3727 | steps = 15 | lagr = 1.0254 | lm = 0.6320 | mu = 0.6117
+i =  71 | cost = 0.3727 | cstr = 1.0107 | nder = 162.7031 | steps = 13 | lagr = 1.0219 | lm = 0.6425 | mu = 0.6212
+i =  72 | cost = 0.3381 | cstr = 0.9995 | nder = 76.8816 | steps = 14 | lagr = 0.9678 | lm = 0.6300 | mu = 0.6311
+i =  73 | cost = 0.3236 | cstr = 1.0036 | nder = 52.6812 | steps = 14 | lagr = 0.9636 | lm = 0.6377 | mu = 0.6306
+i =  74 | cost = 0.3667 | cstr = 1.0047 | nder = 90.5805 | steps = 14 | lagr = 1.0130 | lm = 0.6433 | mu = 0.6339
+i =  75 | cost = 0.4739 | cstr = 1.0131 | nder = 144.3351 | steps = 14 | lagr = 1.1470 | lm = 0.6645 | mu = 0.6383
+[mpiexec@free2602] Sending Ctrl-C to processes as requested
+[mpiexec@free2602] Press Ctrl-C again to force abort
+Ctrl-C caught... cleaning up processes
