@@ -24,7 +24,7 @@ size = comm.size
 Tests
 -----
 test_01 : Symmetric Cantilever 2D - Data Parallelism
-test_02 : Symmetric cantilever 3D (Data Parallelism)
+test_02 : Symmetric cantilever 3D - Data Parallelism
 test_03 : Cantilever with two loads I (Data Parallelism)
 test_04 : Cantilever with two loads I (Task Parallelism)
 test_05 : Cantilever with two loads I (Mixed Parallelism)
@@ -33,9 +33,9 @@ test_07 : Elasticity Inverse Problem - Task Parallelism
 test_08 : Elasticity Inverse Problem - Mixed Parallelism
 test_09 : Heat conduction problem 1 - Data Parallelism
 test_10 : Heat conduction problem 2 - Data Parallelism
-test_11 : Heat conduction problem 3 - Data Parallelism
-test_12 : Heat conduction with two sinks (Data Parallelism)
-test_13 : Heat conduction with one load (Data Parallelism)
+test_11 : Heat conduction with one load - Data Parallelism
+test_12 : Heat conduction with two sinks 1 - Data Parallelism
+test_13 : Heat conduction with two sinks 2 - Data Parallelism
 test_14 : Logistic equation, r = 10 (Data Parallelism)
 test_15 : Logistic equation, r = 40 (Data Parallelism)
 test_16 : Logistic equation, r = 90 (Data Parallelism)
@@ -1523,10 +1523,10 @@ def test_09():
 
     #Run Data Parallelism
     md.runDP(
-        niter = 250,
-        dfactor = 1e-2,
-        ctrn_tol = 1e-3,
-        lgrn_tol = 1e-2
+        niter=250,
+        dfactor=1e-2,
+        ctrn_tol=1e-3,
+        lgrn_tol=1e-2
     )
 
 
@@ -1639,12 +1639,104 @@ def test_10():
 
 def test_11():
     """
-    Run: mpirun -np <nbr of processes> python test.py 11
-    For instance: mpirun -np 2 python test.py 11
+    Heat conduction with one load - Data Parallelism
+
+    Run `mpirun -np <nbr of processes> python test.py 11`.
+    For instance, `mpirun -np 2 python test.py 11`.
+    
+    To save the output, append `> ../results/t11/out.txt`.
+    To delete the images, enter `rm ../results/t11/*.png`.
+    """
+
+    test_name = "Heat conduction with one load - Data Parallelism"
+    test_path = Path("../results/t11/")
+    dim = 2
+    rank_dim = 1
+    mesh_size = 1e-2
+
+    vertices = np.array([
+        [0.0, 0.0],
+        [1.0, 0.0],
+        [1.0, 1.0],
+        [0.0, 1.0]
+    ])
+
+    dir1_idx, dir1_mkr = [1], 1
+    dir2_idx, dir2_mkr = [2], 2
+    dir3_idx, dir3_mkr = [3], 3
+    dir4_idx, dir4_mkr = [4], 4
+    
+    boundary_parts = [
+        (dir1_idx, dir1_mkr, "dir1"),
+        (dir2_idx, dir2_mkr, "dir2"),
+        (dir3_idx, dir3_mkr, "dir3"),
+        (dir4_idx, dir4_mkr, "dir4")
+    ]
+
+    # Create gmsh domain for Data Parallelism
+    output = dib.create_domain_2d_DP(
+        vertices, boundary_parts, mesh_size,
+        path = test_path,
+        plot = True
+    )
+
+    domain, nbr_tri, boundary_tags = output
+
+    if rank == 0:
+        print("\n\t" + test_name + "\n")
+        print(f"> Path = {test_path}")
+        print(f"> Nbr of triangles = {nbr_tri}")
+
+    # Space
+    space = dib.create_space(domain, "CG", rank_dim)
+    # Dirichlet conditions
+    dirichlet_bcs = dib.homogeneus_boundary(
+        domain, space, dim, rank_dim
+    )
+    area = 0.5
+    # Create the model
+    md = Heat(
+        dim, domain, space, dirichlet_bcs, area, test_path, "1Load"
+    )
+
+    centers = []
+
+    centers += [(i/3.0, 1.0) for i in range(4)]
+    centers += [(i/3.0, 2.0/3.0) for i in range(4)]
+    centers += [(i/3.0, 1.0/3.0) for i in range(4)]
+    centers += [(i/3.0, 0.0) for i in range(4)]
+
+    # Uncomment to add more holes to the initial condition
+    # Spoilier: the result is different
+    # centers += [(i/6.0, 5.0/6.0) for i in range(1, 6, 2)]
+    # centers += [(i/6.0, 0.5) for i in range(1, 6, 2) if i != 3]
+    # centers += [(i/6.0, 1.0/6.0) for i in range(1, 6, 2)]
+
+    centers = np.array(centers)
+    radii = np.repeat(0.08, centers.shape[0])
+
+    md.create_initial_level(centers, radii)
+    md.save_initial_level(comm)
+    
+    md.runDP(
+        niter=250,
+        dfactor=1.0,
+        ctrn_tol=1e-3,
+        lgrn_tol=1e-2,
+        smooth=True,
+        reinit_step=6,
+        reinit_pars=(8, 0.01)
+    )
+
+
+def test_12():
+    """
+    Run: mpirun -np <nbr of processes> python test.py 12
+    For instance: mpirun -np 2 python test.py 12
     """
 
     test_name = "Heat conduction 3 (Data Parallelism)"
-    test_path = Path("../results/t11/")
+    test_path = Path("../results/t12/")
     dim = 2
     rank_dim = 1
     mesh_size = 5e-3
@@ -1767,14 +1859,14 @@ def test_11():
     )
 
 
-def test_12():
+def test_13():
     """
-    Run: mpirun -np <nbr of processes> python test.py 11
-    For instance: mpirun -np 2 python test.py 11
+    Run: mpirun -np <nbr of processes> python test.py 13
+    For instance: mpirun -np 2 python test.py 13
     """
 
     test_name = "Heat conduction (Data Parallelism)"
-    test_path = Path("../results/t12/")
+    test_path = Path("../results/t13/")
     dim = 2
     rank_dim = 1
     mesh_size = 5e-3
@@ -1896,98 +1988,6 @@ def test_12():
         niter = 250,
         dfactor = 1e-2,
         ctrn_tol = 1e-3
-    )
-
-
-def test_13():
-    """
-    Heat conduction with one load - Data Parallelism
-
-    Run `mpirun -np <nbr of processes> python test.py 13`.
-    For instance, `mpirun -np 2 python test.py 13`.
-    
-    To save the output, append `> ../results/t13/out.txt`.
-    To delete the images, enter `rm ../results/t13/*.png`.
-    """
-
-    test_name = "Heat conduction with one load (Data Parallelism)"
-    test_path = Path("../results/t13/")
-    dim = 2
-    rank_dim = 1
-    mesh_size = 1e-2
-
-    vertices = np.array([
-        [0.0, 0.0],
-        [1.0, 0.0],
-        [1.0, 1.0],
-        [0.0, 1.0]
-    ])
-
-    dir1_idx, dir1_mkr = [1], 1
-    dir2_idx, dir2_mkr = [2], 2
-    dir3_idx, dir3_mkr = [3], 3
-    dir4_idx, dir4_mkr = [4], 4
-    
-    boundary_parts = [
-        (dir1_idx, dir1_mkr, "dir1"),
-        (dir2_idx, dir2_mkr, "dir2"),
-        (dir3_idx, dir3_mkr, "dir3"),
-        (dir4_idx, dir4_mkr, "dir4")
-    ]
-
-    # Create gmsh domain for Data Parallelism
-    output = dib.create_domain_2d_DP(
-        vertices, boundary_parts, mesh_size,
-        path = test_path,
-        plot = True
-    )
-
-    domain, nbr_tri, boundary_tags = output
-
-    if rank == 0:
-        print("\n\t" + test_name + "\n")
-        print(f"> Path = {test_path}")
-        print(f"> Nbr of triangles = {nbr_tri}")
-
-    # Space
-    space = dib.create_space(domain, "CG", rank_dim)
-    # Dirichlet conditions
-    dirichlet_bcs = dib.homogeneus_boundary(
-        domain, space, dim, rank_dim
-    )
-    area = 0.5
-    # Create the model
-    md = Heat(
-        dim, domain, space, dirichlet_bcs, area, test_path, "1Load"
-    )
-
-    centers = []
-
-    centers += [(i/3.0, 1.0) for i in range(4)]
-    centers += [(i/3.0, 2.0/3.0) for i in range(4)]
-    centers += [(i/3.0, 1.0/3.0) for i in range(4)]
-    centers += [(i/3.0, 0.0) for i in range(4)]
-
-    # Uncomment to add more holes to the initial condition
-    # Spoilier: the result is different
-    # centers += [(i/6.0, 5.0/6.0) for i in range(1, 6, 2)]
-    # centers += [(i/6.0, 0.5) for i in range(1, 6, 2) if i != 3]
-    # centers += [(i/6.0, 1.0/6.0) for i in range(1, 6, 2)]
-
-    centers = np.array(centers)
-    radii = np.repeat(0.08, centers.shape[0])
-
-    md.create_initial_level(centers, radii)
-    md.save_initial_level(comm)
-    
-    md.runDP(
-        niter=250,
-        dfactor=1.0,
-        ctrn_tol=1e-3,
-        lgrn_tol=1e-2,
-        smooth=True,
-        reinit_step=6,
-        reinit_pars=(8, 0.01)
     )
 
 

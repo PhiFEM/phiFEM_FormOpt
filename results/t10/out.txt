@@ -4,7 +4,7 @@ Info    : 46683 nodes
 Info    : 93364 elements
 Info    : Done reading '../results/t10/domain.msh'
 
-	Heat conduction 2 (Data Parallelism)
+	Heat conduction 2 - Data Parallelism
 
 > Path = ../results/t10
 > Nbr of triangles = 92564
@@ -138,5 +138,5 @@ i = 125 | cost = 0.1258 | cstr = 0.9979 | nder = 0.1132 | steps = 15 | lagr = 0.
 i = 126 | cost = 0.1252 | cstr = 0.9986 | nder = 0.1145 | steps = 16 | lagr = 0.3604 | lm = 0.2355 | mu = 0.2383
 i = 127 | cost = 0.1251 | cstr = 0.9992 | nder = 0.1156 | steps = 16 | lagr = 0.3603 | lm = 0.2355 | mu = 0.2371
 > Stopping condition reached!
-> Assembly time = 5.262844819000065 s
-> Resolution time = 45.384347949000016 s
+> Assembly time = 6.7576389070000005 s
+> Resolution time = 45.15651695199995 s

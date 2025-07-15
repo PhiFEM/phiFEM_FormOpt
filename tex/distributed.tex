@@ -1651,15 +1651,104 @@ bilinear form
 	B(\theta, \xi) = \int_{\mathcal{D}} D\theta : D\xi .
 \end{equation}
 
-multiple load cases
+$\mathcal{D} = (0, 1)\times(0, 1)$
 
-\noindent\textit{Example.}
+\noindent\textit{Example 1.}
+
+$\Gamma_0 = (0.4, 0.6)\times\{y=0\}$
+$f \equiv 1$
+
+\begin{lstlisting}
+mpirun -np 2 python test.py 09	
+\end{lstlisting}
+
+Figure \ref{fig:heat1}
+
+\begin{center}
+\includegraphics[width=0.48\linewidth]{heat1_0.png}
+\hfill
+\includegraphics[width=0.48\linewidth]{heat1_1.png}
+\captionof{figure}{
+	Initial guess and
+	optimized design at iteration $i=204$.
+}
+\label{fig:heat1}
+\end{center}
+
+\noindent\textit{Example 2.}
+
+$\Gamma_1 = \emptyset$
+$f \equiv 1$
+
+\begin{lstlisting}
+mpirun -np 2 python test.py 10	
+\end{lstlisting}
+
+Figure \ref{fig:heat2}
+
+\begin{center}
+\includegraphics[width=0.48\linewidth]{heat2_0.png}
+\hfill
+\includegraphics[width=0.48\linewidth]{heat2_1.png}
+\captionof{figure}{
+	Initial guess and
+	optimized design at iteration $i=127$.
+}
+\label{fig:heat2}
+\end{center}
+
+\noindent\textit{Example 3.} 
+
+$\Gamma_1 = \emptyset$
+$f(x,y) \coloneqq \phi(\vert(x,y)-(0.5, 0.5)\vert_2)$
+\begin{equation}
+	\phi(r) \coloneqq
+	\begin{cases}
+	25(1 + \cos(10 \pi r )) & \text{if } r < 0.1, \\
+	0  & \text{otherwise}.
+	\end{cases}
+\end{equation}
+radial function
+
+$f$ is radially symmetric around the point 
+$(0.5,0.5)$ and is infinitely differentiable on the entire plane
+
+\begin{lstlisting}
+mpirun -np 2 python test.py 11	
+\end{lstlisting}
+
+\begin{center}
+\includegraphics[width=0.48\linewidth]{heat3_0.png}
+\hfill
+\includegraphics[width=0.48\linewidth]{heat3_1.png}
+\captionof{figure}{
+	Initial guess and
+	optimized design at iteration $i=207$.
+}
+\label{fig:heat3}
+\end{center}
 
 
+\noindent\textit{Example 4.}  (multiple load cases)
 
-%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{lstlisting}
+mpirun -np 2 python test.py 12	
+\end{lstlisting}
+
+\begin{lstlisting}
+mpirun -np 2 python test.py 13	
+\end{lstlisting}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Population dynamics}
+\label{sub:pop}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Performance investigation}
-%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Here we should discuss some performance data of the code. Show that the code is extremely fast in 2D. Show what size of 3D problems we can consider using a server (also large amount of sources).
 Also maybe show weak scalabilty tests for parallel computing, as in \cite{Jia2024}.
