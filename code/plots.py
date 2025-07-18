@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import matplotlib.tri as mtri
 from matplotlib.colors import ListedColormap, Normalize
 
+import pathlib as Path
 #import matplotlib
 # matplotlib.rcParams.update({
 # 	"text.usetex": False,
@@ -467,6 +468,42 @@ def plot_cost(cost_values, figsize = None, filename = None):
 
     if filename:
         plt.savefig(filename, format = filename.suffix[1:], dpi = 300)
+        plt.close()
+    else:
+        plt.show()
+
+def plot_lag2(cost_values,
+              label, 
+              extra_values, 
+              extra_label, 
+              figsize=None, 
+              filename=None):
+    """
+    Plots the cost function values for each iteration and optionally another array.
+
+    Parameters:
+        cost_values (list or numpy array): Array of positive real values representing the cost function J.
+        extra_values (list or numpy array, optional): Another array to plot for comparison (e.g., validation cost).
+        extra_label (str, optional): Label for the extra plot line. Default is "Extra".
+        figsize (tuple, optional): Figure size passed to matplotlib.
+        filename (Path or str, optional): If provided, saves the plot to the specified path. Default is None.
+    """
+    iterations = np.arange(len(cost_values))
+
+    fig, ax = plt.subplots(figsize=figsize)
+    ax.plot(iterations, cost_values, color="black", linewidth=2, label=label)
+
+    extra_iterations = np.arange(len(extra_values))
+    ax.plot(extra_iterations, extra_values, color="black", linestyle="--", linewidth=2, label=extra_label)
+
+    #ax.set_xlabel("Iterations")
+    #ax.set_ylabel("Lagragangian values")
+    ax.grid(True, linestyle="--", alpha=0.7)
+    ax.legend()
+    fig.tight_layout()
+
+    if filename:
+        plt.savefig(filename, dpi=300)
         plt.close()
     else:
         plt.show()

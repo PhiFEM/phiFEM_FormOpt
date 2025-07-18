@@ -31,14 +31,14 @@ test_05 : Cantilever with two loads I (Mixed Parallelism)
 test_06 : Elasticity Inverse Problem - Data Parallelism
 test_07 : Elasticity Inverse Problem - Task Parallelism
 test_08 : Elasticity Inverse Problem - Mixed Parallelism
-test_09 : Heat conduction problem 1 - Data Parallelism
-test_10 : Heat conduction problem 2 - Data Parallelism
+test_09 : Heat conduction 1 - Data Parallelism
+test_10 : Heat conduction 2 - Data Parallelism
 test_11 : Heat conduction with one load - Data Parallelism
-test_12 : Heat conduction with two sinks 1 - Data Parallelism
-test_13 : Heat conduction with two sinks 2 - Data Parallelism
-test_14 : Logistic equation, r = 10 (Data Parallelism)
-test_15 : Logistic equation, r = 40 (Data Parallelism)
-test_16 : Logistic equation, r = 90 (Data Parallelism)
+test_12 : Heat conduction 2 - Data Parallelism
+test_13 : Heat conduction with two sinks - Task Parallelism
+test_14 : Logistic equation (r = 10) - Data Parallelism
+test_15 : Logistic equation (r = 40) - Data Parallelism
+test_16 : Logistic equation (r = 90) - Data Parallelism
 test_17 : ?
 test_18 : Cantilever with two loads II (Task Parallelism)
 """
@@ -360,7 +360,7 @@ def test_04():
     # Verification
     task_nbr = 2
     if size != task_nbr:
-        print(f"Nbr of processes must be = {task_nbr}")
+        print(f"Number of processes must be = {task_nbr}")
         return
     
     comm_self = MPI.COMM_SELF
@@ -1524,7 +1524,6 @@ def test_09():
     #Run Data Parallelism
     md.runDP(
         niter=250,
-        dfactor=1e-2,
         ctrn_tol=1e-3,
         lgrn_tol=1e-2
     )
@@ -1532,7 +1531,7 @@ def test_09():
 
 def test_10():
     """
-    Heat conduction with 2 - Data Parallelism
+    Heat conduction 2 - Data Parallelism
 
     Run `mpirun -np <nbr of processes> python test.py 10`.
     For instance, `mpirun -np 2 python test.py 10`.
@@ -1731,11 +1730,16 @@ def test_11():
 
 def test_12():
     """
-    Run: mpirun -np <nbr of processes> python test.py 12
-    For instance: mpirun -np 2 python test.py 12
+    Heat conduction 3 - Data Parallelism
+
+    Run `mpirun -np <nbr of processes> python test.py 12`.
+    For instance, `mpirun -np 2 python test.py 12`.
+    
+    To save the output, append `> ../results/t12/out.txt`.
+    To delete the images, enter `rm ../results/t12/*.png`.
     """
 
-    test_name = "Heat conduction 3 (Data Parallelism)"
+    test_name = "Heat conduction 3 - Data Parallelism"
     test_path = Path("../results/t12/")
     dim = 2
     rank_dim = 1
@@ -1853,19 +1857,31 @@ def test_12():
     md.save_initial_level(comm)
     
     md.runDP(
-        niter = 250,
-        dfactor = 1e-2,
-        ctrn_tol = 1e-3
+        niter=250,
+        ctrn_tol=1e-3,
+        lgrn_tol=1e-2
     )
 
 
 def test_13():
     """
-    Run: mpirun -np <nbr of processes> python test.py 13
-    For instance: mpirun -np 2 python test.py 13
+    Heat conduction with two sinks - Task Parallelism
+
+    Run `mpirun -np <nbr of processes> python test.py 13`.
+    For instance, `mpirun -np 2 python test.py 13`.
+    
+    To save the output, append `> ../results/t13/out.txt`.
+    To delete the images, enter `rm ../results/t13/*.png`.
     """
 
-    test_name = "Heat conduction (Data Parallelism)"
+    task_nbr = 2
+    if size != task_nbr:
+        print(f"Number of processes must be = {task_nbr}")
+        return
+
+    comm_self = MPI.COMM_SELF
+
+    test_name = "Heat conduction with two sinks - Task Parallelism"
     test_path = Path("../results/t13/")
     dim = 2
     rank_dim = 1
@@ -1891,7 +1907,7 @@ def test_13():
     ]
 
     # Create gmsh domain for Data Parallelism
-    output = dib.create_domain_2d_DP(
+    output = dib.create_domain_2d_TP(
         vertices, boundary_parts, mesh_size,
         path = test_path,
         plot = True
@@ -1982,12 +1998,13 @@ def test_13():
     radii = np.concatenate((radii_b, radii_i))
 
     md.create_initial_level(centers, radii)
-    md.save_initial_level(comm)
+    if rank == 0:
+        md.save_initial_level(comm_self)
     
-    md.runDP(
-        niter = 250,
-        dfactor = 1e-2,
-        ctrn_tol = 1e-3
+    md.runTP(
+        niter=250,
+        ctrn_tol=1e-3,
+        lgrn_tol=1e-2
     )
 
 

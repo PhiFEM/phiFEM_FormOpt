@@ -529,7 +529,7 @@ class HeatPlus(Model):
 
     @staticmethod
     def A(w):
-        return conditional(lt(w, 0.0), 1.0, 1e-2)
+        return conditional(lt(w, 0.0), 1.0, 1e-3)
     
     @staticmethod
     def chi(w):
