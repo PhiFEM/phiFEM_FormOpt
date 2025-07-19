@@ -1535,63 +1535,147 @@ mpirun -np 12 python test.py 08
 
 Here, we minimize the compliance in a linear elasticity problem.
 
-$C(\Omega) = \left|\mathcal{D}\right|/2$
+\begin{equation} \label{eq:compli_cost}
+	\min_{\Omega \subset \mathcal{D}}
+	J(\Omega) \coloneqq \int_{\mathcal{D}} A_{\Omega}\sigma(u):\epsilon(u)
+\end{equation}
+subject to
+\begin{equation}
+	\int_{\mathcal{D}} \chi_{\Omega} = V,
+\end{equation}
+where $u$ is the solution to
+\begin{equation}\label{eq:compli_prob}
+	\begin{aligned}
+	   -\operatorname{div} A_{\Omega} \sigma(u) &= 0 && \text{in } \mathcal{D}\\
+											 u  &= 0 && \text{on } \Gamma_{0}\\
+					     A_{\Omega} \sigma(u)n  &= g && \text{on } \Gamma_{1} \\
+					     A_{\Omega} \sigma(u)n  &= 0 && \text{on } \Gamma \setminus (\Gamma_{1} \cup \Gamma_{1})						 
+	\end{aligned}
+\end{equation}
+and $A_{\Omega}:\overline{\mathcal{D}} \rightarrow \mathds{R}$ is given by
+\begin{equation}\label{eq:compli_AOmega}
+	A_{\Omega} = \chi_{\Omega} + {10}^{-4}\chi_{\overline{\mathcal{D}}\setminus\Omega}.
+\end{equation}
 
 
-\textbf{Symmetric cantilever.}
+\noindent\textit{Example 1.} Symmetric cantilever
+
 $\mathcal{D} = (0, 2)\times(0, 1)$
-line segment $\{x=2, 0.45<y<0.55\}$, $\{x=0, 0<y<1\}$ 
 
-$g = (0, -2)$
+$\Gamma_0 = \{x=0\} \times (0, 1)$ 
 
+$\Gamma_1 = \{x=2\} \times (0.45,0.55)$
+
+$g = (0, -2)^\top$
+
+$V = 1$
+
+\begin{lstlisting}
+mpirun -np 2 python test.py 01 # Data
+\end{lstlisting}
+
+Figure \ref{fig:compli1}
 \begin{center}
-\includegraphics[width=0.48\linewidth]{compliance0.png}
+\includegraphics[width=0.48\linewidth]{compli1_0.png}
 \hfill
-\includegraphics[width=0.48\linewidth]{compliance1.png}
-\includegraphics[width=0.85\linewidth]{compliance2.png}
+\includegraphics[width=0.48\linewidth]{compli1_1.png}
+\includegraphics[width=0.85\linewidth]{compli1_2.png}
 \captionof{figure}{
-	(top) Initial guess and optimized design.
-	(bottom) The level set function approximates the distance function.
+	(Top) Initial guess and optimized design.
+	(Bottom) Level set function.
 }
-\label{fig:compli2D}
+\label{fig:compli1}
 \end{center}
+
+\noindent\textit{Example 2.} Three-dimensional symmetric cantilever
 
 $\mathcal{D} = (0, 2)\times(0, 1)\times(0, 1)$
 
-$\{x=0, 0<y<1, 0<z<1\}$
+$\Gamma_0 = \{x=0\} \times (0,1) \times (0,1)$
 
-$\{x=1, 0.4<y<0.6, 0.4<z<0.6\}$
+$\Gamma_1 = \{x=1\} \times (0.4,0.6) \times (0.4,0.6)$
 
-$g = (0, 0, -4)$
+$g = (0, 0, -4)^\top$
+
+$V = 1$
+
+\begin{lstlisting}
+mpirun -np 2 python test.py 02 # Data
+\end{lstlisting}
+
+Figure \ref{fig:compli2}
 \begin{center}
-\includegraphics[width=0.48\linewidth]{compli3D_0.png}
+\includegraphics[width=0.48\linewidth]{compli2_0.png}
 \hfill
-\includegraphics[width=0.48\linewidth]{compli3D_1.png}
-\includegraphics[width=0.48\linewidth]{compli3D_2.png}
+\includegraphics[width=0.48\linewidth]{compli2_1.png}
+\includegraphics[width=0.48\linewidth]{compli2_2.png}
 \hfill
-\includegraphics[width=0.48\linewidth]{compli3D_3.png}
+\includegraphics[width=0.48\linewidth]{compli2_3.png}
 \captionof{figure}{
-	Some iterations of the three-dimensional
-	cantilever.
+	Iterations of the three-dimensional cantilever.
 }
-\label{fig:compli3D}
+\label{fig:compli2}
 \end{center}
 
-\textbf{Multiple load cases.}
+\noindent\textit{Example 3.} Cantilever problem with two loads
+
+$\mathcal{D} = (0, 1)\times(0, 1)$
+
+$\Gamma_0 = \{x=0\} \times (0, 1)$ 
+
+$\Gamma_1^{\mathrm{I}} = \{x=1\} \times (0,0.1)$
+
+$\Gamma_1^{\mathrm{II}} = \{x=1\} \times (0.9,1)$
+
+$g^{\mathrm{I}} = g^{\mathrm{II}} = (0, -2)^\top$
+
+$V = 0.5$
+
+\begin{lstlisting}
+mpirun -np 2 python test.py 03 # Data 
+mpirun -np 2 python test.py 04 # Task	
+mpirun -np 2 python test.py 05 # Mixed		
+\end{lstlisting}
+
+Figure \ref{fig:compli3}
 \begin{center}
-\includegraphics[width=0.48\linewidth]{compliplus1_0.png}
+\includegraphics[width=0.48\linewidth]{compli3_0.png}
 \hfill
-\includegraphics[width=0.48\linewidth]{compliplus1_1.png}
-
-\vspace{0.3cm}
-
-\includegraphics[width=0.48\linewidth]{compliplus2_0.png}
-\hfill
-\includegraphics[width=0.48\linewidth]{compliplus2_1.png}
+\includegraphics[width=0.48\linewidth]{compli3_1.png}
 \captionof{figure}{
-	(Top) (Bottom)
+	Initial and optimal domains.
 }
-\label{fig:compliplus}
+\label{fig:compli3}
+\end{center}
+
+\noindent\textit{Example 4.} Cantilever problem with two loads (again)
+
+$\mathcal{D} = (0, 2)\times(0, 1)$
+
+$\Gamma_0 = \{x=0\} \times (0, 1)$ 
+
+$\Gamma_1^{\mathrm{I}} = (0.95,1.05) \times \{y=0\}$
+
+$\Gamma_1^{\mathrm{II}} = \{x=2\} \times (0.45,0.55)$
+
+$g^{\mathrm{I}} = (0, -2)^\top$
+$g^{\mathrm{II}} = (0, 2)^\top$
+
+$V = 1.1$
+
+\begin{lstlisting}
+mpirun -np 2 python test.py 09 # Task
+\end{lstlisting}
+
+Figure \ref{fig:compli4}
+\begin{center}
+\includegraphics[width=0.48\linewidth]{compli4_0.png}
+\hfill
+\includegraphics[width=0.48\linewidth]{compli4_1.png}
+\captionof{figure}{
+	Initial and optimal domains.
+}
+\label{fig:compli4}
 \end{center}
 
 
@@ -1612,11 +1696,11 @@ subject to
 \end{equation}
 where $u$ is the solution to
 \begin{equation} \label{eq:heat_prob}
-	\begin{array}{rcl}
-	-\mathrm{div}(A_{\Omega} \nabla u) = f & \text{in} & \mathcal{D}\\
-                                    u  = 0 & \text{on} & \Gamma_{0}\\
-                       \partial_{n} u  = 0 & \text{on} & \Gamma_{1}                     
-	\end{array}	
+	\begin{aligned}
+	-\operatorname{div}(A_{\Omega} \nabla u) &= f && \text{in } \mathcal{D}\\
+                                          u  &= 0 && \text{on } \Gamma_{0}\\
+                             \partial_{n} u  &= 0 && \text{on } \Gamma_{1}                     
+	\end{aligned}	
 \end{equation}
 and $A_{\Omega}:\overline{\mathcal{D}} \rightarrow \mathds{R}$ is given by
 \begin{equation}\label{eq:heat_AOmega}
@@ -1651,19 +1735,21 @@ bilinear form
 	B(\theta, \xi) = \int_{\mathcal{D}} D\theta : D\xi .
 \end{equation}
 
-$\mathcal{D} = (0, 1)\times(0, 1)$
+In all examples, $\mathcal{D} = (0, 1)\times(0, 1)$
 
 \noindent\textit{Example 1.}
 
 $\Gamma_0 = (0.4, 0.6)\times\{y=0\}$
+
 $f \equiv 1$
 
+$V = 0.25$
+
 \begin{lstlisting}
-mpirun -np 2 python test.py 09	
+mpirun -np 2 python test.py 09 # Data
 \end{lstlisting}
 
 Figure \ref{fig:heat1}
-
 \begin{center}
 \includegraphics[width=0.48\linewidth]{heat1_0.png}
 \hfill
@@ -1677,15 +1763,17 @@ Figure \ref{fig:heat1}
 
 \noindent\textit{Example 2.}
 
-$\Gamma_1 = \emptyset$
+$\Gamma_0 = \Gamma$
+
 $f \equiv 1$
 
+$V = 0.5$
+
 \begin{lstlisting}
-mpirun -np 2 python test.py 10	
+mpirun -np 2 python test.py 10 # Data
 \end{lstlisting}
 
 Figure \ref{fig:heat2}
-
 \begin{center}
 \includegraphics[width=0.48\linewidth]{heat2_0.png}
 \hfill
@@ -1699,7 +1787,8 @@ Figure \ref{fig:heat2}
 
 \noindent\textit{Example 3.} 
 
-$\Gamma_1 = \emptyset$
+$\Gamma_0 = \Gamma$
+
 $f(x,y) \coloneqq \phi(\vert(x,y)-(0.5, 0.5)\vert_2)$
 \begin{equation}
 	\phi(r) \coloneqq
@@ -1713,10 +1802,13 @@ radial function
 $f$ is radially symmetric around the point 
 $(0.5,0.5)$ and is infinitely differentiable on the entire plane
 
+$V = 0.5$
+
 \begin{lstlisting}
-mpirun -np 2 python test.py 11	
+mpirun -np 2 python test.py 11 # Data
 \end{lstlisting}
 
+Figure \ref{fig:heat3}
 \begin{center}
 \includegraphics[width=0.48\linewidth]{heat3_0.png}
 \hfill
@@ -1733,13 +1825,14 @@ mpirun -np 2 python test.py 11
 
 
 \begin{lstlisting}
-mpirun -np 2 python test.py 12	
+mpirun -np 2 python test.py 12 # Data
 \end{lstlisting}
 
 \begin{lstlisting}
-mpirun -np 2 python test.py 13	
+mpirun -np 2 python test.py 13 # Task
 \end{lstlisting}
 
+Figure \ref{fig:heat4}
 \begin{center}
 \includegraphics[width=0.48\linewidth]{heat4_0.png}
 \hfill
@@ -1759,6 +1852,61 @@ mpirun -np 2 python test.py 13
 \label{sub:pop}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+
+Let $V$ be a prefixed volume, less than the volume of $\mathcal{D}$.
+The problem reads
+\begin{equation} \label{eq:log_cost}
+	\min_{\Omega \subset \mathcal{D}}
+	J(\Omega) \coloneqq -\int_{\mathcal{D}} u
+\end{equation}
+subject to
+\begin{equation}
+	\int_{\mathcal{D}} K_{\Omega} = V,
+\end{equation}
+where $u$ is the solution to
+\begin{equation}\label{eq:log_prob}
+	\begin{aligned}
+	   -\nabla^2 u &= r u \left(1-\frac{u}{K_\Omega}\right) && \text{in } \mathcal{D}\\
+	\partial_{n} u &= 0 && \text{on } \Gamma   
+	\end{aligned}
+\end{equation}
+and $K_{\Omega}:\overline{\mathcal{D}} \rightarrow \mathds{R}$ is given by
+\begin{equation}\label{eq:log_KOmega}
+	K_{\Omega} = \chi_{\Omega} + {10}^{-2}\chi_{\overline{\mathcal{D}}\setminus\Omega}.
+\end{equation}
+According to \eqref{eq:problem}, the constraint function for this problem is written as
+\begin{equation}
+	C(\Omega) = \frac{1}{V} \int_{\mathcal{D}} K_{\Omega}.
+\end{equation}
+Here, $u$ represents the population size,
+$r$ is a positive constant that represents the growth rate of the population,
+and the positive function $K_{\Omega}$ represents the carrying capacity of the environment.
+
+\eqref{eq:log_prob} is non-linear
+
+\noindent\textit{Example.}
+
+$V=0.5$
+
+\begin{lstlisting}
+mpirun -np 2 python test.py 14 # Data
+mpirun -np 2 python test.py 15 # Data
+mpirun -np 2 python test.py 16 # Data	 
+\end{lstlisting}
+
+\begin{center}
+\includegraphics[width=0.48\linewidth]{log_0.png}
+\hfill
+\includegraphics[width=0.48\linewidth]{log_1.png}
+\includegraphics[width=0.48\linewidth]{log_2.png}
+\hfill
+\includegraphics[width=0.48\linewidth]{log_3.png}
+\captionof{figure}{
+	Initial guess and
+	optimized designs for $r=10$, $40$, and $100$.
+}
+\label{fig:log}
+\end{center}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Performance investigation}

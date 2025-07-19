@@ -25,9 +25,9 @@ Tests
 -----
 test_01 : Symmetric Cantilever 2D - Data Parallelism
 test_02 : Symmetric cantilever 3D - Data Parallelism
-test_03 : Cantilever with two loads I (Data Parallelism)
-test_04 : Cantilever with two loads I (Task Parallelism)
-test_05 : Cantilever with two loads I (Mixed Parallelism)
+test_03 : Cantilever with two loads I - Data Parallelism
+test_04 : Cantilever with two loads I - Task Parallelism
+test_05 : Cantilever with two loads I - Mixed Parallelism
 test_06 : Elasticity Inverse Problem - Data Parallelism
 test_07 : Elasticity Inverse Problem - Task Parallelism
 test_08 : Elasticity Inverse Problem - Mixed Parallelism
@@ -270,7 +270,7 @@ def test_03():
     For instance: mpirun -np 2 python test.py 03
     """
 
-    test_name = "Multiple load cases (Data Parallelism)"
+    test_name = "Multiple load cases - Data Parallelism"
     test_path = Path("../results/t03/")
     dim = 2
     rank_dim = 2
@@ -2010,8 +2010,13 @@ def test_13():
 
 def test_14(test_path = Path("../results/t14/"), r = 10.0):
     """
-    Run: mpirun -np <nbr of processes> python test.py 14
-    For instance: mpirun -np 2 python test.py 14
+    Logistic equation (r = 10) - Data Parallelism
+
+    Run `mpirun -np <nbr of processes> python test.py 14`.
+    For instance, `mpirun -np 2 python test.py 14`.
+    
+    To save the output, append `> ../results/t14/out.txt`.
+    To delete the images, enter `rm ../results/t14/*.png`.
     """
 
     dim = 2
@@ -2079,8 +2084,7 @@ def test_14(test_path = Path("../results/t14/"), r = 10.0):
 
 def test_15():
     """
-    Run: mpirun -np <nbr of processes> python test.py 14
-    For instance: mpirun -np 2 python test.py 15
+    Logistic equation (r = 40) - Data Parallelism
     """
 
     test_path = Path("../results/t15/")
@@ -2089,8 +2093,7 @@ def test_15():
 
 def test_16():
     """
-    Run: mpirun -np <nbr of processes> python test.py 14
-    For instance: mpirun -np 2 python test.py 16
+    Logistic equation (r = 100) - Data Parallelism
     """
 
     test_path = Path("../results/t16/")

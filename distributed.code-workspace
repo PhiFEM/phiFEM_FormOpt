@@ -26,6 +26,9 @@
 			"mathcal",
 			"mpirun",
 			"Sobolev"
+		],
+		"cSpell.ignoreWords": [
+			"mpirun"
 		]
 	}
 }
