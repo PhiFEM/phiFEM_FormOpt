@@ -18,6 +18,24 @@
 \usepackage{enumitem}
 \usepackage{hyperref}
 
+
+
+\newcommand{\hold}{\mathcal{D}}
+\newcommand{\Sb}{S}
+\newcommand{\Om}{\Omega}
+\newcommand{\VV}{\theta}
+\newcommand{\R}{\mathds{R}}
+\newcommand{\ddo}{:}
+\newcommand{\singset}{L}
+
+\newcommand{\tred}{\textcolor{red}}
+
+
+\newtheorem{definition}{Definition}
+\newtheorem{proposition}{Proposition}
+
+
+
 \hypersetup{
     colorlinks=true,
     linkcolor=blue,
@@ -70,9 +88,9 @@
 
 \begin{abstract}
 We present a toolbox for shape and topology optimization using the software package FEniCSx.
-The optimization is based on the distributed shape derivative.
+We employ an optimize-then-discretize approach based on the distributed shape derivative and its tensor representation, thus following the approach of \cite{MR3843884}.
 The numerical shape modeling uses a standard level set method.
-The implementation supports parallel computing in two different modes.
+The implementation supports three different modes for parallel computing: data, task and mixed parallelisms, thus allowing for an efficient resolution of the problems.
 On one hand, the built-in features of FEniCSx for parallelizing the mesh are used.
 On the other hand, we also implement a parallelization of the source terms in the underlying partial differential equations. The user can then conveniently use a combination of the two modes for parallel computing.
 \end{abstract}
@@ -89,8 +107,8 @@ On the other hand, we also implement a parallelization of the source terms in th
 %- phase field
 % 3) the trend of educational codes + literature
 % 4) We use here the distributed shape derivative approach, why it is good?
-% 5) We extend the previous work in many directions
-% 6) The need for parallel computing, and how FenicsX help + recent trend
+% 5) The need for parallel computing, and how FenicsX help + recent trend
+% 6) We extend the previous work in many directions
 % 7) structure of paper
 
 
@@ -103,7 +121,7 @@ The topic has found natural applications first  in structural and fluid mechanic
 Different approaches have been developed for shape and topology optimization. 
 The solid isotropic microstructure with penalty (SIMP) method \cite{MR2008524}, based on a material density approach,  is one of the most popular in structural mechanics and is the basis of many educational codes since the work \cite{Sigmund2014}. 
 It has been extended to different frameworks, beyond structural optimization.
-Another widely used approach is the family level-set based approach, with different variations of the method introduced by Osher and Sethian in \cite{MR965860}. 
+Another widely used approach is the level-set based approach, with different variations of the method introduced by Osher and Sethian in \cite{MR965860}. 
 Other important methods include phase-field methods \cite{MR2108636} and topological derivative-based methods \cite{MR2235384}. 
 Reference works for the level set approach in structural optimization are \cite{MR1911658,MR2033390}. 
 As the literature on topology optimization is very extensive, we only provide certain illustrative citations, and refer to review papers for a more extensive literature review. 
@@ -112,7 +130,7 @@ As the literature on topology optimization is very extensive, we only provide ce
 % 3) the trend of educational codes + literature
 The offer for softwares for shape and topology optimization is growing quickly.
 Along commercial softwares, many open-source softwares have been developed. 
-For topology optimization in structural mechanics, a trend of educational codes started in 2001 with the  “99 line” Matlab code by Sigmund published in 2001 \cite{Sigmund2014} and followed by an improved version in \cite{Andreassen2010}. Another pioneering code is the FreeFEM implementation \cite{MR2252743}.
+For topology optimization in structural mechanics, a trend of educational codes started in 2001 with the 99 line Matlab code by Sigmund published in 2001 \cite{Sigmund2014} and followed by an improved version in \cite{Andreassen2010}. Another pioneering code is the FreeFEM implementation \cite{MR2252743}.
 Codes for various platforms have been developed, such as NGsolve \cite{Gangl2020} and FEniCS \cite{MR3843884}. 
 An open-source Python implementation of the Null Space Optimizer \cite{MR4686093}.
 We refer to  \cite{Gain2013} for a comparison of algorithms.
@@ -128,53 +146,66 @@ The present work is a natural evolution of \cite{MR3843884}.
 From an educational perspective, it is a way to learn about shape sensitivity analysis.
 Another important feature of our approach is that it emphasizes the optimize-then-discretize approach, as the shape derivative is computed in the infinite-dimensional setting, and a discrete version is then used in the numerical algorithm.
 
-% 5) We extend the previous work in many directions
 
-
-
-% 6) The need for parallel computing, and how FenicsX help + recent trend
+% 5) The need for parallel computing, and how FenicsX help + recent trend
 As the computational power steadily increases, parallel computing has become commonplace and is often required for large-scale problems. 
 This trend can also be observed in the topology optimization community, with the developments of many educational codes with parallel capabilities recently. 
 Such work include a Julia toolbox \cite{Wegert2025}, a parallel FreeFEM framework \cite{MR4916810}, and a FEniCSx implementation for 2D and 3D topology optimization \cite{Jia2024}.
 Naturally, we also propose here an evolution of the distributed shape derivative-based \cite{MR3843884} with parallel capabilities.
 Unlike most educational papers on topology optimization which focus on structural mechanics, our objective here is to offer a broader perspective, considering shape optimization problem with general PDE constraints. We also present standard applications involving linear elasticity as a particular case. Another important focus of the present paper is inverse problems, which benefit greatly from the parralelization of the sources.
 
+% 6) We extend the previous work in many directions
+
+Our objective is to provide a toolbox that is easy to use for students and practitioners,  and allows to test some shape optimization problems in a fast way.
+We extend the work \cite{MR3843884} in several directions. 
+First, we only rely on finite elements in the present work, while in \cite{MR3843884} finite elements were used to solve the PDE constraints, and finite difference were used to solve the Hamilton-Jacobi equation for the domain evolution. 
+This allows for more flexible geometries, and a better use of the FEniCSx ressources.
+We calso consider general PDE constraints, with a diversity of examples, whereas  \cite{MR3843884} was focused on linear elasticity. 
+We also include a framework for considering volume constraints, without using penalization of the cost functional.
+An important improvment is the parallel capabilities, which allow for a dramatic speed-up of the numerical experiments. 
+Three parallelism paradigm are available: data, task and mixed parallelisms.
+Data parallelism is a distribution across multiple processes, task parallelism allows to solve for instance the same PDE with different sources and mixed parallelism is a combination of the two.
+An objective of the paper is also to give an introduction to parralelization and its application to PDE-constrained shape optimization.
+The foundation of the present work it to use a tensor representation of the shape derivative, as in \cite{MR3843884}. 
+Thus, in order to consider a new problem, the main work is to write an appropriate model with an appropriate PDE and geometry, and analytically compute the tensors $S_0,S_1$ of the distributed shape derivative.
+This is an opportunity to learn about basic notions of shape sensitivity analysis.
+
 
 % 7) structure of paper
 
+The structure of the paper is as follows. 
+In Section~\ref{sec:shape-opt}, the model shape optimization with constraints is presented, and the basic notions of distributed and boundary expressions of the shape derivative, as well as the  tensor representation
+are introduced. 
+In Section~\ref{sec:model_prob}, and inverse problem for linear elasticity is presented, which allows us to explain how to compute the shape derivative on a concrete example.
+In Section~\ref{sec:numerics}, the numerical implementation is discussed in details, and various snippets of the code are used for reference. In particular, the discretization of the level set equation and the parallelism paradigms are explained.
+In Section~\ref{sec:results}, numerical results are given for several model problems, including benchmarks of compliance minimization for linear elasticity.
 
 
-
-\begin{itemize}
+%\begin{itemize}
 	% \item Literature review on sequential  codes: The popular “99 line” Matlab code by Sigmund published
 	% in 2001 \cite{Sigmund2014} and following improvments such as \cite{Andreassen2010}, based on Matlab. Comparison of algorithms in \cite{Gain2013}. For FreeFEM \cite{MR2252743}.
 	% NGsolve \cite{Gangl2020}.
     % \item Literature review on code with parallel capabilities: Many recents educational codes available. Julia toolbox \cite{Wegert2025}, a parallel FreeFEM framework \cite{MR4916810}, open-source Python implementation of the Null Space Optimizer for solving Topology Optimization problems \cite{MR4686093}, aFEniCSx implementation for 2D 	and 3D topology optimization \cite{Jia2024}.
     % \item Literature for other methods such as phase-field methods. As the literature on topology optimization is very extensive, we only provide certain illustrative citations, and refer to review papers for a more extensive literature review. 
 % \item Here we follow a level set approach. Approach based on shape derivatives \cite{MR2731611,SokZol92} Pioneered in \cite{MR2033390,MR1911658}. Also \cite{Challis2009,MR2459656} The paper is a continuation of \cite{MR3843884}.
-\item The goal is to provide a toolbox that is easy to use and allows to test some shape optimization problems in a fast way. Suited for students and practitioners. The main work for someone using the toolbox is to write an appropriate model (geometry and PDE) and compute $S_1,S_0$.
+% \item The goal is to provide a toolbox that is easy to use and allows to test some shape optimization problems in a fast way. Suited for students and practitioners. The main work for someone using the toolbox is to write an appropriate model (geometry and PDE) and compute $S_1,S_0$.
 % \item There are many educational papers and implementations for structural optimization and topology optimization, but they usually focus on the SIMP method, or an approximation of the level set method (clarify). Here we provide an implementation based on the distributed shape derivative. 
 % \item In \cite{MR3843884}, an educational acode for structural mechanics based on a  variation of the level set approach using the so-called {\it distributed shape derivative} was introduced.
 % This approach has several advantages, such as higher accuracy \cite{MR2642680,MR3348199} and ease of implementation \cite{MR3535238}. From an educational perspective, it is a way to learn about shape sensitivity analysis.
 % We emphasize the optimize-then-discretize approach.
 % \item Most educational papers on topology optimization focus on structural mechanics. Here our objective is to offer a broader perspective, considering shape optimization problem with general partial differential equations (PDEs) constraints. We also present applications to linear elasticity as a particular case. Another important focus of the present paper is inverse problems, which benefit greatly from the parralelization of the sources.
-\item We also want to explain how the parralelization works, in a pedagogical way.
-\end{itemize}    
+%\item We also want to explain how the parralelization works, in a pedagogical way.
+%\end{itemize}    
 
-General problem
-\begin{equation} \label{eq:problem}
-	\min_{\Omega\subset\mathcal{D}} J(\Omega)
-	\quad \text{subject to} \quad C(\Omega) = \boldsymbol{1}
-\end{equation}
-$J$ is the cost functional, $C$ is the vector-valued constraint function
+
 %%%%%%%%%%%%%%%%%%%%%%%
-\section{Shape derivatives}
+\section{Model problem and shape derivatives}\label{sec:shape-opt}
 %%%%%%%%%%%%%%%%%%%%%%%
-This will be similar to \cite[Section 2]{MR3843884},
-recalling definitions of distributed and boundary expression of shape derivative.
 
+% This will be similar to \cite[Section 2]{MR3843884},
+% recalling definitions of distributed and boundary expression of shape derivative.
 
-\textbf{Notations.}
+%\textbf{Notations.}
 Let $\mathcal{D} \subset \mathds{R}^d$ be an open, bounded domain with boundary
 $\Gamma \coloneqq \partial \mathcal{D}$. Let $n$ denote the outward unit normal vector to $\Gamma$.
 The spaces $H^1(\mathcal{D})$ and $H^1_0(\mathcal{D})$ denote the usual Sobolev spaces.
@@ -186,25 +217,112 @@ Given a vector-valued function $w \in H^1(\mathcal{D})^d$,
 $Dw$ denotes its Jacobian matrix.
 
 
-\begin{equation}
-	dJ(\Omega) \theta = \int_{\mathcal{D}} S_0^J \cdot \theta + S_1^J : D\theta 
+We consider the following general shape optimization problem with constraints:
+\begin{equation} \label{eq:problem}
+	\min_{\Omega\subset\mathcal{D}} J(\Omega)
+	\quad \text{subject to} \quad C(\Omega) = \boldsymbol{1},
 \end{equation}
-\begin{equation}
-	dC(\Omega) \theta = \int_{\mathcal{D}} S_0^C \cdot \theta + S_1^C : D\theta 
-\end{equation}
+where $J: \mathds{P}\to\R$ is a cost functional, $C: \mathds{P}\to\R$ is a vector-valued constraint function, and $\mathds{P}$ is a set of subsets of $\hold$.
+\tred{A: we should somehow modify this formulation of the problem, so that the PDE constraint is visible. One needs to introduce a reduced cost functional.}
+
+
+For numerical purposes, we need a notion of derivative with respect to the shape $\Om$.
+We thus consider a diffeomorphism $T_t:\overline{\hold}\to\overline{\hold}$, $t\in [0,\tau]$ and the associated parameterized shape $\Om_t := T_t(\Om)$.
+The transformation must be at least bi-Lipschitz, as we will use a change of variables in integrals later to compute the shape derivative.
+We denote its time derivative at $t=0$ as $\VV: = \frac{\partial}{\partial t} T_t|_{t=0}$.
+Alternatively, one can also start with a given $\VV\in\Theta^k(\hold)$, where
+$$ \Theta^k(\hold) := \{\VV\in C^k_c(\R^m,\R^m)| \VV\cdot n_{|\partial\hold\setminus \singset} = 0 \mbox{ and } \VV_{|\singset} = 0\}$$
+and $\singset\subset\partial\hold$ is the set of points where the normal $n$ is not defined, i.e., the set of singular points of $\partial\hold$.
+Then, one can build $T_t$ satisfying $\VV\in\Theta^k(\hold)$ using a flow as in the {\it speed method}
+\cite{MR2731611,SokZol92} or using a {\it perturbation of identity} \cite{MR2512810}.
+The choice of the method is irrelevant for the computation of the first-order shape derivative.
+In any case, once $T_t$ is available and assuming  $\VV\in\Theta^k(\hold)$, we can define the shape derivative of $J$ as follows.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{definition}[Shape derivative]\label{def1}
+	Let $J : \mathds{P} \rightarrow \R$ be a shape function.
+	\begin{itemize}
+	\item[(i)] The Eulerian semiderivative of $J$ at $\Omega$ in direction $\theta \in \Theta^k(\hold)$, when the limit exists,
+	is defined by
+	\begin{equation}
+	dJ(\Omega ;\VV):= \lim_{t \searrow 0}\frac{J(\Omega_t)-J(\Omega)}{t}.
+	\end{equation}
+	\item[(ii)] $J$ is  \textit{shape differentiable} at $\Omega$ if it has a Eulerian semiderivative at $\Omega$ for all $\theta \in \Theta^k(\hold)$ and the mapping
+	\begin{align*}
+	dJ(\Omega): \Theta^k(\hold) &  \to \R,\; \VV     \mapsto dJ(\Omega ;\VV)
+	\end{align*}
+	is linear and continuous, in which case $dJ(\Omega)$ is called the \textit{shape derivative} at $\Omega$.
+	\end{itemize}
+	\end{definition}
+	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%55
+	% When the shape derivative is computed as a volume integral, it is convenient to write it in the following particular form.
+When the cost function and PDE constraints consist of bulk integrals, the shape derivative is also naturally written as a bulk integral, and one can often write it in the following canonical form.  
+	\begin{definition}[Tensor representation]\label{def:tensor2}
+	Let $\Om\in \mathds{P}$ be open.
+	A shape differentiable function $J : \mathds{P} \rightarrow \R$  admits  a tensor representation of order $1$ if
+	%there exist tensors $\Sb_l\in  L^1(\hold, \mathcal L^l(\R^m,\R^m))$, $l =0,1$, such that
+	there exist tensors $\Sb_0\in L^1(\hold,\R^{d})$  and $\Sb_1\in L^1(\hold,\R^{d\times d})$, such that
+	\begin{align}
+	\label{ea:volume_form2}
+	dJ(\Omega ;\VV) = \int_\hold \Sb_1 \ddo D\VV +  \Sb_0\cdot \VV,
+	\end{align}
+	for all  $\VV\in \Theta^k(\hold)$. 
+	%Here $\mathcal L^l(\R^m, \R^m) $ denotes the space of multilinear maps from 
+	%$(\R^m)^l$ to $\R^m$.
+	\end{definition}
+	Expression \eqref{ea:volume_form2} is called distributed, volumetric, or domain expression of the shape derivative.
+	Tensor representations of arbitrary order can be defined in a similar way, see \cite{MR3535238}.
+The order of the representation is essentially the maximal order of the differential operators appearing in the variational formulation of the PDE constraint and in the cost functional, see \cite{MR4531392,LL2024} for examples of tensor representations of order two. 
+Tensor representation can also be formulated when the cost function and PDE constraints contain boundary term, see \cite{MR3535238}.
+Here we only discuss representations of order one and bulk integrals for the sake of simplicity.
+
+	Under natural regularity assumptions, the shape derivative only depends on the restriction of the normal component $\VV\cdot n$ to the interface $\partial\Om$.  
+	This fundamental result is known as the Hadamard-Zol\'esio structure theorem; see \cite[pp. 480-481]{MR2731611}.  
+Applying the divergence theorem, this structure follows immediatly from the tensor representation \eqref{ea:volume_form2}, as shown in the following proposition.
+
+%%%%%%%%%%%%%%%%%%%
+	\begin{proposition}[Hadamard form]\label{tensor_relations}
+	Let $\Om\in \mathds{P}$ and assume $\partial \Omega$ is $C^2$. 
+	%\tred{Here the main problem is that $\Om$ is not smooth at the points where it touches the box $\hold$}. 
+	% True but we only use this to get the usual boundary expression.
+	% For the domain expression we use for the algorithm, we can just use the definition where \Omega is only open.
+	Suppose that $dJ(\Omega)$ has the tensor representation \eqref{ea:volume_form2}.
+	If $\Sb_1^+\in W^{1,1}(\Om,\R^{d\times d})$ and $\Sb_1^-\in W^{1,1}(\hold\setminus\overline \Omega,\R^{d\times d})$, 	then we obtain the so-called {\it Hadamard form} or {\it boundary expression} of the shape derivative: 
+	\begin{equation}
+	\label{eq:general_boundary_exp}
+	dJ(\Omega;\theta) = \int_{\partial \Omega} g\, \theta\cdot n,
+	\end{equation}
+	with
+	$
+	g :=  [(\Sb_1^+-\Sb_1^-)n]\cdot n,
+	$
+	where $+$ and $-$ denote the restrictions of $\Sb_1$ to $\Omega$ and $\hold\setminus\overline \Omega$, respectively.
+	\end{proposition}
+	See \cite[Proposition~1]{LAURAIN2020328} and \cite[Proposition~4.3]{MR3535238} for proofs of Proposition \ref{tensor_relations} in more general settings.
+	The Hadamard formula \eqref{eq:general_boundary_exp} is the basis for most shape derivative-based numerical methods, such as \cite{MR2033390}.
+In this paper we pursue the distributed expression-based approach described in \cite{MR3843884} using \eqref{ea:volume_form2}.
+	A Lagrangian approach is employed to compute the tensor representation \eqref{ea:volume_form2}.
+	
+We will use the following notation for the shape derivatives of the cost and constraint functionals:
+	\begin{equation}
+		dJ(\Omega) \theta = \int_{\mathcal{D}} S_0^J \cdot \theta + S_1^J : D\theta, 
+	\end{equation}
+	\begin{equation}
+		dC(\Omega) \theta = \int_{\mathcal{D}} S_0^C \cdot \theta + S_1^C : D\theta .
+	\end{equation}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Shape derivative for a model problem}
 \label{sec:model_prob}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Here one could show the calculation of the distributed shape derivative for a model problem. 
-One should choose a different problem from \cite[Section 3]{MR3843884},
-for instance the inverse problem in elasticity. One could add another
-subsection with another model problem, for instance heat equation,
-where one would just show the result with the tensors $S_1,S_0$.
+In order to illustrate a concrete example of calculation of tensor representation \eqref{ea:volume_form2}, we consider an inverse problem in elasticity. 
+
+\tred{A: should we add another
+subsection with another model problem, for instance heat equation?
+One would just show the result with the tensors $S_1,S_0$.}
 
 \textbf{Inverse problem.}
+\tred{A: add figure to illustrate the geometry.}
 Let $\Gamma_0$, $\Gamma_1$ subsets of $\Gamma$ such that $\Gamma=\Gamma_1\cup\Gamma_2$.
 Let $H_{\Gamma_0}(\mathcal{D})^d$ be the space of functions
 \begin{equation*}
@@ -384,7 +502,7 @@ defined by
 \end{equation}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Numerical implementation}
+\section{Numerical implementation}\label{sec:numerics}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 The Python module \code{distributed.py} was developed to apply
@@ -1912,8 +2030,8 @@ mpirun -np 2 python test.py 16 # Data
 \subsection{Performance investigation}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Here we should discuss some performance data of the code. Show that the code is extremely fast in 2D. Show what size of 3D problems we can consider using a server (also large amount of sources).
-Also maybe show weak scalabilty tests for parallel computing, as in \cite{Jia2024}.
+\tred{A: Here we should discuss some performance data of the code. Show that the code is extremely fast in 2D. Show what size of 3D problems we can consider using a server (also large amount of sources).
+Also maybe show weak scalabilty tests for parallel computing, as in \cite{Jia2024}.}
 
 
 
