@@ -131,8 +131,8 @@ As the literature on topology optimization is very extensive, we only provide ce
 The offer for softwares for shape and topology optimization is growing quickly.
 Along commercial softwares, many open-source softwares have been developed. 
 For topology optimization in structural mechanics, a trend of educational codes started in 2001 with the 99 line Matlab code by Sigmund published in 2001 \cite{Sigmund2014} and followed by an improved version in \cite{Andreassen2010}. Another pioneering code is the FreeFEM implementation \cite{MR2252743}.
-Codes for various platforms have been developed, such as NGsolve \cite{Gangl2020} and FEniCS \cite{MR3843884}. 
-An open-source Python implementation of the Null Space Optimizer \cite{MR4686093}.
+Codes for various platforms have been developed, such as NGsolve \cite{MR4233697}, FEniCS \cite{MR3843884} and Firedrake \cite{Paganini2021}. 
+See also an open-source Python implementation of the Null Space Optimizer \cite{MR4686093}.
 We refer to  \cite{Gain2013} for a comparison of algorithms.
  
 % 4) We use here the distributed shape derivative approach, why it is good?
@@ -184,7 +184,7 @@ In Section~\ref{sec:results}, numerical results are given for several model prob
 %\begin{itemize}
 	% \item Literature review on sequential  codes: The popular “99 line” Matlab code by Sigmund published
 	% in 2001 \cite{Sigmund2014} and following improvments such as \cite{Andreassen2010}, based on Matlab. Comparison of algorithms in \cite{Gain2013}. For FreeFEM \cite{MR2252743}.
-	% NGsolve \cite{Gangl2020}.
+	% NGsolve \cite{MR4233697}.
     % \item Literature review on code with parallel capabilities: Many recents educational codes available. Julia toolbox \cite{Wegert2025}, a parallel FreeFEM framework \cite{MR4916810}, open-source Python implementation of the Null Space Optimizer for solving Topology Optimization problems \cite{MR4686093}, aFEniCSx implementation for 2D 	and 3D topology optimization \cite{Jia2024}.
     % \item Literature for other methods such as phase-field methods. As the literature on topology optimization is very extensive, we only provide certain illustrative citations, and refer to review papers for a more extensive literature review. 
 % \item Here we follow a level set approach. Approach based on shape derivatives \cite{MR2731611,SokZol92} Pioneered in \cite{MR2033390,MR1911658}. Also \cite{Challis2009,MR2459656} The paper is a continuation of \cite{MR3843884}.
@@ -295,7 +295,7 @@ Applying the divergence theorem, this structure follows immediatly from the tens
 	$
 	g :=  [(\Sb_1^+-\Sb_1^-)n]\cdot n,
 	$
-	where $+$ and $-$ denote the restrictions of $\Sb_1$ to $\Omega$ and $\hold\setminus\overline \Omega$, respectively.
+	where $+$ and $-$ denote the restrictions of $\Sb_1$ to $\Omega$ and $\hold\setminus\overline \Omega$, respectively. \tred{A: also need to check the notation for the jump.}
 	\end{proposition}
 	See \cite[Proposition~1]{LAURAIN2020328} and \cite[Proposition~4.3]{MR3535238} for proofs of Proposition \ref{tensor_relations} in more general settings.
 	The Hadamard formula \eqref{eq:general_boundary_exp} is the basis for most shape derivative-based numerical methods, such as \cite{MR2033390}.
@@ -303,6 +303,7 @@ In this paper we pursue the distributed expression-based approach described in \
 	A Lagrangian approach is employed to compute the tensor representation \eqref{ea:volume_form2}.
 	
 We will use the following notation for the shape derivatives of the cost and constraint functionals:
+\tred{A: need to uniformize notations for shape derivatives.}
 	\begin{equation}
 		dJ(\Omega) \theta = \int_{\mathcal{D}} S_0^J \cdot \theta + S_1^J : D\theta, 
 	\end{equation}
@@ -316,6 +317,7 @@ We will use the following notation for the shape derivatives of the cost and con
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 In order to illustrate a concrete example of calculation of tensor representation \eqref{ea:volume_form2}, we consider an inverse problem in elasticity. 
+The uniqueness in determining cavities has been investigated in \cite{MR1772729}.
 
 \tred{A: should we add another
 subsection with another model problem, for instance heat equation?
@@ -323,19 +325,20 @@ One would just show the result with the tensors $S_1,S_0$.}
 
 \textbf{Inverse problem.}
 \tred{A: add figure to illustrate the geometry.}
-Let $\Gamma_0$, $\Gamma_1$ subsets of $\Gamma$ such that $\Gamma=\Gamma_1\cup\Gamma_2$.
+Let $\Gamma_0$, $\Gamma_1$ be subsets of $\Gamma$ such that $\Gamma=\Gamma_1\cup\Gamma_2$.
 Let $H_{\Gamma_0}(\mathcal{D})^d$ be the space of functions
 \begin{equation*}
 	H_{\Gamma_0}(\mathcal{D})^d\coloneqq\left\{ u\in H(\mathcal{D})^{d}\mid u|_{\Gamma_0}=\boldsymbol{0}\right\}. 
 \end{equation*}
 The strain and stress tensors are given by
 \begin{equation*}
-	\epsilon(w)\coloneqq\frac{Dw+{Dw}^{\top}}{2},\quad\sigma(w)\coloneqq2\mu\,\epsilon(w)+\lambda\mathrm{div}wI,
+	\epsilon(w)\coloneqq\frac{Dw+{Dw}^{\top}}{2},\quad\sigma(w)\coloneqq2\mu\,\epsilon(w) 
+	+ \lambda (\mathrm{div}w) I,
 \end{equation*}
 where $\mu$ and $\lambda$ are the Lam\'e parameters.
 Let $f$ and $g$ be vector-valued functions defined on $\Gamma_1$.
 Let $\alpha$ and $\beta$ be positive weights.
-The shape optimization problem reads:
+We follow a Kohn-Vogelius-type approach, considering the shape optimization problem:
 \begin{equation} \label{eq:cost}
 	\min_{\Omega \subset \mathcal{D}}
 	J(\Omega) \coloneqq
@@ -366,6 +369,9 @@ A_{\Omega} = \kappa\chi_{\Omega} + \chi_{\overline{\mathcal{D}}\setminus\Omega}
 In \eqref{eq:cost}, observe that $u$ and $v$ depend on $\Omega$ due to
 the presence of $A_\Omega$ in the above equations.
 
+\tred{A: we need to think if we keep this notation. In the previous paper, the PDE was written $ -\mathrm{div} A_{\Omega} \epsilon(u) = 0$ but $A$ was the Hooke elasticity tensor. Here you use the formulation using $\sigma$ and $A$ is just a scalar. So the notation for $A$ are different in the two papers. This could be confusing. Or maybe we could change the notation for $A$ here. We can discuss that. }
+
+%%%%%%%%%%%%%%%%%%%
 \textbf{The state and adjoint problems.}
 Now we write the weak formulations of \eqref{eq:f-prob} and \eqref{eq:g-prob},
 and of their corresponding adjoint problems.
@@ -428,12 +434,12 @@ Find $q \in  H^1_{0}(\mathcal{D})^d$ such that
 \end{equation*}
 Observe that both the state and the adjoint problems are linear.
 
+%%%%%%%%%%%%
 \textbf{Shape derivative components.}
-In order to obtain the shape derivative of of the cost functional, we define
-the so-called shape-Lagrangian as
+In order to compensate for the change of variables $x\mapsto T_t(x)$ in the integrlas,  that will be used further to compute the shape derivative, we need to reparameterize the Lagrangian by composing the functions with $T_t^{-1}$; see \cite{MR4531392} for a more detailed explanation. Thus we introduce the so-called shape-Lagrangian as
 \begin{align*}
-	& \mathcal{G}(t,\varphi,\psi,\rho,\varrho) \coloneqq\\
-	& \mathcal{L}\left(\Omega_{t},\varphi\circ T_{t}^{-1},\psi\circ T_{t}^{-1},\rho\circ T_{t}^{-1},\varrho\circ T_{t}^{-1}\right)
+	& \mathcal{G}(t,\varphi,\psi,\rho,\varrho) \\
+	& \coloneqq \mathcal{L}\left(\Omega_{t},\varphi\circ T_{t}^{-1},\psi\circ T_{t}^{-1},\rho\circ T_{t}^{-1},\varrho\circ T_{t}^{-1}\right)
 \end{align*}
 for all $t\in[0, t_1]$, $\varphi,\psi$ in $H^1_{\Gamma_0}(\mathcal{D})^d$, and $\rho,\varrho$ in $H^1_0(\mathcal{D})^d$.
 For $t\in[0, t_1]$ and $w \in H^1(\mathcal{D})^d$, let
@@ -455,51 +461,69 @@ Applying the change of variable $x \mapsto T_t(x)$ and the fact that $T_t=I$ on 
 	\mathcal{G}_{\mathrm{state}[f]} +
 	\mathcal{G}_{\mathrm{state}[g]}
 \end{equation}
-with
+with \tred{A: one should mention that the term on $\Gamma_1$ do not have $T_t$ because $T_t$ is the identity on this part of the boundary, correct?}
 \begin{align*}
-	\mathcal{G}_{\mathrm{cost}}     &= \frac{\alpha}{2}\int_{\mathcal{D}}\left|\phi-\varphi-g\circ T_{t}\right|^{2}\xi(t)+\frac{\beta}{2}\int_{\Gamma_{1}}\left|\phi-g\right|^{2}, \\
+	\mathcal{G}_{\mathrm{cost}}     &= \frac{\alpha}{2}\int_{\mathcal{D}}\left|\varphi-\psi-g\circ T_{t}\right|^{2}\xi(t)+\frac{\beta}{2}\int_{\Gamma_{1}}\left|\phi-g\right|^{2}, \\
 	\mathcal{G}_{\mathrm{state}[f]} &= \int_{\mathcal{D}}A_{\Omega}\mathrm{C}E(t,\phi):E(t,\rho)\xi(t)-\int_{\Gamma_{1}}f\cdot\rho, \;\, \text{and}\\
 	\mathcal{G}_{\mathrm{state}[g]} &= \int_{\mathcal{D}}A_{\Omega}\mathrm{C}E(t,\varphi + g\circ T_{t}):E(t,\varrho)\xi(t),
 \end{align*}
 where $\xi(t)=\det DT_t$.
-Using the result
+Then, one can show that the shape derivative is given as the partial derivative of the shape-Lagrangian with respect to $t$, using for instance the averaged adjoint method \cite{MR3535238} or \cite{MR2731611}.
+This yields
 \begin{equation}
 	dJ(\Omega; \theta) = \partial_{t}\mathcal{G}(0, u, v, p, q),
 \end{equation}
-and the formulas
-\begin{equation}
-	\mathrm{C}M:N = M\vcentcolon\mathrm{C}N \quad \forall\,M,N\in\mathds{R}^{d\times d}
-\end{equation}
-\begin{equation}
-	\partial_t E(0,w) = -\frac{Dw\,D\theta + (Dw\,D\theta)^\top}{2}
-\end{equation}
+Using the formulas
+\begin{align*}
+	\mathrm{C}M:N &= M\vcentcolon\mathrm{C}N \quad \forall\,M,N\in\mathds{R}^{d\times d}\\
+	\partial_t E(0,w) &= -\frac{Dw\,D\theta + (Dw\,D\theta)^\top}{2}
+\end{align*}
 we obtain
-\begin{equation}
+\begin{equation}\label{eq:SDelast_inv}
 	dJ(\Omega; \theta) = \int_{\mathcal{D}} S_0^J \cdot \theta + S_1^J : D\theta 
 \end{equation}
 with $S_0^J$ and $S_1^J$ given by
-\begin{equation*}
-	S^{J}_{0} = -\alpha{Dg}^{\top}(u - v - g) +
-	A_{\Omega}\sum_{i,j=1}^{d}{\sigma (q)}_{i,j}\nabla(\epsilon(g)_{i,j})
-\end{equation*}
-and
 \begin{align*}
-	S^{J}_{1} & = \frac{\alpha}{2}{|u-v-g|}^2 I\\
+	S^{J}_{0} & := -\alpha{Dg}^{\top}(u - v - g) +
+	A_{\Omega}\sum_{i,j=1}^{d}{\sigma (q)}_{i,j}\nabla(\epsilon(g)_{i,j})\\
+	%%%%
+	S^{J}_{1} & := \frac{\alpha}{2}{|u-v-g|}^2 I\\
 			  & \quad + \left(A_{\Omega}\sigma(u):\epsilon(p) + A_{\Omega}\sigma(v+g):\epsilon(q)\right)I\\
 			  & \quad + A_{\Omega} \left({Du}^{\top}\sigma(p) + {Dp}^{\top}\sigma(u)\right)\\
 			  & \quad + A_{\Omega} \left({Dv}^{\top}\sigma(q) + {Dq}^{\top}\sigma(v+g)\right),
 \end{align*}
 respectively.
 
+\textbf{Hadamard form.} Even though our numerical algorithm is based on the distributed expression~\ref{eq:SDelast_inv}, it is instructive to compute the Hadamard form of the shape derivative, following Proposition~\ref{tensor_relations}.
+Using \eqref{eq:general_boundary_exp} and using the fact that the jump of $|u-v-g|^2$ on $\partial\Om$ vanishes, we get
+\begin{equation}
+	dJ(\Omega;\theta) = \int_{\partial \Omega} g\, \theta\cdot n,
+	\end{equation}
+	with
+	$g :=  [G^+- G^-]$ and
+\begin{align*}
+	%%%%
+	G & := \left(A_{\Omega}\sigma(u):\epsilon(p) + A_{\Omega}\sigma(v+g):\epsilon(q)\right)\\
+			  & \quad + A_{\Omega} \left({Du}^{\top}\sigma(p) + {Dp}^{\top}\sigma(u)\right)n\cdot n\\
+			  & \quad + A_{\Omega} \left({Dv}^{\top}\sigma(q) + {Dq}^{\top}\sigma(v+g)\right)n\cdot n \text{ on }\partial\Om.
+\end{align*}
+
+\tred{A: maybe there could be some simplifications, but we don't really need to optimize this formula anyway.}
+
+
+
 \textbf{Bilinear form.}
 In addition to the state/adjoint problems and the derivative components,
 it is necessary to choose a positive bilinear form
-in order to find an velocity field to compute the level set function.
+in order to find a velocity field to compute the level set function.
 For this problem we choose $B:H_{0}^1(\mathcal{D})^d \times H_{0}^1(\mathcal{D})^d \rightarrow \mathds{R}$
 defined by
 \begin{equation} \label{eq:biform}
 	B(\theta, \xi) = \int_{\mathcal{D}} {10}^{-1}\theta \cdot \xi + D\theta : D\xi .
 \end{equation}
+\tred{A: should probably write $\alpha$ instead of $10^{-1}$, and specify the value of $\alpha$ later.}
+
+\tred{A: do we need to introduce this bilinear form now? I would rather introduce it later, as it is a separated issue from the shape derivative.}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Numerical implementation}\label{sec:numerics}
@@ -519,7 +543,7 @@ the construction of the model problem,
 the three parallelism paradigms that were implemented,
 and the numerical methods used to solve the sub-problems.
 
-First, we briefly describe Algorithm \eqref{eq:algo_lv}.
+First, we briefly describe Algorithm~\ref{eq:algo_lv}.
 Given an initial level set function
 $\phi^0:\overline{\mathcal{D}} \rightarrow \mathds{R}$,
 we iteratively solve the state and adjoint equations (steps 4 and 5)
@@ -544,7 +568,7 @@ Lagrangian approach for handling constraints, and others
 will be explained in the following subsections.
 
 \begin{algorithm}[H] 
-\caption{Basic level set algorithm} \label{eq:algo_lv}
+\caption{Level set algorithm} \label{eq:algo_lv}
 \small
 \begin{algorithmic}[1]
 \State \textbf{Initialization:} Choose an initial $\phi^0:\overline{\mathcal{D}} \rightarrow \mathds{R}$.
@@ -557,9 +581,9 @@ will be explained in the following subsections.
 	\State Use $\Omega^i$ and $U$ to calculate the \textbf{constraint} error.
 	\State Use $\Omega^i$, $U$, $P$ to construct the derivative components:
 	\Statex \hspace{1.2em} $S_0^{J}$, $S_1^{J}$ (cost) and $S_0^{C}$, $S_1^{C}$ (constraint).
-	\State Solve the \textbf{velocity} equation with $S_0^{J}$, $S_1^{J}$, $S_0^{C}$, $S_1^{C}$.
+	\State Solve the \textbf{velocity} equation \tred{A: add equation reference.} with $S_0^{J}$, $S_1^{J}$, $S_0^{C}$, $S_1^{C}$.
 	\Statex \hspace{3em} Let $\theta:\overline{\mathcal{D}} \rightarrow \mathds{R}^d$ be the solution.
-	\State Solve the \textbf{transport} equation with $\theta$.
+	\State Solve the \textbf{transport} equation \tred{A: add equation reference.} with $\theta$.
 	\Statex \hspace{3em} Let $\phi^{i+1}:\overline{\mathcal{D}} \rightarrow \mathds{R}$ be the solution.
 \EndFor
 \end{algorithmic}
@@ -588,7 +612,7 @@ It must contain
 the weak formulations of the state and adjoint equations,
 the cost functional, the constraints,
 the distributed shape derivative components, and
-the bilinear form used to compute the velocity $\theta$---all written exclusively using UFL and native Python functions.
+the bilinear form used to compute the velocity $\theta$, all written exclusively using UFL and native Python functions.
 To achieve this, the following methods must be overridden:
 \begin{lstlisting}
 	pde(level_set_func)
@@ -611,7 +635,7 @@ different parallelism modes:
 These methods must \textbf{not} be overridden.
 
 \item \code{Velocity}:
-This class builds and solves the velocity equation \eqref{eq:velocity}.
+This class builds and solves the velocity equation \eqref{eq:velocity}. \tred{A: the equation \eqref{eq:velocity} should appear before this reference, so I suggest to reorganize the paper so that the equations appear before the explanations about the code structure.}
 Since the bilinear form $B$ remains unchanged, the \code{\_\_init\_\_} method
 compiles the left-hand side of the corresponding linear system during initialization.
 Thus, at each iteration, only the right-hand side is updated before solving
@@ -619,7 +643,7 @@ the linear system (see the \code{run} method of this class).
 
 \item \code{Level}:
 This class provides the level set function at each iteration
-by solving the diffusive version of the transport equation \eqref{eq:transport}.
+by solving the diffusive version of the transport equation \eqref{eq:transport}. \tred{A: same here}
 The linear system is precompiled during initialization
 (see the \code{\_\_init\_\_} method). 
 Calling the \code{run} method updates the level set function.
@@ -648,10 +672,11 @@ by approximating the distance function associated to $\Omega^i$.
 The following are some helper functions:
 \begin{itemize}[left=0.0em]
 \item \code{create\_domain\_2d\_<DP|TP|MP>}:
+Here, \code{DP|TP|MP} refers to the parallelism paradigm.
 This function uses Gmsh to create 2D polygonal domains 
 from a set of vertices, along with marked boundaries.
 Interior holes and curves (formed by line segments) are supported.
-\code{DP|TP|MP} refers to the parallelism paradigm.
+
 
 \item \code{create\_space}:
 This is wrapper function for creating a FEniCSx function space.
@@ -728,7 +753,7 @@ where the results are saved.
 
 The files \code{load.py} and \code{plots.py} contain auxiliary code
 for visualizing the results. Since the results are saved in XDMF format,
-we recommend ParaView to view them.
+we recommend ParaView to view them. \tred{A: add some citation for paraview.}
 
 Several classes and functions are used internally, and the user does not need
 to understand how to use them. Below, we describe the stages the user must follow,
@@ -810,6 +835,7 @@ Finally, the \code{bilinear\_form} method must return
 the chosen bilinear form $B$, where \code{th} and \code{xi}
 representing the arguments of $B(\theta, \xi)$.
 
+\tred{A: what do you mean, "By convention"? Maybe clarify.}
 By convention, all the contents of this class are written exclusively using
 UFL and native Python functions. For example, the following UFL
 functions were used across all our models (see \code{models.py}):
@@ -836,6 +862,8 @@ can be found in the documentation of the \code{Model} class.
 %and how the user can play with that. Explain the splitting and the colors.
 %Cite some parts of the codes to explain that.
 
+\tred{A: Here one should start with a paragraph explaining some basic principles of parallelization, for complete beginners, with a simple reference maybe. }
+
 Our module supports three parallelism paradigms:
 \textit{data parallelism} (\code{DP}),
 \textit{task parallelism} (\code{TP}), and a combination of the two,
@@ -843,6 +871,7 @@ known as \textit{mixed parallelism} (\code{MP}).
 
 \textit{Data parallelism} refers to solving the problem on a mesh
 that is distributed across multiple processes.
+One uses domain decomposition methods to partition the domain and solve the PDE locally in each part \cite{MR2104179}. 
 All the weak formulations are solved on this distributed mesh.
 In the \textit{task parallelism} paradigm, each state equation is solved
 in a separate process, and the same applies to each adjoint equation.
@@ -900,8 +929,8 @@ processes are divided into groups of equal size.
 Thus, the total number of processes (\code{size}) must be divisible
 by the number of groups (\code{nbr\_groups}), where \code{nbr\_groups}
 corresponds to the number of state equations (and adjoint equations, if present).
-Once this condition is verified, we assign a \code{color} to each process:
-processes in the same group share tha same \code{color}.
+Once this condition is verified \tred{A: but what if the condition is not satisfied? I guess there is another option, he will only use a smaller amount of processors?}, we assign a \code{color} to each process:
+processes in the same group share the same \code{color}.
 The \code{Split} function returns the sub-communicator associated to each group:
 \begin{lstlisting}
 if size%nbr_groups != 0:
@@ -985,6 +1014,7 @@ $S_0 = S_0^J$ and $S_1 = S_1^J$.
 
 The velocity field $\theta$ is obtained by solving the following weak formulation:
 Find $\theta\in\mathbb{H}$ such that
+\tred{I think it is the same as \eqref{eq:biform}? I would rather write \eqref{eq:biform} here and remove the discussion about the bilinear form in section 3.}
 \begin{equation} \label{eq:velocity}
 	B (\theta, \xi) =
 	- \int_{\mathcal{D}} S_0\cdot\xi + S_1 : D\xi \quad\forall \; \xi \in \mathbb{H},
@@ -995,7 +1025,7 @@ the Hilbert space $\mathbb{H}$ is either $H^1(\mathcal{D})^d$ or $H_0^1(\mathcal
 The \code{bilinear\_form} method must return 
 the UFL expression of bilinear form $B$, along with
 a Boolean value indicating whether homogeneous Dirichlet boundary conditions
-should be must be imposed:
+should be imposed:
 \code{False} if $\mathbb{H} = H^1(\mathcal{D})^d$ and
 \code{True} if $\mathbb{H} = H_0^1(\mathcal{D})^d$.
 In the case $\mathbb{H} = H^1(\mathcal{D})^d$,
@@ -1033,7 +1063,9 @@ are sufficient to configure this part.
 \label{sub:level}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-We update the level set function by solving the diffusion-transport problem
+In the standard level set method \cite{MR965860}, the level set function is updated by solving a Hamilton-Jacobi equation on a short time interval, using a descent direction $\theta\cdot n$ in the normal direction,  derived from the boundary expression.
+In the distributed shape derivative-based level set method, one rather solves a transport equation, as $\theta$ is available in $\hold$ rather than $\theta\cdot n$ on $\partial\Om$, see \cite{MR3535238}.  
+In fact, we update the level set function by solving the diffusion-transport problem \tred{A: add a brief explanation as to why we need the diffusion term. It seems this diffusion term can be omitted sometimes, so it is only an option. Then one needs to explain that this gives more options, depedning on the type of problem.}
 \begin{equation} \label{eq:transport}
 \begin{aligned}
 \partial_t \phi+\theta\cdot\nabla\phi &= h^2\nabla^2\varphi && x\in \mathcal{D},\, t>0, \\
@@ -1079,7 +1111,7 @@ are in the \code{Level} class.
 \label{sub:other}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\textbf{Reinitialization.} We regularly perform a reinitialization of
+\textbf{Reinitialization.} As in the standard level set method \cite{MR965860}, see also \cite{MR3843884}, we regularly perform a reinitialization of
 the level set function $\phi = \phi(T, \cdot)$ (obtained from \eqref{eq:transport})
 by solving the diffusive Eikonal equation with fictitious time derivative:
 \begin{equation} \label{eq:Eikonal}
@@ -1310,6 +1342,8 @@ we provide the $\code{dir\_extension\_from}$ function, which
 solves \eqref{eq:w-f} and then extend its solution by calling
 $\code{dirichlet\_extension}$.
 
+\tred{A: do we really need the Dirichlet extension? Can one define $g$ directly inside the entire domain in general?}
+
 \textbf{Mesh diameter.}
 We define the mesh diameter $h$ as
 \begin{equation}
@@ -1368,8 +1402,11 @@ in the \code{bilinear\_form} method.
 %Here we need to decide which examples we want to show. 
 %Inverse elasticity 2D or 3D, Compliance 2D or 3D? Heat equation?
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Inverse Elasticity}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+We consider the inverse elasticity problem described in Section~\ref{sec:model_prob}, where the distributed shape derivative has been computed.
 We start by writing the model class for this problem. 
 We call our model \code{InverseElasticity}:
 \begin{lstlisting}
@@ -1450,7 +1487,7 @@ def pde(self, phi):
 
 Similarly, we write the methods \code{adj\_f\_prob} and \code{adj\_g\_prob}
 to get the adjoint problems, 
-and collet all of them in the required \code{adjoint} method:
+and collect all of them in the required \code{adjoint} method:
 \begin{lstlisting}
 def adj_f_prob(self, p, r, phi, u, v, g):
 	# adjoint of f-problem
@@ -1683,10 +1720,16 @@ in terminal, execute
 mpirun -np 12 python test.py 08
 \end{lstlisting}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Compliance minimization}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Here, we minimize the compliance in a linear elasticity problem.
+Compliance minimization is a standard problem in structural mechanics, for which an abundant literature exists on \cite{MR1911658,MR2033390}.
+Compliance minimization using the distributed shape derivative is also the main topic of the previous work \cite{MR3843884}.
+We use it here to illustrate the performance of FormOpt on benchmark problems such as the cantilever.
 
+
+We minimize the compliance in a linear elasticity problem:
 \begin{equation} \label{eq:compli_cost}
 	\min_{\Omega \subset \mathcal{D}}
 	J(\Omega) \coloneqq \int_{\mathcal{D}} A_{\Omega}\sigma(u):\epsilon(u)
@@ -1764,7 +1807,7 @@ Figure \ref{fig:compli2}
 \hfill
 \includegraphics[width=0.48\linewidth]{compli2_3.png}
 \captionof{figure}{
-	Iterations of the three-dimensional cantilever.
+	Iterations of the three-dimensional cantilever.\tred{A: write iteration numbers.}
 }
 \label{fig:compli2}
 \end{center}
@@ -1933,7 +1976,7 @@ Figure \ref{fig:heat2}
 \includegraphics[width=0.48\linewidth]{heat2_1.png}
 \captionof{figure}{
 	Initial guess and
-	optimized design at iteration $i=127$.
+	optimized design at iteration $i=127$. \tred{A: we should make a comment about the fractal structure and small disconnected components? Is it a problem? Could we remove them with a perimeter constraint?}
 }
 \label{fig:heat2}
 \end{center}
@@ -2018,6 +2061,7 @@ Figure \ref{fig:heat4}
 \label{sub:pop}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\tred{A: here also some references and emphasize that the PDE is nonlinear.}
 
 Let $V$ be a prefixed volume, less than the volume of $\mathcal{D}$.
 The problem reads
@@ -2088,12 +2132,16 @@ Also maybe show weak scalabilty tests for parallel computing, as in \cite{Jia202
 \section{Conclusion}
 %%%%%%%%%%%%%%%%%%%%%%%
 
-In the conclusion we discuss possible future extensions of this toolbox. Here are some ideas.
-\begin{itemize}
-\item higher-order tensors such as biLaplacian problems
-\item Boundary terms for surface problems.
-\item automatic differentiation?
-\end{itemize}    
+In this work we have extended the results of \cite{MR3843884} in several directions, for PDE-constrained shape optimization based on the distributed shape derivative and a level set method. 
+The notable features of the FormOpt toolbox are two and three-dimensional problems with flexible geometries, thanks to the FEM capabilities offered by FEniCSx.
+The parallel computing capacities with three different modes is also an important development, which allows for efficiency and large scale capabilities. 
+The built-in Proximal-Perturbed Lagrangian is also a useful feature to handle shape constraints, in particular volume constraints which are commonplace in shape optimization problems. 
+
+
+Despite the versatility of FormOpt, several extensions will be considered in future research.
+The extension to higher-order tensor representation of shape derivatives should be straightforward and will be useful for applications, for instance to consider problems involving the biLaplacian \cite{LL2024}.
+The extension to tensor representations including boundary term is important for applications, but is more delicate from an implementation point of view, as it will require more complex discretization methods to handle the boundary terms \tred{A: cite CUTfem, Xfem, etc ... } 
+Other natural extensions are time-dependent problems and  automatic differentiation capabilities \cite{MR4233697,Paganini2021} to compute the adjoint and shape derivative.
 
 
 \end{multicols} 
