@@ -1000,7 +1000,7 @@ should be must be imposed:
 \code{True} if $\mathbb{H} = H_0^1(\mathcal{D})^d$.
 In the case $\mathbb{H} = H^1(\mathcal{D})^d$,
 we recommend adding to $B$ a term of the form
-\begin{equation}
+\begin{equation}\label{eq:bd_plt}
 	{10}^4 \int_{\partial \mathcal{D}}  (\theta \cdot n) (\xi \cdot n)
 \end{equation}
 to penalize the normal component of $\theta$ on the boundary.
@@ -1325,6 +1325,40 @@ or tetrahedra ($d=3$).
 This expression provides an approximation of the maximum diameter of the finite elements,
 assuming that the elements are identical equilateral triangles or regular tetrahedra.
 
+\noindent \textbf{Penalized subdomains.} (CHECK!)
+For the cases when is necessary keep the arzats material
+in some parts of $\mathcal{D}$, we have written the \code{Subdomain} class.
+It creates a indicator function from a list of inequalities that
+determines a subdomain of $\mathcal{D}$. Then we can use this function
+to add a penalty term of the form
+\begin{equation}\label{eq:sub_dom}
+	{10}^4 \int_{\mathcal{D}} (\theta \cdot \xi) \chi_{\Omega_0}
+\end{equation}
+to $B$, with $\Omega_0$ being the subset where we want to keep the arzats material.
+For instance, the subdomain
+\begin{equation}
+	\Omega_0 = \left\{ (x,y)\in \mathcal{D} \mid 1.95 < x,\, 0.42 < y < 0.58   \right\}.
+\end{equation}
+is modeled by the function
+\begin{lstlisting}
+@dib.region_of(domain)
+def sub_domain(x):
+    ineqs = [x[0] - 1.95, x[1] - 0.42, 0.58 - x[1]]
+    return ineqs
+md.sb = sub_domain.expression()
+\end{lstlisting}
+Observe that each inequality in \code{ineqs} is greater than zero.
+It is necessary to add the decorater \code{dib.region\_of} with the
+current domain as argument. This decorater is a wrapper for the \code{Subdomain} class.
+Then \code{sub\_domain} becomes a indicator function by calling
+the \code{expression} method. Now we add the penalty term \eqref{eq:sub_dom}
+by writing
+\begin{lstlisting}
+def bilinear_form(self, th, xi):
+	#...
+	B += 1e4*self.sb*dot(th, xi)*self.dx
+\end{lstlisting}
+in the \code{bilinear\_form} method.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Numerical results}
@@ -1802,8 +1836,9 @@ Figure \ref{fig:compli4}
 \label{sub:heat}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Let $\Gamma_0$, $\Gamma_1$ subsets of $\Gamma$ such that $\Gamma=\Gamma_1\cup\Gamma_2$.
+Let $\Gamma_0$ be a subset of $\Gamma$.
 Let $V$ be a prefixed volume, less than the volume of $\mathcal{D}$.
+Consider the minimization problem
 \begin{equation} \label{eq:heat_cost}
 	\min_{\Omega \subset \mathcal{D}}
 	J(\Omega) \coloneqq \int_{\mathcal{D}} A_{\Omega}\left|\nabla u\right|^{2}
@@ -1817,7 +1852,7 @@ where $u$ is the solution to
 	\begin{aligned}
 	-\operatorname{div}(A_{\Omega} \nabla u) &= f && \text{in } \mathcal{D}\\
                                           u  &= 0 && \text{on } \Gamma_{0}\\
-                             \partial_{n} u  &= 0 && \text{on } \Gamma_{1}                     
+                             \partial_{n} u  &= 0 && \text{on } \Gamma\setminus\Gamma_{0}                     
 	\end{aligned}	
 \end{equation}
 and $A_{\Omega}:\overline{\mathcal{D}} \rightarrow \mathds{R}$ is given by
@@ -1905,9 +1940,10 @@ Figure \ref{fig:heat2}
 
 \noindent\textit{Example 3.} 
 
-$\Gamma_0 = \Gamma$
+$\Gamma_0 = \emptyset $
 
 $f(x,y) \coloneqq \phi(\vert(x,y)-(0.5, 0.5)\vert_2)$
+where
 \begin{equation}
 	\phi(r) \coloneqq
 	\begin{cases}
@@ -1915,12 +1951,15 @@ $f(x,y) \coloneqq \phi(\vert(x,y)-(0.5, 0.5)\vert_2)$
 	0  & \text{otherwise}.
 	\end{cases}
 \end{equation}
-radial function
+is a radial function
 
 $f$ is radially symmetric around the point 
 $(0.5,0.5)$ and is infinitely differentiable on the entire plane
 
 $V = 0.5$
+
+The term \eqref{eq:bd_plt} is added to the bilinear form $B$ and
+the velocity problem is solved with $\mathbb{H} = H^1(\mathcal{D})^d$.
 
 \begin{lstlisting}
 mpirun -np 2 python test.py 11 # Data
@@ -1938,9 +1977,17 @@ Figure \ref{fig:heat3}
 \label{fig:heat3}
 \end{center}
 
-
 \noindent\textit{Example 4.}  (multiple load cases)
 
+$\Gamma_0^\mathrm{I} = (0.4,0.6)\times\{y=0\}$
+
+$\Gamma_0^\mathrm{II} = \{x=1\}\times(0.4,0.6)$
+
+$\Gamma_0 = \Gamma_0^\mathrm{I} \cup \Gamma_0^\mathrm{II}$
+
+$f\equiv 1$
+
+$V = 0.4$
 
 \begin{lstlisting}
 mpirun -np 2 python test.py 12 # Data
@@ -1950,6 +1997,7 @@ mpirun -np 2 python test.py 12 # Data
 mpirun -np 2 python test.py 13 # Task
 \end{lstlisting}
 
+Lagrangian value : multiple = two times simple case 
 Figure \ref{fig:heat4}
 \begin{center}
 \includegraphics[width=0.48\linewidth]{heat4_0.png}

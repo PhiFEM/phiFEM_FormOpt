@@ -6,6 +6,7 @@ nav:
   - Velocity class: velocity.md
   - Level class: level.md
   - Reinit class: reinit.md
+  - Installation: installation.md
 
 theme:
   name: material
