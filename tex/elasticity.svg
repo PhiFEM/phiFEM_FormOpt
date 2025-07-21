@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?><svg xmlns="http://www.w3.org/2000/svg" viewBox="-20.946 -9.938 295.81 198.164" xmlns:latexdraw="http://latexdraw.sourceforge.net/namespaces/latexdraw" version="1.1" baseProfile="full">
+    <g>
+        <g latexdraw:type="bezierCurve" id="id1844746796">
+            <path d="M 88.8333333333319 82.98809523809427 C 80.86221211617132 102.90605867154426 110.87416615173794 132.30045880733897 154.0714285714273 107.74999999999909 C 197.26869099111667 83.19954119265921 178.4812597352195 55.76320152868669 143.59523809523694 59.65476190476079 C 108.70921645525436 63.546322280834886 90.12583384825959 77.00906500218258 88.83333333333212 83.94047619047501" stroke="black" stroke-width="2.0" fill="#999999" latexdraw:rotationAngle="0.0"/>
+        </g>
+        <g latexdraw:type="text" id="id1775695386" fill="black" latexdraw:position="bl">
+            <text x="70.4761904761905" y="39.23809523809532">$\mathcal{D}$</text>
+        </g>
+        <g latexdraw:type="text" id="id1198538318" fill="black" latexdraw:position="bl">
+            <text x="124.66666666666681" y="91.85714285714286">$\Omega$</text>
+        </g>
+        <g latexdraw:type="joinedLines" id="id727563265">
+            <polyline points="-0.9459459459458515,133.13513513513502 254.86357786357797,133.135135135135 " stroke="black" stroke-width="2.0" fill="none" latexdraw:rotationAngle="0.0"/>
+        </g>
+        <g latexdraw:type="bezierCurve" id="id1001107107">
+            <path d="M 22.701907790141817 132.7641328303082 C 18.056340638881665 69.83959833250663 35.055646930208866 11.202463684059623 126.95961087137428 10.062059959117505 C 218.8635748125397 8.921656234175387 231.94212286458992 70.45754937579682 229.5086304792178 133.01190476190368" stroke="black" stroke-width="2.0" fill="none" latexdraw:rotationAngle="0.0"/>
+        </g>
+        <g latexdraw:type="text" id="id1610131735" fill="black" latexdraw:position="bl">
+            <text x="120.26190476190355" y="168.2261904761894">$\Gamma_0$</text>
+        </g>
+        <g latexdraw:type="joinedLines" id="id168913833">
+            <polyline points="22.64285714285599,145.36904761904657 229.3095238095225,144.41666666666583 " stroke="#808080" stroke-width="2.1" fill="none" stroke-dasharray="8.819444444444445, 5.291666666666667" latexdraw:rotationAngle="0.0" marker-start="url(#arrow0-168913833)" marker-end="url(#arrow1-168913833)"/>
+        </g>
+    </g>
+    <defs>
+        <marker overflow="visible" markerUnits="userSpaceOnUse" orient="179.736" id="arrow0-168913833">
+            <path d="M 0.0 -7.013888888888889 L 0.0 7.013888888888889" stroke-width="2.1" stroke="#808080" latexdraw:arrSizeNum="2" latexdraw:tbarSizeNum="5"/>
+        </marker>
+        <marker overflow="visible" markerUnits="userSpaceOnUse" orient="359.736" id="arrow1-168913833">
+            <path d="M 0.0 -7.013888888888889 L 0.0 7.013888888888889" stroke-width="2.1" stroke="#808080" latexdraw:arrSizeNum="2" latexdraw:tbarSizeNum="5"/>
+        </marker>
+    </defs>
+    <metadata>
+        <latexdraw:metadata>
+            <latexdraw:centreHoriz>false</latexdraw:centreHoriz>
+            <latexdraw:positionVert/>
+            <latexdraw:zoom>2.1000000000000005</latexdraw:zoom>
+            <latexdraw:vpx>0.38</latexdraw:vpx>
+            <latexdraw:vpy>0.347</latexdraw:vpy>
+        </latexdraw:metadata>
+    </metadata>
+</svg>

@@ -29,7 +29,7 @@
 \newcommand{\singset}{L}
 
 \newcommand{\tred}{\textcolor{red}}
-
+\newcommand{\tblue}{\textcolor{blue}}
 
 \newtheorem{definition}{Definition}
 \newtheorem{proposition}{Proposition}
@@ -322,9 +322,13 @@ The uniqueness in determining cavities has been investigated in \cite{MR1772729}
 \tred{A: should we add another
 subsection with another model problem, for instance heat equation?
 One would just show the result with the tensors $S_1,S_0$.}
+\tblue{J: I think it depends on the number of pages. Now 
+there is a subsection for heat condution problems
+in the numerical results section.
+}
 
 \textbf{Inverse problem.}
-\tred{A: add figure to illustrate the geometry.}
+%\tred{A: add figure to illustrate the geometry.}%Ready!
 Let $\Gamma_0$, $\Gamma_1$ be subsets of $\Gamma$ such that $\Gamma=\Gamma_1\cup\Gamma_2$.
 Let $H_{\Gamma_0}(\mathcal{D})^d$ be the space of functions
 \begin{equation*}
@@ -338,6 +342,13 @@ The strain and stress tensors are given by
 where $\mu$ and $\lambda$ are the Lam\'e parameters.
 Let $f$ and $g$ be vector-valued functions defined on $\Gamma_1$.
 Let $\alpha$ and $\beta$ be positive weights.
+\begin{center}
+\includegraphics[width=0.7\linewidth]{elasticity_dom.png}
+\captionof{figure}{
+	Domain configuration for the inverse problem in elasticity.
+}
+\label{fig:elast_dom}
+\end{center}
 We follow a Kohn-Vogelius-type approach, considering the shape optimization problem:
 \begin{equation} \label{eq:cost}
 	\min_{\Omega \subset \mathcal{D}}
@@ -366,7 +377,7 @@ respectively, and $A_{\Omega}:\overline{\mathcal{D}} \rightarrow \mathds{R}$ is 
 A_{\Omega} = \kappa\chi_{\Omega} + \chi_{\overline{\mathcal{D}}\setminus\Omega}
 \quad \text{with }\kappa>0.
 \end{equation}
-In \eqref{eq:cost}, observe that $u$ and $v$ depend on $\Omega$ due to
+See Figure \ref{fig:elast_dom}. In \eqref{eq:cost}, observe that $u$ and $v$ depend on $\Omega$ due to
 the presence of $A_\Omega$ in the above equations.
 
 \tred{A: we need to think if we keep this notation. In the previous paper, the PDE was written $ -\mathrm{div} A_{\Omega} \epsilon(u) = 0$ but $A$ was the Hooke elasticity tensor. Here you use the formulation using $\sigma$ and $A$ is just a scalar. So the notation for $A$ are different in the two papers. This could be confusing. Or maybe we could change the notation for $A$ here. We can discuss that. }
@@ -1240,7 +1251,7 @@ and $\hat{s}$ is rounded to an integer.
 We recall that the \code{LineSearch} class 
 performs all these procedures.
 
-\textbf{Stopping criterion.}
+\noindent \textbf{Stopping criterion.}
 We consider the following stopping criterions from a iteration 
 $i>\code{start\_to\_check}$ forward:
 \begin{itemize}
@@ -1271,7 +1282,7 @@ The default values are
 \code{ctrn\_tol=1e-2},
 and \code{prev=10}.
 
-\textbf{Initial guess.}
+\noindent \textbf{Initial guess.}
 The initial level set function $\phi^0$ is constructed
 using two arrays:  \code{centers} and \code{radii}.
 The array \code{centers} contains coordinates that
@@ -1321,7 +1332,7 @@ Internally, the $\code{InitialLevel}$ class
 provides a callable method that uses the
 \code{centers} and \code{radii} arrays to construct $\phi^0$.
 
-\textbf{Dirichlet extension.}
+\noindent \textbf{Dirichlet extension.}
 The Dirichlet extension of a function $u\in H^1(\mathcal{D})^{d}$ is defined 
 as the solution to the following problem:
 Find $\eta\in H^1(\mathcal{D})^{d}$ such that
@@ -1344,7 +1355,14 @@ $\code{dirichlet\_extension}$.
 
 \tred{A: do we really need the Dirichlet extension? Can one define $g$ directly inside the entire domain in general?}
 
-\textbf{Mesh diameter.}
+\tblue{J: From my point of view, in the inverse elasticity problem,
+$f$ (force) is applied and $g$ (displacement) is observed.
+Do we could define $g$ and later calculate $f=A_\Omega \sigma(u_g)n$??
+On the other hand, we need a way of extending the Dirichlet data,
+because of problems with non-homogeneous boundary conditions.
+}
+
+\noindent \textbf{Mesh diameter.}
 We define the mesh diameter $h$ as
 \begin{equation}
 	h \coloneqq
@@ -1359,21 +1377,23 @@ or tetrahedra ($d=3$).
 This expression provides an approximation of the maximum diameter of the finite elements,
 assuming that the elements are identical equilateral triangles or regular tetrahedra.
 
-\noindent \textbf{Penalized subdomains.} (CHECK!)
-For the cases when is necessary keep the arzats material
-in some parts of $\mathcal{D}$, we have written the \code{Subdomain} class.
-It creates a indicator function from a list of inequalities that
-determines a subdomain of $\mathcal{D}$. Then we can use this function
+\noindent \textbf{Penalized subdomains.}
+For cases where it is necessary to retain the material
+in certain regions of $\mathcal{D}$,
+we have implemented the \code{Subdomain} class.
+This class constructs an indicator function from a list of inequalities that
+define a subdomain of $\mathcal{D}$. We can then use this function
 to add a penalty term of the form
 \begin{equation}\label{eq:sub_dom}
 	{10}^4 \int_{\mathcal{D}} (\theta \cdot \xi) \chi_{\Omega_0}
 \end{equation}
-to $B$, with $\Omega_0$ being the subset where we want to keep the arzats material.
+to the bilinear form $B$, where $\Omega_0$ is the region
+in which we want to preserve the material.
 For instance, the subdomain
 \begin{equation}
 	\Omega_0 = \left\{ (x,y)\in \mathcal{D} \mid 1.95 < x,\, 0.42 < y < 0.58   \right\}.
 \end{equation}
-is modeled by the function
+is modeled using the function
 \begin{lstlisting}
 @dib.region_of(domain)
 def sub_domain(x):
@@ -1381,18 +1401,18 @@ def sub_domain(x):
     return ineqs
 md.sb = sub_domain.expression()
 \end{lstlisting}
-Observe that each inequality in \code{ineqs} is greater than zero.
-It is necessary to add the decorater \code{dib.region\_of} with the
-current domain as argument. This decorater is a wrapper for the \code{Subdomain} class.
-Then \code{sub\_domain} becomes a indicator function by calling
-the \code{expression} method. Now we add the penalty term \eqref{eq:sub_dom}
-by writing
+Each element in \code{ineqs} represents an inequality greater than zero.
+It is required to include the decorator \code{region\_of} with the
+current domain as its argument. This decorator is a wrapper for the \code{Subdomain} class,
+turning \code{sub\_domain} into an indicator via the \code{expression} method.
+Once defined, the penalty term \eqref{eq:sub_dom}
+can be added to the bilinear form by including the
+following line in the \code{bilinear\_form} method:
 \begin{lstlisting}
 def bilinear_form(self, th, xi):
 	#...
 	B += 1e4*self.sb*dot(th, xi)*self.dx
 \end{lstlisting}
-in the \code{bilinear\_form} method.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Numerical results}
