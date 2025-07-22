@@ -290,13 +290,13 @@ Applying the divergence theorem, this structure follows immediatly from the tens
 	If $\Sb_1^+\in W^{1,1}(\Om,\R^{d\times d})$ and $\Sb_1^-\in W^{1,1}(\hold\setminus\overline \Omega,\R^{d\times d})$, 	then we obtain the so-called {\it Hadamard form} or {\it boundary expression} of the shape derivative: 
 	\begin{equation}
 	\label{eq:general_boundary_exp}
-	dJ(\Omega;\theta) = \int_{\partial \Omega} g\, \theta\cdot n,
+	dJ(\Omega;\theta) = \int_{\partial \Omega} G\, \theta\cdot n,
 	\end{equation}
 	with
 	$
-	g :=  [(\Sb_1^+-\Sb_1^-)n]\cdot n,
+	G :=  [(\Sb_1^+-\Sb_1^-)n]\cdot n,
 	$
-	where $+$ and $-$ denote the restrictions of $\Sb_1$ to $\Omega$ and $\hold\setminus\overline \Omega$, respectively. \tred{A: also need to check the notation for the jump.}
+	where $+$ and $-$ denote the traces on $\partial\Om$ of the restrictions of $\Sb_1$ to $\Omega$ and $\hold\setminus\overline \Omega$, respectively. 
 	\end{proposition}
 	See \cite[Proposition~1]{LAURAIN2020328} and \cite[Proposition~4.3]{MR3535238} for proofs of Proposition \ref{tensor_relations} in more general settings.
 	The Hadamard formula \eqref{eq:general_boundary_exp} is the basis for most shape derivative-based numerical methods, such as \cite{MR2033390}.
@@ -509,13 +509,13 @@ respectively.
 \textbf{Hadamard form.} Even though our numerical algorithm is based on the distributed expression~\ref{eq:SDelast_inv}, it is instructive to compute the Hadamard form of the shape derivative, following Proposition~\ref{tensor_relations}.
 Using \eqref{eq:general_boundary_exp} and using the fact that the jump of $|u-v-g|^2$ on $\partial\Om$ vanishes, we get
 \begin{equation}
-	dJ(\Omega;\theta) = \int_{\partial \Omega} g\, \theta\cdot n,
+	dJ(\Omega;\theta) = \int_{\partial \Omega} G\, \theta\cdot n,
 	\end{equation}
 	with
-	$g :=  [G^+- G^-]$ and
+	$G :=  \mathcal{G}^+- \mathcal{G}^-$ and
 \begin{align*}
 	%%%%
-	G & := \left(A_{\Omega}\sigma(u):\epsilon(p) + A_{\Omega}\sigma(v+g):\epsilon(q)\right)\\
+	\mathcal{G} & := \left(A_{\Omega}\sigma(u):\epsilon(p) + A_{\Omega}\sigma(v+g):\epsilon(q)\right)\\
 			  & \quad + A_{\Omega} \left({Du}^{\top}\sigma(p) + {Dp}^{\top}\sigma(u)\right)n\cdot n\\
 			  & \quad + A_{\Omega} \left({Dv}^{\top}\sigma(q) + {Dq}^{\top}\sigma(v+g)\right)n\cdot n \text{ on }\partial\Om.
 \end{align*}
