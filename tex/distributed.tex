@@ -131,7 +131,7 @@ As the literature on topology optimization is very extensive, we only provide ce
 The offer for softwares for shape and topology optimization is growing quickly.
 Along commercial softwares, many open-source softwares have been developed. 
 For topology optimization in structural mechanics, a trend of educational codes started in 2001 with the 99 line Matlab code by Sigmund published in 2001 \cite{Sigmund2014} and followed by an improved version in \cite{Andreassen2010}. Another pioneering code is the FreeFEM implementation \cite{MR2252743}.
-Codes for various platforms have been developed, such as NGsolve \cite{MR4233697}, FEniCS \cite{MR3843884} and Firedrake \cite{Paganini2021}. 
+Codes for various platforms have been developed, such as NGsolve \cite{MR4233697}, FEniCS \cite{BLAUTH2021100646,MR3843884} and Firedrake~\cite{Paganini2021}. 
 See also an open-source Python implementation of the Null Space Optimizer \cite{MR4686093}.
 We refer to  \cite{Gain2013} for a comparison of algorithms.
  
@@ -151,6 +151,7 @@ Another important feature of our approach is that it emphasizes the optimize-the
 As the computational power steadily increases, parallel computing has become commonplace and is often required for large-scale problems. 
 This trend can also be observed in the topology optimization community, with the developments of many educational codes with parallel capabilities recently. 
 Such work include a Julia toolbox \cite{Wegert2025}, a parallel FreeFEM framework \cite{MR4916810}, and a FEniCSx implementation for 2D and 3D topology optimization \cite{Jia2024}.
+The new version of cashocs based on FEniCS also added support for parallelism with MPI \cite{BLAUTH2021100646,BLAUTH2023101577}.
 Naturally, we also propose here an evolution of the distributed shape derivative-based \cite{MR3843884} with parallel capabilities.
 Unlike most educational papers on topology optimization which focus on structural mechanics, our objective here is to offer a broader perspective, considering shape optimization problem with general PDE constraints. We also present standard applications involving linear elasticity as a particular case. Another important focus of the present paper is inverse problems, which benefit greatly from the parralelization of the sources.
 
@@ -316,20 +317,14 @@ We will use the following notation for the shape derivatives of the cost and con
 \label{sec:model_prob}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-In order to illustrate a concrete example of calculation of tensor representation \eqref{ea:volume_form2}, we consider an inverse problem in elasticity. 
+In order to illustrate a concrete example of the calculation of a tensor representation \eqref{ea:volume_form2}, we consider a standard inverse problem in linear elasticity. 
+Other examples of tensor representation of the shape derivative are provided in Section~\ref{sec:results}.
 The uniqueness in determining cavities has been investigated in \cite{MR1772729}.
 The shape sensitivity analysis for a similar problem was investigated in \cite{MEFTAHI20151554}, for a different cost function and using strong formulations rather than weak formulations of the PDEs.
 The focus in \cite{MEFTAHI20151554} is on the Hadamard form rather than the distributed shape derivative.
 \tred{A: in fact there are several issues in \cite{MEFTAHI20151554}, for instance they use strong formulations in the variational formulations but they do not have enough regularity for that. But I don't think we need to discuss that.}
 
 
-\tred{A: should we add another
-subsection with another model problem, for instance heat equation?
-One would just show the result with the tensors $S_1,S_0$.}
-\tblue{J: I think it depends on the number of pages. Now 
-there is a subsection for heat condution problems
-in the numerical results section.
-}
 
 \textbf{Inverse problem.}
 %\tred{A: add figure to illustrate the geometry.}%Ready!
@@ -383,6 +378,8 @@ A_{\Omega} = \kappa\chi_{\Omega} + \chi_{\overline{\mathcal{D}}\setminus\Omega}
 \end{equation}
 See Figure \ref{fig:elast_dom}. In \eqref{eq:cost}, observe that $u$ and $v$ depend on $\Omega$ due to
 the presence of $A_\Omega$ in the above equations.
+We present the model for a single measurement for simplicity. 
+For several measurements, one can simply sum over the measurements in \eqref{eq:cost}.
 
 \tred{A: we need to think if we keep this notation. In the previous paper, the PDE was written $ -\mathrm{div} A_{\Omega} \epsilon(u) = 0$ but $A$ was the Hooke elasticity tensor. Here you use the formulation using $\sigma$ and $A$ is just a scalar. So the notation for $A$ are different in the two papers. This could be confusing. Or maybe we could change the notation for $A$ here. We can discuss that. }
 
@@ -877,7 +874,9 @@ can be found in the documentation of the \code{Model} class.
 %and how the user can play with that. Explain the splitting and the colors.
 %Cite some parts of the codes to explain that.
 
-\tred{A: Here one should start with a paragraph explaining some basic principles of parallelization, for complete beginners, with a simple reference maybe. }
+
+The main principle of parallel computing is to break a large problem into smaller tasks that can be solved independently and simultaneously using multiple processors, typically CPU cores. As the processing power of a single CPU has nearly reached its physical limits, and as data sizes increase and simulations become more detailed, computing in parallel has become essential to overcome these limitations.
+The main challenges in parallel computing are how to divide the problem effectively and how to manage communication and coordination between processors. These must be handled efficiently to ensure that parallelization leads to a significant reduction in computation time.
 
 Our module supports three parallelism paradigms:
 \textit{data parallelism} (\code{DP}),
@@ -1903,6 +1902,8 @@ Figure \ref{fig:compli4}
 \label{sub:heat}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\tred{Also add few references here.}
+
 Let $\Gamma_0$ be a subset of $\Gamma$.
 Let $V$ be a prefixed volume, less than the volume of $\mathcal{D}$.
 Consider the minimization problem
@@ -2087,6 +2088,7 @@ Figure \ref{fig:heat4}
 
 \tred{A: here also some references and emphasize that the PDE is nonlinear.}
 
+Here we provide an example where the PDE constraint is non-linear. \tred{A: should explain how the PDE is solved. Newton?}
 Let $V$ be a prefixed volume, less than the volume of $\mathcal{D}$.
 The problem reads
 \begin{equation} \label{eq:log_cost}
@@ -2097,7 +2099,7 @@ subject to
 \begin{equation}
 	\int_{\mathcal{D}} K_{\Omega} = V,
 \end{equation}
-where $u$ is the solution to
+where $u$ is the solution to \tred{A: should we use $-\Delta$ instead of $-\nabla^2$?}
 \begin{equation}\label{eq:log_prob}
 	\begin{aligned}
 	   -\nabla^2 u &= r u \left(1-\frac{u}{K_\Omega}\right) && \text{in } \mathcal{D}\\
@@ -2116,7 +2118,7 @@ Here, $u$ represents the population size,
 $r$ is a positive constant that represents the growth rate of the population,
 and the positive function $K_{\Omega}$ represents the carrying capacity of the environment.
 
-\eqref{eq:log_prob} is non-linear
+
 
 \noindent\textit{Example.}
 
