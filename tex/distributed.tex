@@ -216,15 +216,23 @@ Let $I$ denote the $d$-dimensional identity matrix.
 Let $\left|\cdot\right|_{\infty}$ denote the infinity norm.
 Given a vector-valued function $w \in H^1(\mathcal{D})^d$,
 $Dw$ denotes its Jacobian matrix.
+We use $\boldsymbol{1}$ for a vector of ones. \tred{A: what is the dimension of $\boldsymbol{1}$ actually?}
 
 
 We consider the following general shape optimization problem with constraints:
 \begin{equation} \label{eq:problem}
-	\min_{\Omega\subset\mathcal{D}} J(\Omega)
-	\quad \text{subject to} \quad C(\Omega) = \boldsymbol{1},
+	\min_{\Omega\subset\mathcal{D}} \mathcal{J}(u,\Omega)
+	\quad \text{subject to} \, C(\Omega) = \boldsymbol{1}, E(u,\Om)=0,
 \end{equation}
-where $J: \mathds{P}\to\R$ is a cost functional, $C: \mathds{P}\to\R$ is a vector-valued constraint function, and $\mathds{P}$ is a set of subsets of $\hold$.
-\tred{A: we should somehow modify this formulation of the problem, so that the PDE constraint is visible. One needs to introduce a reduced cost functional.}
+where $\mathcal{J}: \mathbb{H}\times \mathds{P}\to\R$ is a cost functional, 
+$C: \mathds{P}\to\R$ is a vector-valued constraint function, $E: \mathbb{H}\times \mathds{P}\to\R$ is a PDE constraint for $u$, and $\mathds{P}$ is a set of subsets of $\hold$, $\mathbb{H}$ is an appropriate function space.
+The additional constraint $C(\Omega) = \boldsymbol{1}$ is typically a geometric constraint, such as a volume or perimeter constraint.
+Assuming $u(\Om)$ is the unique solution of $e(u,\Om)=0$,  we introduce the reduced cost functional $J(\Om):= \mathcal{J}(u(\Om),\Om)$ and we consider the problem:
+\begin{equation} \label{eq:problem}
+	\min_{\Omega\subset\mathcal{D}} J(\Omega)
+	\quad \text{subject to} \quad C(\Omega) = \boldsymbol{1}.
+\end{equation}
+
 
 
 For numerical purposes, we need a notion of derivative with respect to the shape $\Om$.
@@ -304,12 +312,11 @@ In this paper we pursue the distributed expression-based approach described in \
 	A Lagrangian approach is employed to compute the tensor representation \eqref{ea:volume_form2}.
 	
 We will use the following notation for the shape derivatives of the cost and constraint functionals:
-\tred{A: need to uniformize notations for shape derivatives.}
 	\begin{equation}
-		dJ(\Omega) \theta = \int_{\mathcal{D}} S_0^J \cdot \theta + S_1^J : D\theta, 
+		dJ(\Omega;\VV) = \int_{\mathcal{D}} S_0^J \cdot \theta + S_1^J : D\theta, 
 	\end{equation}
 	\begin{equation}
-		dC(\Omega) \theta = \int_{\mathcal{D}} S_0^C \cdot \theta + S_1^C : D\theta .
+		dC(\Omega;\VV) = \int_{\mathcal{D}} S_0^C \cdot \theta + S_1^C : D\theta .
 	\end{equation}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -328,7 +335,7 @@ The focus in \cite{MEFTAHI20151554} is on the Hadamard form rather than the dist
 
 \textbf{Inverse problem.}
 %\tred{A: add figure to illustrate the geometry.}%Ready!
-Let $\Gamma_0$, $\Gamma_1$ be subsets of $\Gamma$ such that $\Gamma=\Gamma_1\cup\Gamma_2$.
+Let $\Gamma_0$, $\Gamma_1$ be subsets of $\Gamma$ such that $\Gamma=\Gamma_1\cup\Gamma_2$. \tred{A: do you mean $\Gamma=\Gamma_0\cup\Gamma_1$?}
 Let $H_{\Gamma_0}(\mathcal{D})^d$ be the space of functions
 \begin{equation*}
 	H_{\Gamma_0}(\mathcal{D})^d\coloneqq\left\{ u\in H(\mathcal{D})^{d}\mid u|_{\Gamma_0}=\boldsymbol{0}\right\}. 
@@ -376,12 +383,14 @@ respectively, and $A_{\Omega}:\overline{\mathcal{D}} \rightarrow \mathds{R}$ is 
 A_{\Omega} = \kappa\chi_{\Omega} + \chi_{\overline{\mathcal{D}}\setminus\Omega}
 \quad \text{with }\kappa>0.
 \end{equation}
-See Figure \ref{fig:elast_dom}. In \eqref{eq:cost}, observe that $u$ and $v$ depend on $\Omega$ due to
+See Figure \ref{fig:elast_dom} for an illustration of the geometry. In \eqref{eq:cost}, observe that $u$ and $v$ depend on $\Omega$ due to
 the presence of $A_\Omega$ in the above equations.
 We present the model for a single measurement for simplicity. 
 For several measurements, one can simply sum over the measurements in \eqref{eq:cost}.
 
-\tred{A: we need to think if we keep this notation. In the previous paper, the PDE was written $ -\mathrm{div} A_{\Omega} \epsilon(u) = 0$ but $A$ was the Hooke elasticity tensor. Here you use the formulation using $\sigma$ and $A$ is just a scalar. So the notation for $A$ are different in the two papers. This could be confusing. Or maybe we could change the notation for $A$ here. We can discuss that. }
+% \tred{A: we need to think if we keep this notation. In the previous paper, the PDE was written $ -\mathrm{div} A_{\Omega} \epsilon(u) = 0$ but $A$ was the Hooke elasticity tensor. Here you use the formulation using $\sigma$ and $A$ is just a scalar. So the notation for $A$ are different in the two papers. This could be confusing. Or maybe we could change the notation for $A$ here. We can discuss that. 
+%This notation is more practical for the impementation, as it is uniform for all problems, so we decided to keep it}
+ 
 
 %%%%%%%%%%%%%%%%%%%
 \textbf{The state and adjoint problems.}
@@ -395,6 +404,7 @@ Find $u \in  H^1_{\Gamma_0}(\mathcal{D})^d$ such that
 	\quad
 	\forall \, w \in  H^1_{\Gamma_0}(\mathcal{D})^d.
 \end{equation}
+\tred{A: should we write the regularity of $f,g$? I think the extension should satisfy $g\in H^1(\hold)$.}
 By extending $g$ to the whole domain,
 the weak formulation of \eqref{eq:g-prob}
 is written in such a way that we seek a solution
@@ -448,7 +458,11 @@ Observe that both the state and the adjoint problems are linear.
 
 %%%%%%%%%%%%
 \textbf{Shape derivative components.}
-In order to compensate for the change of variables $x\mapsto T_t(x)$ in the integrlas,  that will be used further to compute the shape derivative, we need to reparameterize the Lagrangian by composing the functions with $T_t^{-1}$; see \cite{MR4531392} for a more detailed explanation. Thus we introduce the so-called shape-Lagrangian as
+Let $T_t:\overline{\hold}\to\overline{\hold}$, $t\in [0,\tau]$ be a diffeomorphism as described in Section~\ref{sec:shape-opt} and $\Om_t := T_t(\Om)$.
+We assume in addition that $T_t=I$ on $\Gamma_1$, where the measurements are taken.
+Note that the Lagrangian $\mathcal{L}$ in \eqref{eq:elastic_lag} depends on $\Om_t$  through $A_{\Om_t}$.
+The standard procedure to compute the shape derivative is to first perform a change of variables $x\mapsto T_t(x)$ in the integrals of $\mathcal{L}$, in order to transform $A_{\Om_t}$ into $A_{\Om}$.
+In order to compensate for this change of variables, one needs to reparameterize $\mathcal{L}$ by composing the functions with $T_t^{-1}$; see \cite{MR4531392} for a more detailed explanation. Thus we introduce the so-called shape-Lagrangian as
 \begin{align*}
 	& \mathcal{G}(t,\varphi,\psi,\rho,\varrho) \\
 	& \coloneqq \mathcal{L}\left(\Omega_{t},\varphi\circ T_{t}^{-1},\psi\circ T_{t}^{-1},\rho\circ T_{t}^{-1},\varrho\circ T_{t}^{-1}\right)
@@ -466,20 +480,20 @@ $\lambda$ and $\mu$. In terms of Kronecker symbols,
 \begin{equation}
 	\mathrm{C}_{ijkl} \coloneqq \lambda \delta_{ij} \delta_{kl} + \mu(\delta_{ik}\delta_{jl} + \delta_{il}\delta_{jk}).
 \end{equation}
-Applying the change of variable $x \mapsto T_t(x)$ and the fact that $T_t=I$ on $\Gamma_1$, we have
+Applying the change of variable $x \mapsto T_t(x)$ and using the fact that $T_t=I$ on $\Gamma_1$, we obtain
 \begin{equation}
 	\mathcal{G}(t,\varphi,\psi,\rho,\varrho) =
 	\mathcal{G}_{\mathrm{cost}} +
 	\mathcal{G}_{\mathrm{state}[f]} +
 	\mathcal{G}_{\mathrm{state}[g]}
 \end{equation}
-with \tred{A: one should mention that the term on $\Gamma_1$ do not have $T_t$ because $T_t$ is the identity on this part of the boundary, correct?}
+with
 \begin{align*}
 	\mathcal{G}_{\mathrm{cost}}     &= \frac{\alpha}{2}\int_{\mathcal{D}}\left|\varphi-\psi-g\circ T_{t}\right|^{2}\xi(t)+\frac{\beta}{2}\int_{\Gamma_{1}}\left|\phi-g\right|^{2}, \\
 	\mathcal{G}_{\mathrm{state}[f]} &= \int_{\mathcal{D}}A_{\Omega}\mathrm{C}E(t,\phi):E(t,\rho)\xi(t)-\int_{\Gamma_{1}}f\cdot\rho, \;\, \text{and}\\
 	\mathcal{G}_{\mathrm{state}[g]} &= \int_{\mathcal{D}}A_{\Omega}\mathrm{C}E(t,\varphi + g\circ T_{t}):E(t,\varrho)\xi(t),
 \end{align*}
-where $\xi(t)=\det DT_t$.
+where $\xi(t):=\det DT_t$.
 Then, one can show that the shape derivative is given as the partial derivative of the shape-Lagrangian with respect to $t$, using for instance the averaged adjoint method \cite{MR3535238} or \cite{MR2731611}.
 This yields
 \begin{equation}
@@ -523,61 +537,86 @@ Using \eqref{eq:general_boundary_exp} and using the fact that the jump of $|u-v-
 \tred{A: maybe there could be some simplifications, but we don't really need to optimize this formula anyway.}
 
 
+% \textbf{Bilinear form.}
+% In addition to the state/adjoint problems and the derivative components,
+% it is necessary to choose a positive bilinear form
+% in order to find a velocity field to compute the level set function.
+% For this problem we choose $B:H_{0}^1(\mathcal{D})^d \times H_{0}^1(\mathcal{D})^d \rightarrow \mathds{R}$
+% defined by
+% \begin{equation} \label{eq:biform}
+% 	B(\theta, \xi) = \int_{\mathcal{D}} {10}^{-1}\theta \cdot \xi + D\theta : D\xi .
+% \end{equation}
+% \tred{A: should probably write $\alpha$ instead of $10^{-1}$, and specify the value of $\alpha$ later.}
 
-\textbf{Bilinear form.}
-In addition to the state/adjoint problems and the derivative components,
-it is necessary to choose a positive bilinear form
-in order to find a velocity field to compute the level set function.
-For this problem we choose $B:H_{0}^1(\mathcal{D})^d \times H_{0}^1(\mathcal{D})^d \rightarrow \mathds{R}$
-defined by
-\begin{equation} \label{eq:biform}
-	B(\theta, \xi) = \int_{\mathcal{D}} {10}^{-1}\theta \cdot \xi + D\theta : D\xi .
-\end{equation}
-\tred{A: should probably write $\alpha$ instead of $10^{-1}$, and specify the value of $\alpha$ later.}
 
-\tred{A: do we need to introduce this bilinear form now? I would rather introduce it later, as it is a separated issue from the shape derivative.}
+\tred{A: regarding the bilinear form, I think you mean that the coefficient is $10^{-1}$ for this inverse problem. I think we should rather write this in the numerical section, in Section \eqref{sec:num_inverse_elasticity}, as it is just a choice of parameter.}
+
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Numerical implementation}\label{sec:numerics}
+\section{Main algorithm}\label{sec:algo}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-The Python module \code{distributed.py} was developed to apply
-the level set method to shape optimization problems.
-It implements the basic level set algorithm (see Algorithm \ref{eq:algo_lv}) using
-the finite element method to solve the weak formulations of all problems involved.
-The shape optimization problem is defined as a model that includes
-all relevant equations and the distributed shape derivatives,
-while sub-problems are addressed using parallel computing methodologies.
 
-This section covers four aspects:
-the main classes and functions provided by \code{distributed.py},
-the construction of the model problem,
-the three parallelism paradigms that were implemented,
-and the numerical methods used to solve the sub-problems.
 
-First, we briefly describe Algorithm~\ref{eq:algo_lv}.
-Given an initial level set function
-$\phi^0:\overline{\mathcal{D}} \rightarrow \mathds{R}$,
-we iteratively solve the state and adjoint equations (steps 4 and 5)
-using the subdomain $\Omega^i$ defined by
+
+
+In this section we describe the main steps of the algorithm, which can be summarized as follows. 
+We employ the level set method, introduced by Osher and Sethian \cite{MR965860}, to update $\Om$. 
+In this method, the shape $\Om$ is represented as the subzero level set of a function $\phi$:
 \begin{equation} \label{eq:subdomain}
-	\Omega^i \coloneqq \left\{x\in\mathcal{D}\mid \phi^i(x)<0\right\},
+	\Omega \coloneqq \left\{x\in\mathcal{D}\mid \phi(x)<0\right\},
 	\quad
-	\phi^i:\overline{\mathcal{D}} \rightarrow \mathds{R}.
+	\phi:\overline{\mathcal{D}} \rightarrow \mathds{R}.
 \end{equation}
-The solutions of these equations are used to construct
-the shape derivative components corresponding to
-the cost functional and constraints (step 9).
-Next, the so-called velocity equation is solved
-(see Subsection \ref{sub:velocity}). This equation uses
-a bilinear form $B$ which must be defined by the user.
-The solution, denoted by $\theta$, is a vector-valued function
-defined on $\overline{\mathcal{D}}$ and is used to update
-the level set function by solving a transport-like equation
-(see Subsection \ref{sub:level}).
-Additional procedures such as reinitialization, the stopping criterion,
-Lagrangian approach for handling constraints, and others
+For a given $\phi$, we start by solving the state and adjoint equations, which are used  to construct the shape derivative components of  \eqref{ea:volume_form2}, which were first computed analytically.
+% Given an initial level set function
+% $\phi^0:\overline{\mathcal{D}} \rightarrow \mathds{R}$,
+% we iteratively solve the state and adjoint equations (steps 4 and 5)
+% using the subdomain $\Omega^i$ defined by
+% \begin{equation} \label{eq:subdomain}
+% 	\Omega^i \coloneqq \left\{x\in\mathcal{D}\mid \phi^i(x)<0\right\},
+% 	\quad
+% 	\phi^i:\overline{\mathcal{D}} \rightarrow \mathds{R}.
+% \end{equation}
+% The solutions of these equations are used to construct
+% the shape derivative components corresponding to
+% the cost functional and constraints (step 9).
+Next, a descent direction $\VV: \overline{\mathcal{D}}\to\R^d$ is computed by solving a so-called {\it velocity equation}:
+Find $\theta\in\mathbb{H}$ such that
+\begin{equation}\label{eq:velocity_eq0} 
+	B(\theta, \xi) = - dJ(\Omega ;\xi)\qquad \forall \; \xi \in \mathbb{H},
+\end{equation}	
+where $dJ(\Omega ;\xi)$ is the distributed expression \eqref{ea:volume_form2} and $B:\mathbb{H}\times \mathbb{H} \rightarrow \mathds{R}$ is a user-defined positive definite bilinear form, with $\mathbb{H}$ an appropriate function space.
+The solution is indeed a descent direction, as  $dJ(\Omega ;\VV) = - B(\VV,\VV)<0
+$.
+The implementation is described in Subsection \ref{sub:velocity}.
+
+
+% Next, the so-called velocity equation is solved
+% (see Subsection \ref{sub:velocity}). This equation uses
+% a bilinear form $B$ which must be defined by the user.
+% The solution, denoted by $\theta$, is a vector-valued function
+% defined on $\overline{\mathcal{D}}$ and is used to update
+% the level set function by solving a transport-like equation
+% (see Subsection \ref{sub:level}).
+
+Further, $\VV$ is used to update
+the level set function by solving the following transport-like equation on a short time interval:
+\begin{equation} \label{eq:transport0}
+	\begin{aligned}
+	\partial_t \phi+\theta\cdot\nabla\phi &= h^2\nabla^2\varphi && x\in \mathcal{D},\, t>0, \\
+						\partial_{n} \phi &= 0 && x\in \partial\mathcal{D},\, t>0, \\
+							   \phi(0, x) &= \phi^{i}(x) && x\in \overline{\mathcal{D}},
+	\end{aligned}
+	\end{equation}
+	where $\phi^{i}$ is the current iteration.
+	The implementation is described in Subsection \ref{sub:level}.
+
+	These are the key steps of the algorithm, summarized in Algorithm~\ref{eq:algo_lv}.
+The numerical implementation also involves other procedures such as reinitialization, the stopping criterion, Lagrangian approach for handling constraints, which
 will be explained in the following subsections.
+
 
 \begin{algorithm}[H] 
 \caption{Level set algorithm} \label{eq:algo_lv}
@@ -593,13 +632,40 @@ will be explained in the following subsections.
 	\State Use $\Omega^i$ and $U$ to calculate the \textbf{constraint} error.
 	\State Use $\Omega^i$, $U$, $P$ to construct the derivative components:
 	\Statex \hspace{1.2em} $S_0^{J}$, $S_1^{J}$ (cost) and $S_0^{C}$, $S_1^{C}$ (constraint).
-	\State Solve the \textbf{velocity} equation \tred{A: add equation reference.} with $S_0^{J}$, $S_1^{J}$, $S_0^{C}$, $S_1^{C}$.
+	\State Solve the \textbf{velocity} equation \eqref{eq:velocity_eq0} with $S_0^{J}$, $S_1^{J}$, $S_0^{C}$, $S_1^{C}$.
 	\Statex \hspace{3em} Let $\theta:\overline{\mathcal{D}} \rightarrow \mathds{R}^d$ be the solution.
-	\State Solve the \textbf{transport} equation \tred{A: add equation reference.} with $\theta$.
+	\State Solve the \textbf{transport} equation \eqref{eq:transport0} with $\theta$.
 	\Statex \hspace{3em} Let $\phi^{i+1}:\overline{\mathcal{D}} \rightarrow \mathds{R}$ be the solution.
 \EndFor
 \end{algorithmic}
 \end{algorithm}
+
+
+
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Numerical implementation}\label{sec:numerics}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+The Python module \code{distributed.py} was developed to apply
+the level set method to shape optimization problems.
+It implements the level set algorithm (see Algorithm \ref{eq:algo_lv}) using
+the finite element method to solve the weak formulations of all problems involved.
+The shape optimization problem is defined as a model that includes
+all relevant equations and the distributed shape derivatives,
+while sub-problems are addressed using parallel computing methodologies.
+
+This section covers four aspects:
+the main classes and functions provided by \code{distributed.py},
+the construction of the model problem,
+the three parallelism paradigms that were implemented,
+and the numerical methods used to solve the sub-problems.
+
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Toolbox structure}
@@ -647,7 +713,7 @@ different parallelism modes:
 These methods must \textbf{not} be overridden.
 
 \item \code{Velocity}:
-This class builds and solves the velocity equation \eqref{eq:velocity}. \tred{A: the equation \eqref{eq:velocity} should appear before this reference, so I suggest to reorganize the paper so that the equations appear before the explanations about the code structure.}
+This class builds and solves the velocity equation \eqref{eq:velocity_eq0}. 
 Since the bilinear form $B$ remains unchanged, the \code{\_\_init\_\_} method
 compiles the left-hand side of the corresponding linear system during initialization.
 Thus, at each iteration, only the right-hand side is updated before solving
@@ -655,7 +721,7 @@ the linear system (see the \code{run} method of this class).
 
 \item \code{Level}:
 This class provides the level set function at each iteration
-by solving the diffusive version of the transport equation \eqref{eq:transport}. \tred{A: same here}
+by solving the diffusive version of the transport equation \eqref{eq:transport0}. 
 The linear system is precompiled during initialization
 (see the \code{\_\_init\_\_} method). 
 Calling the \code{run} method updates the level set function.
@@ -1028,7 +1094,6 @@ $S_0 = S_0^J$ and $S_1 = S_1^J$.
 
 The velocity field $\theta$ is obtained by solving the following weak formulation:
 Find $\theta\in\mathbb{H}$ such that
-\tred{I think it is the same as \eqref{eq:biform}? I would rather write \eqref{eq:biform} here and remove the discussion about the bilinear form in section 3.}
 \begin{equation} \label{eq:velocity}
 	B (\theta, \xi) =
 	- \int_{\mathcal{D}} S_0\cdot\xi + S_1 : D\xi \quad\forall \; \xi \in \mathbb{H},
@@ -1335,8 +1400,11 @@ Internally, the $\code{InitialLevel}$ class
 provides a callable method that uses the
 \code{centers} and \code{radii} arrays to construct $\phi^0$.
 
+%%%%%%%%%%%%%%%%%%%%%%%%
 \noindent \textbf{Dirichlet extension.}
-The Dirichlet extension of a function $u\in H^1(\mathcal{D})^{d}$ is defined 
+In order to compute distributed shape derivatives, one sometimes need to extend functions defined on the boundary to the entire domain $\hold$. 
+This is precisely the case with the boundary measurements $g$ in Section~\ref{sec:model_prob}. 
+For this purpose we consider the Dirichlet extension of a function $u\in H^1(\mathcal{D})^{d}$ \tred{A: in fact it should be $u\in H^1(\Gamma)^{d}$, or even a subset of $\Gamma$? Need to clarify this.} is defined 
 as the solution to the following problem:
 Find $\eta\in H^1(\mathcal{D})^{d}$ such that
 \begin{equation} \label{eq:dir}
@@ -1356,14 +1424,14 @@ we provide the $\code{dir\_extension\_from}$ function, which
 solves \eqref{eq:w-f} and then extend its solution by calling
 $\code{dirichlet\_extension}$.
 
-\tred{A: do we really need the Dirichlet extension? Can one define $g$ directly inside the entire domain in general?}
+% \tred{A: do we really need the Dirichlet extension? Can one define $g$ directly inside the entire domain in general?}
 
-\tblue{J: From my point of view, in the inverse elasticity problem,
-$f$ (force) is applied and $g$ (displacement) is observed.
-Do we could define $g$ and later calculate $f=A_\Omega \sigma(u_g)n$??
-On the other hand, we need a way of extending the Dirichlet data,
-because of problems with non-homogeneous boundary conditions.
-}
+% \tblue{J: From my point of view, in the inverse elasticity problem,
+% $f$ (force) is applied and $g$ (displacement) is observed.
+% Do we could define $g$ and later calculate $f=A_\Omega \sigma(u_g)n$??
+% On the other hand, we need a way of extending the Dirichlet data,
+% because of problems with non-homogeneous boundary conditions.
+% }
 
 \noindent \textbf{Mesh diameter.}
 We define the mesh diameter $h$ as
@@ -1426,7 +1494,7 @@ def bilinear_form(self, th, xi):
 %Inverse elasticity 2D or 3D, Compliance 2D or 3D? Heat equation?
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Inverse Elasticity}
+\subsection{Inverse Elasticity}\label{sec:num_inverse_elasticity}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 We consider the inverse elasticity problem described in Section~\ref{sec:model_prob}, where the distributed shape derivative has been computed.
@@ -2169,6 +2237,8 @@ The extension to higher-order tensor representation of shape derivatives should 
 The extension to tensor representations including boundary term is important for applications, but is more delicate from an implementation point of view, as it will require more complex discretization methods to handle the boundary terms \tred{A: cite CUTfem, Xfem, etc ... } 
 Other natural extensions are time-dependent problems and  automatic differentiation capabilities \cite{MR4233697,Paganini2021} to compute the adjoint and shape derivative.
 
+
+\tred{A: I am also thinking that we do not have a test with many sources or measurements, to illustrate the task and mixed parallelisms. Maybe we could try the elastic inverse problem with more sources (with small compact support maybe), like 12 sources? Or maybe define a sort of simplified EIT with more sources. I think I will try to implement this module myself. }
 
 \end{multicols} 
 
