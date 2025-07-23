@@ -2165,12 +2165,13 @@ The problem reads
 \end{equation}
 subject to
 \begin{equation}
-	\int_{\mathcal{D}} K_{\Omega} = V,
+	\int_{\mathcal{D}} \chi_{\Omega} = V,
 \end{equation}
-where $u$ is the solution to \tred{A: should we use $-\Delta$ instead of $-\nabla^2$?}
+where $u$ is the solution to
+%\tred{A: should we use $-\Delta$ instead of $-\nabla^2$?}
 \begin{equation}\label{eq:log_prob}
 	\begin{aligned}
-	   -\nabla^2 u &= r u \left(1-\frac{u}{K_\Omega}\right) && \text{in } \mathcal{D}\\
+	   -\Delta u &= r u \left(1-\frac{u}{K_\Omega}\right) && \text{in } \mathcal{D}\\
 	\partial_{n} u &= 0 && \text{on } \Gamma   
 	\end{aligned}
 \end{equation}
@@ -2180,23 +2181,58 @@ and $K_{\Omega}:\overline{\mathcal{D}} \rightarrow \mathds{R}$ is given by
 \end{equation}
 According to \eqref{eq:problem}, the constraint function for this problem is written as
 \begin{equation}
-	C(\Omega) = \frac{1}{V} \int_{\mathcal{D}} K_{\Omega}.
+	C(\Omega) = \frac{1}{V} \int_{\mathcal{D}} \chi_{\Omega}.
 \end{equation}
 Here, $u$ represents the population size,
 $r$ is a positive constant that represents the growth rate of the population,
 and the positive function $K_{\Omega}$ represents the carrying capacity of the environment.
 
+weak formulation
+\begin{equation}
+	\int_{\mathcal{D}}\nabla u \cdot \nabla v =
+    \int_{\mathcal{D}}ru\left(1-\frac{u}{K_{\Omega}}\right)v
+    \quad
+    \forall \, v \in  H^1(\mathcal{D})
+\end{equation}
+
+adjoint equation
+\begin{equation}
+	\int_{\mathcal{D}}\nabla p \cdot \nabla q +
+    \int_{\mathcal{D}}r\left(\frac{2u}{K_{\Omega}}-1\right)pq = 
+    \int_{\mathcal{D}}q
+    \quad
+    \forall \, q \in  H^1(\mathcal{D})
+\end{equation}
+
+derivative components
+\begin{align*}
+	S^J_0 &= \boldsymbol{0},\\
+	S^J_1 &= \left(\nabla u\cdot\nabla p-u-ru\left(1-\frac{u}{K_{\Omega}}\right)p\right)I \\
+		  &-(\nabla u\otimes\nabla p+\nabla p\otimes\nabla u)	
+\end{align*}
+\begin{equation*}
+	S_0^C = \boldsymbol{0}, \quad S_1^C = \frac{1}{V} \chi_{\Omega}I.
+\end{equation*}
 
 
 \noindent\textit{Example.}
-
-$V=0.5$
+We solve problem \eqref{eq:log_cost}--\eqref{eq:log_prob} on
+the domain $\mathcal{D} = (0,1)\times(0,1)$
+subject to a resource constraint $V=0.5$, which correspond to half
+the area of the domain.
+Tests for several values of $r$ are performed; see Figure~\ref{fig:log}.
+All tests are performed using data parallelism across two processes:
 
 \begin{lstlisting}
-mpirun -np 2 python test.py 14 # Data
-mpirun -np 2 python test.py 15 # Data
-mpirun -np 2 python test.py 16 # Data	 
+mpirun -np 2 python test.py 14 # Data (r=10)
+mpirun -np 2 python test.py 15 # Data (r=40)
+mpirun -np 2 python test.py 16 # Data (r=100)	 
 \end{lstlisting}
+
+initial guess
+\begin{equation}
+	u_0(x,y)=1 + 0.2 \sin(6\pi x)\sin(6\pi y)
+\end{equation}
 
 \begin{center}
 \includegraphics[width=0.48\linewidth]{log_0.png}
@@ -2206,8 +2242,9 @@ mpirun -np 2 python test.py 16 # Data
 \hfill
 \includegraphics[width=0.48\linewidth]{log_3.png}
 \captionof{figure}{
-	Initial guess and
-	optimized designs for $r=10$, $40$, and $100$.
+	Initial guess (top-left) and
+	optimized designs for $r=10$ (top-right),
+	$r=40$ (bottom-left), and $r=100$ (bottom-right).
 }
 \label{fig:log}
 \end{center}
