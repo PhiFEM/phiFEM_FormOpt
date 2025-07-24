@@ -1972,6 +1972,8 @@ Figure \ref{fig:compli4}
 
 \tred{Also add few references here.}
 
+\cite{GAO2008805}
+
 Let $\Gamma_0$ be a subset of $\Gamma$.
 Let $V$ be a prefixed volume, less than the volume of $\mathcal{D}$.
 Consider the minimization problem
@@ -2187,33 +2189,43 @@ Here, $u$ represents the population size,
 $r$ is a positive constant that represents the growth rate of the population,
 and the positive function $K_{\Omega}$ represents the carrying capacity of the environment.
 
-weak formulation
-\begin{equation}
+The weak formulation of \eqref{eq:log_prob} is the following:
+Find $u\in H^1(\mathcal{D})$ such that
+\begin{equation}\label{eq:log_weak}
 	\int_{\mathcal{D}}\nabla u \cdot \nabla v =
     \int_{\mathcal{D}}ru\left(1-\frac{u}{K_{\Omega}}\right)v
     \quad
     \forall \, v \in  H^1(\mathcal{D})
 \end{equation}
-
-adjoint equation
-\begin{equation}
+In the same manner as ?,
+from the Lagrangian functional we can obtain
+the adjoint equation:
+Find $p\in H^1(\mathcal{D})$ such that
+\begin{equation*}
 	\int_{\mathcal{D}}\nabla p \cdot \nabla q +
     \int_{\mathcal{D}}r\left(\frac{2u}{K_{\Omega}}-1\right)pq = 
     \int_{\mathcal{D}}q
     \quad
     \forall \, q \in  H^1(\mathcal{D})
-\end{equation}
-
-derivative components
+\end{equation*}
+The derivative components
+of the cost functional and the constraint are
 \begin{align*}
 	S^J_0 &= \boldsymbol{0},\\
 	S^J_1 &= \left(\nabla u\cdot\nabla p-u-ru\left(1-\frac{u}{K_{\Omega}}\right)p\right)I \\
 		  &-(\nabla u\otimes\nabla p+\nabla p\otimes\nabla u)	
 \end{align*}
+and
 \begin{equation*}
 	S_0^C = \boldsymbol{0}, \quad S_1^C = \frac{1}{V} \chi_{\Omega}I.
 \end{equation*}
-
+The bilinear form used in this problem was
+\begin{equation*}
+	B(\theta, \xi) =
+	\int_{\mathcal{D}} D\theta : D\xi +
+	{10}^4 \int_{\partial \mathcal{D}}  (\theta \cdot n) (\xi \cdot n),	
+\end{equation*}
+with $\mathbb{H}=H^1(\mathcal{D})$.
 
 \noindent\textit{Example.}
 We solve problem \eqref{eq:log_cost}--\eqref{eq:log_prob} on
@@ -2229,10 +2241,17 @@ mpirun -np 2 python test.py 15 # Data (r=40)
 mpirun -np 2 python test.py 16 # Data (r=100)	 
 \end{lstlisting}
 
-initial guess
-\begin{equation}
+For Newton method, we pass
+the derivative $DF(u,\cdot)(\delta u)$
+of the state equation $F(u,\cdot)=0$ (equation \eqref{eq:log_weak})
+and the positive function
+\begin{equation*}
 	u_0(x,y)=1 + 0.2 \sin(6\pi x)\sin(6\pi y)
-\end{equation}
+	\quad
+	(x,y)\in\overline{\mathcal{D}}
+\end{equation*}
+to start the iterations.
+
 
 \begin{center}
 \includegraphics[width=0.48\linewidth]{log_0.png}
@@ -2245,6 +2264,8 @@ initial guess
 	Initial guess (top-left) and
 	optimized designs for $r=10$ (top-right),
 	$r=40$ (bottom-left), and $r=100$ (bottom-right).
+	The stop criterion was satisfied at
+	$138$, $105$, and $83$ iterations, respectively.
 }
 \label{fig:log}
 \end{center}
