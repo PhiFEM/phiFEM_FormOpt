@@ -3,6 +3,7 @@ code/ParaView
 code/deprecated/
 code/__pycache__/
 code/Links
+code/mytest.py
 *.lyx~
 *.npz
 *.npy
