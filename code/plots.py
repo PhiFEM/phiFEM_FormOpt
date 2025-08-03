@@ -23,7 +23,7 @@ from mpi4py import MPI
 rank = MPI.COMM_WORLD.rank
 
 
-def plot_tutorial(h5file, size):
+def plot_tutorial(h5file, size, limits = None, filenames = [None, None]):
     
     with h5py.File(h5file, "r") as f:
         
@@ -34,11 +34,11 @@ def plot_tutorial(h5file, size):
         niter = len(list(phi_group.keys())) - 1
         
         plot_level(
-            2, points, cells, phi_group["0"][:, 0], figsize = size, title = "Iteration 0"
+            2, points, cells, phi_group["0"][:, 0], figsize = size, lims=limits, filename=filenames[0]
         )
 
         plot_level(
-            2, points, cells, phi_group[str(niter)][:, 0], figsize = size, title = "Iteration "+str(niter)
+            2, points, cells, phi_group[str(niter)][:, 0], figsize = size, lims=limits, filename=filenames[1]
         )
 
 def InitialLevel(centers, radii, ftr = 1.0):
@@ -263,7 +263,7 @@ def plot_2D_spacial(x_coords, y_coords, cells, values, figsize = None, save_path
     else:
         plt.show()
 
-def plot_level(dim, points, cells, values, boundaries = None, figsize = None, title = None, filename = None):
+def plot_level(dim, points, cells, values, lims = None, boundaries = None, figsize = None, title = None, filename = None):
     if dim == 2:
         x_coords, y_coords = points[:, 0], points[:, 1]
         x_range = x_coords.max() - x_coords.min()
@@ -277,11 +277,23 @@ def plot_level(dim, points, cells, values, boundaries = None, figsize = None, ti
             triang,
             values,
             levels = [min(values), 0., max(values)],
-            colors = ["black", "lightgray"] 
+            colors = ["black", (0.9, 0.9, 0.9)] 
         )
         ax.set_aspect('equal')
-        ax.set_xlim(x_coords.min() - eps, x_coords.max() + eps)
-        ax.set_ylim(y_coords.min() - eps, y_coords.max() + eps)
+        if lims:
+            ax.set_xlim(lims[0])
+            ax.set_ylim(lims[1])
+            ax.set_xticks([])
+            ax.set_yticks([])
+            ax.tick_params(bottom=False, left=False)
+            for spine in ax.spines.values():
+                spine.set_visible(False)
+            #ax.set_position([0, 0, 1, 1])
+        else:
+            ax.set_xlim(x_coords.min() - eps, x_coords.max() + eps)
+            ax.set_ylim(y_coords.min() - eps, y_coords.max() + eps)
+        
+        fig.tight_layout()
         
         if title:
             ax.set_title(title)
@@ -290,10 +302,10 @@ def plot_level(dim, points, cells, values, boundaries = None, figsize = None, ti
             for xy, cl in boundaries:
                 ax.plot(xy[:, 0], xy[:, 1], color = cl)
 
-        fig.tight_layout()
 
         if filename:
-            plt.savefig(filename, format = filename.suffix[1:], dpi = 300)
+            # format = filename.suffix[1:]
+            plt.savefig(filename, dpi = 300, pad_inches=0, bbox_inches='tight')
             plt.close()
         else:
             plt.show()
@@ -472,32 +484,29 @@ def plot_cost(cost_values, figsize = None, filename = None):
     else:
         plt.show()
 
-def plot_lag2(cost_values,
-              label, 
-              extra_values, 
-              extra_label, 
-              figsize=None, 
-              filename=None):
+def plot_lag2(values, label, extra_values, extra_label, ylimits=None, figsize=None, filename=None):
     """
     Plots the cost function values for each iteration and optionally another array.
 
     Parameters:
-        cost_values (list or numpy array): Array of positive real values representing the cost function J.
+        values (list or numpy array): Array of positive real values representing the cost function J.
         extra_values (list or numpy array, optional): Another array to plot for comparison (e.g., validation cost).
         extra_label (str, optional): Label for the extra plot line. Default is "Extra".
         figsize (tuple, optional): Figure size passed to matplotlib.
         filename (Path or str, optional): If provided, saves the plot to the specified path. Default is None.
     """
-    iterations = np.arange(len(cost_values))
+    iterations = np.arange(len(values))
 
     fig, ax = plt.subplots(figsize=figsize)
-    ax.plot(iterations, cost_values, color="black", linewidth=2, label=label)
+    ax.plot(iterations, values, color="black", linewidth=2, label=label)
 
     extra_iterations = np.arange(len(extra_values))
     ax.plot(extra_iterations, extra_values, color="black", linestyle="--", linewidth=2, label=extra_label)
 
     #ax.set_xlabel("Iterations")
     #ax.set_ylabel("Lagragangian values")
+    if ylimits:
+        ax.set_ylim(ylimits)
     ax.grid(True, linestyle="--", alpha=0.7)
     ax.legend()
     fig.tight_layout()

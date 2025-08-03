@@ -39,7 +39,7 @@ test_13 : Heat conduction with two sinks (multiple) - Task Parallelism
 test_14 : Logistic equation (r = 10) - Data Parallelism
 test_15 : Logistic equation (r = 40) - Data Parallelism
 test_16 : Logistic equation (r = 90) - Data Parallelism
-test_17 : ?
+test_17 : Logistic equation with domain-dependent growth rate (It does not work)
 test_18 : Cantilever with two loads II - Task Parallelism
 test_19 : ?
 test_20 : Symmetric Cantilever 2D (non-rectangular domain) - Data Parallelism
@@ -1725,7 +1725,7 @@ def test_11():
         niter=250,
         dfactor=1.0,
         ctrn_tol=1e-3,
-        lgrn_tol=1e-2,
+        lgrn_tol=1e-3,
         smooth=True,
         reinit_step=6,
         reinit_pars=(8, 0.01)
@@ -2077,14 +2077,15 @@ def test_14(test_path = Path("../results/t14/"), r = 10.0):
     md.save_initial_level(comm)
 
     md.runDP(
-        niter = 300,
-        lv_iter = (10, 16),
-        lv_time = (1e-3, 1.0),
-        reinit_step = 6,
-        reinit_pars = (20, 0.1),
-        ctrn_tol = 1e-3,
-        dfactor = 1.0,
-        smooth = True
+        niter=300,
+        lv_iter=(10, 16),
+        lv_time=(1e-3, 1.0),
+        reinit_step=6,
+        reinit_pars=(20, 0.1),
+        ctrn_tol=1e-3,
+        lgrn_tol=1e-3,
+        dfactor=1.0,
+        smooth=True
     )
 
 
@@ -2136,38 +2137,39 @@ def test_17(test_path = Path("../results/t17/"), vol = 0.3):
     )
 
     md.ini_func = lambda x: (
-        10.0 + 0.1*np.sin(6 * np.pi * x[0]) * np.sin(6 * np.pi * x[1])
+        10 + 0.2 * np.sin(6 * np.pi * x[0]) * np.sin(6 * np.pi * x[1])
     )
     
     md.d = 0.01
     md.vol = vol
     md.name = "R"
-    md.args = (1.0, 0.0)
+    md.args = (1.0, 0.001)
 
     # Initial guess: centers and radii
     centers = []
     
     centers += [(0, 0.25*i) for i in range(5)]
-    centers += [(0.25, 0.25*i) for i in range(5)]
-    centers += [(0.5, 0.25*i) for i in range(5)]
-    centers += [(0.75, 0.25*i) for i in range(5)]
+    #centers += [(0.25, 0.25*i+0.125) for i in range(4)]
+    #centers += [(0.5, 0.25*i) for i in range(5)]
+    #centers += [(0.75, 0.25*i+0.125) for i in range(4)]
     centers += [(1, 0.25*i) for i in range(5)]
     
     centers = np.array(centers)
-    radii = np.repeat(0.1, centers.shape[0])
+    radii = np.repeat(0.05, centers.shape[0])
     
     md.create_initial_level(centers, radii, factor = -1.0)
     md.save_initial_level(comm)
 
     md.runDP(
-        niter = 200,
-        lv_iter = (10, 16),
-        lv_time = (1e-3, 1.0),
-        reinit_step = 6,
-        reinit_pars = (20, 0.1),
-        ctrn_tol = 1e-3,
-        dfactor = 0.1,
-        smooth = True
+        niter=300,
+        lv_iter=(10, 16),
+        lv_time=(1e-3, 0.1),
+        reinit_step=6,
+        reinit_pars=(20, 0.1),
+        ctrn_tol=1e-3,
+        lgrn_tol=1e-3,
+        dfactor=100.0,
+        smooth=True
     )
 
 
@@ -2290,13 +2292,13 @@ def test_18():
     
     # Run Task Parallelism
     md.runTP(
-        niter = 200,
-        ctrn_tol = 1e-3,
-        dfactor = 1e-1,
-        lv_time = (0.001, 1.0),
-        reinit_step = 4,
-        reinit_pars = (16, 0.05),
-        smooth = True
+        niter=100,
+        ctrn_tol=1e-3,
+        lgrn_tol=1e-3,
+        dfactor=1e-1,
+        reinit_step=4,
+        reinit_pars=(16, 0.02),
+        smooth=True
     )
 
 
@@ -2652,12 +2654,12 @@ def test_20():
     )
 
     # Initial guess: centers and radii
-    centers = [(0.0, 0.5), (2.0, 0.35), (2.0, 0.65)]
-    centers += [((1+i)*0.25, 0.0) for i in range(8)]
-    centers += [(i*0.5, 0.25) for i in range(5)]
+    centers = [(0.0, 0.5)]
+    centers += [((1+i)*0.25, 0.0) for i in range(4)]
+    centers += [(i*0.5, 0.25) for i in range(4)]
     centers += [(0.25 + i*0.5, 0.5) for i in range(4)]
-    centers += [(i*0.5, 0.75) for i in range(5)]
-    centers += [((1+i)*0.25, 1.0) for i in range(8)]
+    centers += [(i*0.5, 0.75) for i in range(4)]
+    centers += [((1+i)*0.25, 1.0) for i in range(4)]
 
     centers = np.array(centers)
     radii = np.repeat(0.1, centers.shape[0])

@@ -715,7 +715,7 @@ class PPL:
         """
         Returns the value of the Lagrangian functional.
         """
-        return cost + np.inner(self.lm, self.ct - self.zs) + \
+        return cost + np.inner(self.lm, self.ct - self.ones - self.zs) + \
             np.inner(self.mu, self.zs) + \
             self.alpha*np.inner(self.zs, self.zs)/2.0 - \
             self.beta*np.inner(self.lm - self.mu, self.lm - self.mu)/2.0
