@@ -33,16 +33,18 @@ test_07 : Elasticity Inverse Problem - Task Parallelism
 test_08 : Elasticity Inverse Problem - Mixed Parallelism
 test_09 : Heat conduction 1 - Data Parallelism
 test_10 : Heat conduction 2 - Data Parallelism
-test_11 : Heat conduction with one load - Data Parallelism
-test_12 : Heat conduction 2 - Data Parallelism
-test_13 : Heat conduction with two sinks - Task Parallelism
+test_11 : Heat conduction with one source - Data Parallelism
+test_12 : Heat conduction with two sinks (single) - Data Parallelism
+test_13 : Heat conduction with two sinks (multiple) - Task Parallelism
 test_14 : Logistic equation (r = 10) - Data Parallelism
 test_15 : Logistic equation (r = 40) - Data Parallelism
 test_16 : Logistic equation (r = 90) - Data Parallelism
 test_17 : ?
-test_18 : Cantilever with two loads II (Task Parallelism)
+test_18 : Cantilever with two loads II - Task Parallelism
 test_19 : ?
 test_20 : Symmetric Cantilever 2D (non-rectangular domain) - Data Parallelism
+test_21 : Heat conduction with four sources (single) - Data Parallelism
+test_22 : Heat conduction with four sources (multiple) - Task Parallelism
 """
 
 
@@ -1640,7 +1642,7 @@ def test_10():
 
 def test_11():
     """
-    Heat conduction with one load - Data Parallelism
+    Heat conduction with one source - Data Parallelism
 
     Run `mpirun -np <nbr of processes> python test.py 11`.
     For instance, `mpirun -np 2 python test.py 11`.
@@ -1649,7 +1651,7 @@ def test_11():
     To delete the images, enter `rm ../results/t11/*.png`.
     """
 
-    test_name = "Heat conduction with one load - Data Parallelism"
+    test_name = "Heat conduction with one source - Data Parallelism"
     test_path = Path("../results/t11/")
     dim = 2
     rank_dim = 1
@@ -1732,7 +1734,7 @@ def test_11():
 
 def test_12():
     """
-    Heat conduction 3 - Data Parallelism
+    Heat conduction with two sinks (single) - Data Parallelism
 
     Run `mpirun -np <nbr of processes> python test.py 12`.
     For instance, `mpirun -np 2 python test.py 12`.
@@ -1741,7 +1743,7 @@ def test_12():
     To delete the images, enter `rm ../results/t12/*.png`.
     """
 
-    test_name = "Heat conduction 3 - Data Parallelism"
+    test_name = "Heat conduction with two sinks (single) - Data Parallelism"
     test_path = Path("../results/t12/")
     dim = 2
     rank_dim = 1
@@ -1867,7 +1869,7 @@ def test_12():
 
 def test_13():
     """
-    Heat conduction with two sinks - Task Parallelism
+    Heat conduction with two sinks (multiple) - Task Parallelism
 
     Run `mpirun -np <nbr of processes> python test.py 13`.
     For instance, `mpirun -np 2 python test.py 13`.
@@ -1883,7 +1885,7 @@ def test_13():
 
     comm_self = MPI.COMM_SELF
 
-    test_name = "Heat conduction with two sinks - Task Parallelism"
+    test_name = "Heat conduction with two sinks (multiple) - Task Parallelism"
     test_path = Path("../results/t13/")
     dim = 2
     rank_dim = 1
@@ -1929,11 +1931,13 @@ def test_13():
         domain, space, boundary_tags,
         [dir1_mkr, dir2_mkr], rank_dim
     )
+    
+    dir_bcs = [[dirichlet_bcs[0]], [dirichlet_bcs[1]]]
 
     area = 0.4
     # Create the model
     md = HeatPlus(
-        dim, domain, space, dirichlet_bcs, area, test_path
+        dim, domain, space, dir_bcs, area, test_path
     )
 
     @dib.region_of(domain)
@@ -1963,7 +1967,7 @@ def test_13():
         sub_domain2.expression()
     ]
 
-    md.wts = [0.5, 0.5]
+    md.wt = [0.5, 0.5]
 
     centers_b = [
         (0.1, 0.0),
@@ -2575,6 +2579,7 @@ def test_19():
         cost_tol = 1e-3
     )
 
+
 def test_20():
     """
     Symmetric Cantilever 2D (non-rectangular domain) - Data Parallelism
@@ -2646,21 +2651,7 @@ def test_20():
         dirichlet_bcs, area, test_path
     )
 
-    @dib.region_of(domain)
-    def sub_domain(x):
-        # 0.42 < x[1] < 0.58
-        # 1.95 < x[0]
-        ineqs = [
-            x[1] - 0.42,
-            0.58 - x[1],
-            x[0] - 1.90
-        ]
-        return ineqs
-    
-    md.sub = [sub_domain.expression()]
-
     # Initial guess: centers and radii
-    
     centers = [(0.0, 0.5), (2.0, 0.35), (2.0, 0.65)]
     centers += [((1+i)*0.25, 0.0) for i in range(8)]
     centers += [(i*0.5, 0.25) for i in range(5)]
@@ -2687,6 +2678,252 @@ def test_20():
     )
 
 
+def test_21():
+    """
+    Heat conduction with four sources (single) - Data Parallelism
+
+    Run `mpirun -np <nbr of processes> python test.py 21`.
+    For instance, `mpirun -np 2 python test.py 21`.
+    
+    To save the output, append `> ../results/t21/out.txt`.
+    To delete the images, enter `rm ../results/t21/*.png`.
+
+    Description:
+    This test considers four localized heat sources,
+    represented as radial functions with compact support,
+    and four sinks at the domain corners, imposed through
+    homogeneous Dirichlet boundary conditions. 
+    """
+
+    test_name = "Heat conduction with four sources (single) - Data Parallelism"
+    test_path = Path("../results/t21/")
+    dim = 2
+    rank_dim = 1
+    mesh_size = 1e-2
+
+    vertices = np.array([
+        [0.05, 0.0],
+        [0.95, 0.0],
+        [1.0, 0.05],
+        [1.0, 0.95],
+        [0.95, 1.0],
+        [0.05, 1.0],
+        [0.0, 0.95],
+        [0.0, 0.05]
+    ])
+
+    dir1_idx, dir1_mkr = [2], 1
+    dir2_idx, dir2_mkr = [4], 2
+    dir3_idx, dir3_mkr = [6], 3
+    dir4_idx, dir4_mkr = [8], 4
+    
+    boundary_parts = [
+        (dir1_idx, dir1_mkr, "dir1"),
+        (dir2_idx, dir2_mkr, "dir2"),
+        (dir3_idx, dir3_mkr, "dir3"),
+        (dir4_idx, dir4_mkr, "dir4")
+    ]
+
+    # Create gmsh domain for Data Parallelism
+    output = dib.create_domain_2d_DP(
+        vertices, boundary_parts, mesh_size,
+        path = test_path,
+        plot = True
+    )
+
+    domain, nbr_tri, boundary_tags = output
+
+    if rank == 0:
+        print("\n\t" + test_name + "\n")
+        print(f"> Path = {test_path}")
+        print(f"> Nbr of triangles = {nbr_tri}")
+
+    # Space
+    space = dib.create_space(domain, "CG", rank_dim)
+    # Dirichlet conditions
+    dirichlet_bcs = dib.homogeneous_dirichlet(
+        domain, space, boundary_tags, [dir1_mkr, dir2_mkr, dir3_mkr, dir4_mkr], rank_dim
+    )
+
+    area = 0.45
+    # Create the model
+    md = Heat(
+        dim, domain, space, dirichlet_bcs, area, test_path, "4Loads"
+    )
+    centers = []
+    
+    # Diagonal balls
+    centers += [(0.2+i*0.12,0.2+i*0.12) for i in range(6)]
+    centers += [(0.8-i*0.12,0.2+i*0.12) for i in range(6)]
+    
+    # Boundary balls
+    centers += [(0.1+i*0.1, 0.0) for i in range(9)]
+    centers += [(0.1+i*0.1, 1.0) for i in range(9)]
+    centers += [(0.0, 0.1+i*0.1) for i in range(9)]
+    centers += [(1.0, 0.1+i*0.1) for i in range(9)]
+
+    centers += [(0.2, 0.32), (0.32, 0.2)]
+    centers += [(0.8, 0.32), (0.68, 0.2)]
+    centers += [(0.8, 0.68), (0.68, 0.8)]
+    centers += [(0.2, 0.68), (0.32, 0.8)]
+   
+    centers = np.array(centers)
+    radii = np.repeat(0.05, centers.shape[0])
+
+    md.create_initial_level(centers, radii)
+    md.save_initial_level(comm)
+    
+    md.runDP(
+        dfactor=1.0,
+        ctrn_tol=1e-3,
+        smooth=True,
+        reinit_step=4,
+        reinit_pars=(12, 0.01)
+    )
+
+
+def test_22():
+    """
+    Heat conduction with four sources (multiple) - Task Parallelism
+
+    Run `mpirun -np 4 python test.py 22`.
+
+    To save the output, append `> ../results/t22/out.txt`.
+    To delete the images, enter `rm ../results/t22/*.png`.
+
+    Description:
+    This test considers four problems, each with one
+    localized heat source represented as a radial function with compact support.
+    In all problems, four sinks are located at the domain corners and imposed
+    through homogeneous Dirichlet boundary conditions.
+    """
+
+    task_nbr = 4
+    if size != task_nbr:
+        print(f"Number of processes must be = {task_nbr}")
+        return
+    
+    comm_self = MPI.COMM_SELF
+
+    test_name = "Heat conduction with four sources (multiple) - Task Parallelism"
+    test_path = Path("../results/t22/")
+    dim = 2
+    rank_dim = 1
+    mesh_size = 1e-2
+
+    vertices = np.array([
+        [0.05, 0.0],
+        [0.95, 0.0],
+        [1.0, 0.05],
+        [1.0, 0.95],
+        [0.95, 1.0],
+        [0.05, 1.0],
+        [0.0, 0.95],
+        [0.0, 0.05]
+    ])
+
+    dir1_idx, dir1_mkr = [2], 1
+    dir2_idx, dir2_mkr = [4], 2
+    dir3_idx, dir3_mkr = [6], 3
+    dir4_idx, dir4_mkr = [8], 4
+    
+    boundary_parts = [
+        (dir1_idx, dir1_mkr, "dir1"),
+        (dir2_idx, dir2_mkr, "dir2"),
+        (dir3_idx, dir3_mkr, "dir3"),
+        (dir4_idx, dir4_mkr, "dir4")
+    ]
+
+    # Create gmsh domain for Task Parallelism
+    output = dib.create_domain_2d_TP(
+        vertices, boundary_parts, mesh_size,
+        path = test_path,
+        plot = True
+    )
+
+    domain, nbr_tri, boundary_tags = output
+
+    if rank == 0:
+        print("\n\t" + test_name + "\n")
+        print(f"> Path = {test_path}")
+        print(f"> Nbr of triangles = {nbr_tri}")
+
+    # Space
+    space = dib.create_space(domain, "CG", rank_dim)
+    # Dirichlet conditions
+    dirichlet_bcs = dib.homogeneous_dirichlet(
+        domain, space, boundary_tags, [dir1_mkr, dir2_mkr, dir3_mkr, dir4_mkr], rank_dim
+    )
+    dir_bcs = 4*[dirichlet_bcs]
+    area = 0.45
+    # Create the model
+    md = HeatPlus(
+        dim, domain, space, dir_bcs, area, test_path
+    )
+
+    md.f = [
+        md.source(0.5, 0.25, max_value = 50.0, epsilon = 0.1),
+        md.source(0.75, 0.5, max_value = 50.0, epsilon = 0.1),
+        md.source(0.5, 0.75, max_value = 50.0, epsilon = 0.1),
+        md.source(0.25, 0.5, max_value = 50.0, epsilon = 0.1)
+    ]
+    md.wt = [0.25, 0.25, 0.25, 0.25]
+    centers = []
+
+    @dib.region_of(domain)
+    def sub_domain1(x):
+        return [0.12**2 - (x[0] - 0.5)**2 - (x[1] - 0.25)**2]
+    
+    @dib.region_of(domain)
+    def sub_domain2(x):
+        return [0.12**2 - (x[0] - 0.75)**2 - (x[1] - 0.5)**2]
+    
+    @dib.region_of(domain)
+    def sub_domain3(x):
+        return [0.12**2 - (x[0] - 0.5)**2 - (x[1] - 0.75)**2]
+    
+    @dib.region_of(domain)
+    def sub_domain4(x):
+        return [0.12**2 - (x[0] - 0.25)**2 - (x[1] - 0.5)**2]
+    
+    md.sub = [
+        sub_domain1.expression(),
+        sub_domain2.expression(),
+        sub_domain3.expression(),
+        sub_domain4.expression()
+    ]
+
+    # Diagonal balls
+    centers += [(0.2+i*0.12,0.2+i*0.12) for i in range(6)]
+    centers += [(0.8-i*0.12,0.2+i*0.12) for i in range(6)]
+    
+    # Boundary balls
+    centers += [(0.1+i*0.1, 0.0) for i in range(9)]
+    centers += [(0.1+i*0.1, 1.0) for i in range(9)]
+    centers += [(0.0, 0.1+i*0.1) for i in range(9)]
+    centers += [(1.0, 0.1+i*0.1) for i in range(9)]
+
+    centers += [(0.2, 0.32), (0.32, 0.2)]
+    centers += [(0.8, 0.32), (0.68, 0.2)]
+    centers += [(0.8, 0.68), (0.68, 0.8)]
+    centers += [(0.2, 0.68), (0.32, 0.8)]
+
+    centers = np.array(centers)
+    radii = np.repeat(0.05, centers.shape[0])
+
+    md.create_initial_level(centers, radii)
+    if rank == 0:
+        md.save_initial_level(comm_self)
+    
+    md.runTP(
+        dfactor=0.1,
+        ctrn_tol=1e-3,
+        smooth=True,
+        reinit_step=4,
+        reinit_pars=(12, 0.01)
+    )
+
+
 test_functions = {
     "01": test_01,
     "02": test_02,
@@ -2707,7 +2944,9 @@ test_functions = {
     "17": test_17,
     "18": test_18,
     "19": test_19,
-    "20": test_20
+    "20": test_20,
+    "21": test_21,
+    "22": test_22
 }
 
 def main():

@@ -2,14 +2,14 @@
   <ServerManagerState version="5.13.3">
     <Proxy group="animation" type="AnimationScene" id="263" servers="16">
       <Property name="AnimationTime" id="263.AnimationTime" number_of_elements="1">
-        <Element index="0" value="185"/>
+        <Element index="0" value="158"/>
       </Property>
       <Property name="Cues" id="263.Cues" number_of_elements="1">
         <Proxy value="265"/>
         <Domain name="groups" id="263.Cues.groups"/>
       </Property>
       <Property name="EndTime" id="263.EndTime" number_of_elements="1">
-        <Element index="0" value="185"/>
+        <Element index="0" value="158"/>
       </Property>
       <Property name="ForceDisableCaching" id="263.ForceDisableCaching" number_of_elements="1">
         <Element index="0" value="0"/>
@@ -6302,7 +6302,7 @@
       <Property name="SetStatus" id="13554.SetStatus">
         <Domain name="array_list" id="13554.SetStatus.array_list"/>
       </Property>
-      <Property name="TimestepValues" id="13554.TimestepValues" number_of_elements="186">
+      <Property name="TimestepValues" id="13554.TimestepValues" number_of_elements="159">
         <Element index="0" value="0"/>
         <Element index="1" value="1"/>
         <Element index="2" value="2"/>
@@ -6462,39 +6462,12 @@
         <Element index="156" value="156"/>
         <Element index="157" value="157"/>
         <Element index="158" value="158"/>
-        <Element index="159" value="159"/>
-        <Element index="160" value="160"/>
-        <Element index="161" value="161"/>
-        <Element index="162" value="162"/>
-        <Element index="163" value="163"/>
-        <Element index="164" value="164"/>
-        <Element index="165" value="165"/>
-        <Element index="166" value="166"/>
-        <Element index="167" value="167"/>
-        <Element index="168" value="168"/>
-        <Element index="169" value="169"/>
-        <Element index="170" value="170"/>
-        <Element index="171" value="171"/>
-        <Element index="172" value="172"/>
-        <Element index="173" value="173"/>
-        <Element index="174" value="174"/>
-        <Element index="175" value="175"/>
-        <Element index="176" value="176"/>
-        <Element index="177" value="177"/>
-        <Element index="178" value="178"/>
-        <Element index="179" value="179"/>
-        <Element index="180" value="180"/>
-        <Element index="181" value="181"/>
-        <Element index="182" value="182"/>
-        <Element index="183" value="183"/>
-        <Element index="184" value="184"/>
-        <Element index="185" value="185"/>
       </Property>
     </Proxy>
     <Proxy group="misc" type="TimeKeeper" id="256" servers="16">
       <Property name="SuppressedTimeSources" id="256.SuppressedTimeSources"/>
       <Property name="Time" id="256.Time" number_of_elements="1">
-        <Element index="0" value="185"/>
+        <Element index="0" value="158"/>
         <Domain name="range" id="256.Time.range"/>
       </Property>
       <Property name="TimeLabel" id="256.TimeLabel" number_of_elements="1">
@@ -6502,13 +6475,13 @@
       </Property>
       <Property name="TimeRange" id="256.TimeRange" number_of_elements="2">
         <Element index="0" value="0"/>
-        <Element index="1" value="185"/>
+        <Element index="1" value="158"/>
       </Property>
       <Property name="TimeSources" id="256.TimeSources" number_of_elements="2">
         <Proxy value="13554"/>
         <Proxy value="13815"/>
       </Property>
-      <Property name="TimestepValues" id="256.TimestepValues" number_of_elements="186">
+      <Property name="TimestepValues" id="256.TimestepValues" number_of_elements="159">
         <Element index="0" value="0"/>
         <Element index="1" value="1"/>
         <Element index="2" value="2"/>
@@ -6668,33 +6641,6 @@
         <Element index="156" value="156"/>
         <Element index="157" value="157"/>
         <Element index="158" value="158"/>
-        <Element index="159" value="159"/>
-        <Element index="160" value="160"/>
-        <Element index="161" value="161"/>
-        <Element index="162" value="162"/>
-        <Element index="163" value="163"/>
-        <Element index="164" value="164"/>
-        <Element index="165" value="165"/>
-        <Element index="166" value="166"/>
-        <Element index="167" value="167"/>
-        <Element index="168" value="168"/>
-        <Element index="169" value="169"/>
-        <Element index="170" value="170"/>
-        <Element index="171" value="171"/>
-        <Element index="172" value="172"/>
-        <Element index="173" value="173"/>
-        <Element index="174" value="174"/>
-        <Element index="175" value="175"/>
-        <Element index="176" value="176"/>
-        <Element index="177" value="177"/>
-        <Element index="178" value="178"/>
-        <Element index="179" value="179"/>
-        <Element index="180" value="180"/>
-        <Element index="181" value="181"/>
-        <Element index="182" value="182"/>
-        <Element index="183" value="183"/>
-        <Element index="184" value="184"/>
-        <Element index="185" value="185"/>
       </Property>
       <Property name="Views" id="256.Views" number_of_elements="1">
         <Proxy value="14059"/>
@@ -7339,11 +7285,11 @@
         <Domain name="bool" id="14059.UseToneMapping.bool"/>
       </Property>
       <Property name="ViewSize" id="14059.ViewSize" number_of_elements="2">
-        <Element index="0" value="816"/>
-        <Element index="1" value="816"/>
+        <Element index="0" value="909"/>
+        <Element index="1" value="909"/>
       </Property>
       <Property name="ViewTime" id="14059.ViewTime" number_of_elements="1">
-        <Element index="0" value="185"/>
+        <Element index="0" value="158"/>
         <Domain name="range" id="14059.ViewTime.range"/>
       </Property>
       <Property name="VolumeAnisotropy" id="14059.VolumeAnisotropy" number_of_elements="1">

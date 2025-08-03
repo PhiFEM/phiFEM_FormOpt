@@ -378,7 +378,7 @@ class Model(ABC):
             A tuple with the minimum and maximum number of
             iterations allowed for the integration of the level
             set equation.
-        smooth : bool, default=True
+        smooth : bool, default=False
             If True, a diffusion term is added to the level set
             equation; if False, the equation is solved without
             diffusion.
@@ -454,7 +454,7 @@ class Model(ABC):
             A tuple with the minimum and maximum number of
             iterations allowed for the integration of the level
             set equation.
-        smooth : bool, default=True
+        smooth : bool, default=False
             If True, a diffusion term is added to the level set
             equation; if False, the equation is solved without
             diffusion.
@@ -531,7 +531,7 @@ class Model(ABC):
             A tuple with the minimum and maximum number of
             iterations allowed for the integration of the level
             set equation.
-        smooth : bool, default=True
+        smooth : bool, default=False
             If True, a diffusion term is added to the level set
             equation; if False, the equation is solved without
             diffusion.

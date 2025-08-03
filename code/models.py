@@ -446,6 +446,38 @@ class Heat(Model):
                 0.0
             )
             return delta_expr
+        elif self.sc_type == "4Loads":
+            x1, y1 = 0.5, 0.25
+            x2, y2 = 0.75, 0.5
+            x3, y3 = 0.5, 0.75
+            x4, y4 = 0.25, 0.5
+            max_value, epsilon = 50.0,  0.05
+            x = SpatialCoordinate(self.domain)
+            r1 = sqrt((x[0] - x1)**2 + (x[1] - y1)**2)
+            r2 = sqrt((x[0] - x2)**2 + (x[1] - y2)**2)
+            r3 = sqrt((x[0] - x3)**2 + (x[1] - y3)**2)
+            r4 = sqrt((x[0] - x4)**2 + (x[1] - y4)**2)
+            delta1 = conditional(
+                lt(r1, epsilon),
+                max_value*(1.0 + cos(pi*r1/epsilon))/2.0,
+                0.0
+            )
+            delta2 = conditional(
+                lt(r2, epsilon),
+                max_value*(1.0 + cos(pi*r2/epsilon))/2.0,
+                0.0
+            )
+            delta3 = conditional(
+                lt(r3, epsilon),
+                max_value*(1.0 + cos(pi*r3/epsilon))/2.0,
+                0.0
+            )
+            delta4 = conditional(
+                lt(r4, epsilon),
+                max_value*(1.0 + cos(pi*r4/epsilon))/2.0,
+                0.0
+            )
+            return delta1+delta2+delta3+delta4
 
     def pde(self, phi):
 
@@ -479,7 +511,7 @@ class Heat(Model):
 
         if self.sc_type == "Uniform":
             S0_J = self.zero_vec
-        elif self.sc_type == "1Load":
+        elif self.sc_type == "1Load" or self.sc_type == "4Loads":
             S0_J = 2.0*u*grad(self.f)
         
         S1_J = (2.0*u*self.f - self.A(phi)*dot(grad(u), grad(u)))*self.Id
@@ -518,14 +550,16 @@ class HeatPlus(Model):
         self.space = space
         self.path = path
 
+        self.N = len(dir_bcs)
         self.dx = Measure("dx", domain = domain)
         self.bc = dir_bcs
         self.vol = vol
         self.sub = []
-        self.wts = [1.0 for _ in range(len(dir_bcs))]
+        self.wt = self.N*[1.0] # weights
         
         self.zero_vec = as_vector(dim*[0.0])
         self.Id = Identity(dim)
+        self.f = self.N*[1.0] # sources
 
     @staticmethod
     def A(w):
@@ -534,22 +568,36 @@ class HeatPlus(Model):
     @staticmethod
     def chi(w):
         return conditional(lt(w, 0.0), 1.0, 0.0)
+    
+    def source(self, x0, y0, max_value = 50.0, epsilon = 0.1):
+        x = SpatialCoordinate(self.domain)
+        r = sqrt((x[0] - x0)**2 + (x[1] - y0)**2)
+        scfun = conditional(
+            lt(r, epsilon),
+            max_value*(1.0 + cos(pi*r/epsilon))/2.0,
+            0.0
+        )
+        return scfun
 
     def pde(self, phi):
 
         u = TrialFunction(self.space)
         v = TestFunction(self.space)
 
-        W = self.A(phi)*dot(grad(u), grad(v))*self.dx - v*self.dx
+        P = []
+        for f, bc in zip(self.f, self.bc):
+            P.append([self.A(phi)*dot(grad(u), grad(v))*self.dx - f*v*self.dx, bc])
         
-        return [[W, [bc]] for bc in self.bc]
+        return P
     
     def adjoint(self, phi, U):
         return []
     
     def cost(self, phi, U):
-        
-        J = [wt*u*self.dx for wt, u in zip(self.wts, U)]
+
+        J = []
+        for wt, u, f in zip(self.wt, U, self.f):
+            J.append(wt*f*u*self.dx)
         
         return sum(J)
     
@@ -561,20 +609,23 @@ class HeatPlus(Model):
 
     def derivative(self, phi, U, P):
         
-        u = U[0]
-
-        S0_J = self.zero_vec
+        S0_J = []
+        for wt, u, f in zip(self.wt, U, self.f):
+            if isinstance(f, (int, float)):
+                S0_J.append(self.zero_vec)
+            else:
+                S0_J.append(wt*2.0*u*grad(f))
         
         S1_J = []
-        for wt, u in zip(self.wts, U):
-            s1 = (2.0*u - self.A(phi)*dot(grad(u), grad(u)))*self.Id
+        for wt, u, f in zip(self.wt, U, self.f):
+            s1 = (wt*2.0*u*f - self.A(phi)*dot(grad(u), grad(u)))*self.Id
             s1 += 2.0*self.A(phi)*outer(grad(u), grad(u))
-            S1_J.append(wt*s1)
+            S1_J.append(s1)
         
         S0_C = self.zero_vec
         S1_C = (1.0/self.vol)*self.chi(phi)*self.Id
         
-        S0 = [S0_J, [S0_C]]
+        S0 = [sum(S0_J), [S0_C]]
         S1 = [sum(S1_J), [S1_C]]
         
         return S0, S1
