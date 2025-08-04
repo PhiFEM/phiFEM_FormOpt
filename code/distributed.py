@@ -1373,9 +1373,9 @@ def create_domain_2d_DP(
         List of Nx2 numpy arrays to define holes.
     curve : List[npt.NDArray[np.float64]]
         List of Nx2 numpy arrays to define interior curves.
-    path : Path
+    path : Path, default=Path("")
         Test path.
-    plot : bool
+    plot : bool, default=False
         Flag to plot the mesh.
 
     Returns
@@ -1402,7 +1402,8 @@ def create_domain_2d_DP(
     # ==============================================================
     
     # Plot the distributed mesh
-    plot_domain(domain, f"rank = {rank}")
+    if plot:
+        plot_domain(domain, f"rank = {rank}")
 
     return domain, nbr_triangles, facet_tags
 
@@ -1431,7 +1432,8 @@ def create_domain_2d_TP(
     # =====================================================================
 
     # Plot the identical meshes
-    plot_domain(domain, f"rank = {rank}") 
+    if plot:
+        plot_domain(domain, f"rank = {rank}") 
     
     return domain, nbr_triangles, facet_tags
 
@@ -1463,7 +1465,8 @@ def create_domain_2d_MP(
     # ======================================================================
 
     # Plot the identically distributed meshes
-    plot_domain(domain, f"rank = {rank}")
+    if plot:
+        plot_domain(domain, f"rank = {rank}")
 
     return domain, nbr_triangles, facet_tags
 

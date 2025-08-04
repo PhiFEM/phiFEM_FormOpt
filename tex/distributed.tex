@@ -1813,6 +1813,7 @@ mpirun -np 12 python test.py 08
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Compliance minimization}
+\label{sub:compli}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Compliance minimization is a standard problem in structural mechanics, for which an abundant literature exists on \cite{MR1911658,MR2033390}.
@@ -1826,7 +1827,7 @@ We minimize the compliance in a linear elasticity problem:
 	J(\Omega) \coloneqq \int_{\mathcal{D}} A_{\Omega}\sigma(u):\epsilon(u)
 \end{equation}
 subject to
-\begin{equation}
+\begin{equation}\label{eq:compli_constr}
 	\int_{\mathcal{D}} \chi_{\Omega} = V,
 \end{equation}
 where $u$ is the solution to
@@ -1843,6 +1844,36 @@ and $A_{\Omega}:\overline{\mathcal{D}} \rightarrow \mathds{R}$ is given by
 	A_{\Omega} = \chi_{\Omega} + {10}^{-4}\chi_{\overline{\mathcal{D}}\setminus\Omega}.
 \end{equation}
 
+The weak formulation of \eqref{eq:compli_prob} reads:
+Find $u \in  H^1_{\Gamma_0}(\mathcal{D})^d$ such that
+\begin{equation}\label{eq:compli_weak}
+\int_{\mathcal{D}} A_{\Omega}\sigma(u):\epsilon(v) = \int_{\Gamma_1} g \cdot v
+\qquad
+\forall \, v \in  H^1_{\Gamma_0}(\mathcal{D})^d.
+\end{equation}
+For this problem $p=-2u$ (adjoint solution).
+From \eqref{eq:compli_constr},
+\begin{equation*}
+	C(\Omega) = \frac{1}{V} \int_{\mathcal{D}} \chi_{\Omega}.
+\end{equation*} 
+The derivative components are
+\begin{equation*}
+	S^J_0 = \boldsymbol{0} ,\quad S^J_1 = A_{\Omega} (2{Du}^{\top}\sigma(u)- \sigma(u):\epsilon(u))I,
+\end{equation*}
+\begin{equation*}
+	S^C_0 = \boldsymbol{0},\quad S^C_1 = \frac{1}{V} \chi_\Omega I.
+\end{equation*}
+We choose the same bilinear form $B(\theta, \xi)$ as in the elasticity inverse problem. 
+
+% models
+The \code{Compliance} and \code{CompliancePlus} classes
+contain the equations for compliance minimization.
+\code{CompliancePlus} extends \code{Compliance} by considering multiple forces $\left\{g_k\right\}_k$,
+and $J(\Omega)$ as a sum of compliances associated to each $g_k$:
+\begin{equation}
+	J(\Omega) \coloneqq \sum_{k} \int_{\mathcal{D}} A_{\Omega}\sigma(u_k):\epsilon(u_k),
+\end{equation}
+where $u_k$ 
 
 \noindent\textit{Example 1.} Symmetric cantilever
 
@@ -1964,6 +1995,19 @@ Figure \ref{fig:compli4}
 \label{fig:compli4}
 \end{center}
 
+\noindent\textit{Example 5.} 
+
+Figure \ref{fig:compli5}
+
+\begin{center}
+\includegraphics[width=0.48\linewidth]{compli5_0.png}
+\hfill
+\includegraphics[width=0.48\linewidth]{compli5_1.png}
+\captionof{figure}{
+	Initial and optimal domains.
+}
+\label{fig:compli5}
+\end{center}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Heat Conduction}
@@ -2149,6 +2193,48 @@ Figure \ref{fig:heat4}
 	optimized design at iteration $i=207$.
 }
 \label{fig:heat4}
+\end{center}
+
+\noindent\textit{Example 5.}  (multiple load cases)
+
+
+$\Gamma_0$ 
+
+$\vert \Gamma_0 \vert = 0.05\sqrt{2}$
+
+$f^\mathrm{I}(x,y) \coloneqq \phi(\vert(x,y)-(0.5, 0.25)\vert_2)$
+
+$f^\mathrm{II}(x,y) \coloneqq \phi(\vert(x,y)-(0.75, 0.5)\vert_2)$
+
+$f^\mathrm{III}(x,y) \coloneqq \phi(\vert(x,y)-(0.5, 0.75)\vert_2)$
+
+$f^\mathrm{IV}(x,y) \coloneqq \phi(\vert(x,y)-(0.25, 0.5)\vert_2)$
+
+$f = f^\mathrm{I} + f^\mathrm{II} + f^\mathrm{III} + f^\mathrm{IV}$
+
+$V = 0.45$
+
+\begin{lstlisting}
+mpirun -np 2 python test.py 21 # Data
+\end{lstlisting}
+
+\begin{lstlisting}
+mpirun -np 4 python test.py 22 # Task
+\end{lstlisting}
+
+Figure \ref{fig:heat5}
+\begin{center}
+\includegraphics[width=0.48\linewidth]{heat5_0.png}
+\hfill
+\includegraphics[width=0.48\linewidth]{heat5_1.png}
+\includegraphics[width=0.48\linewidth]{heat5_2.png}
+\hfill
+\includegraphics[width=0.48\linewidth]{heat5_3.png}
+\captionof{figure}{
+	Initial guess and
+	optimized design at iteration $i=?$.
+}
+\label{fig:heat5}
 \end{center}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
