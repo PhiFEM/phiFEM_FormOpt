@@ -40,6 +40,7 @@ def plot_tutorial(h5file, size, limits = None, filenames = [None, None]):
         plot_level(
             2, points, cells, phi_group[str(niter)][:, 0], figsize = size, lims=limits, filename=filenames[1]
         )
+        print("> iterations:", niter)
 
 def InitialLevel(centers, radii, ftr = 1.0):
     dim = centers.shape[1]

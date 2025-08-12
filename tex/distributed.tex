@@ -1851,8 +1851,8 @@ Find $u \in  H^1_{\Gamma_0}(\mathcal{D})^d$ such that
 \qquad
 \forall \, v \in  H^1_{\Gamma_0}(\mathcal{D})^d.
 \end{equation}
-For this problem $p=-2u$ (adjoint solution).
-From \eqref{eq:compli_constr},
+The solution to the adjoint problem can be written as $p=-2u$.
+From \eqref{eq:compli_constr}, the constraint function is given by
 \begin{equation*}
 	C(\Omega) = \frac{1}{V} \int_{\mathcal{D}} \chi_{\Omega}.
 \end{equation*} 
@@ -1865,62 +1865,55 @@ The derivative components are
 \end{equation*}
 We choose the same bilinear form $B(\theta, \xi)$ as in the elasticity inverse problem. 
 
-% models
 The \code{Compliance} and \code{CompliancePlus} classes
 contain the equations for compliance minimization.
-\code{CompliancePlus} extends \code{Compliance} by considering multiple forces $\left\{g_k\right\}_k$,
-and $J(\Omega)$ as a sum of compliances associated to each $g_k$:
+\code{CompliancePlus} extends \code{Compliance} by considering
+multiple forces $\left\{g_k\right\}_k$, along with
+the cost functional $J(\Omega)$ as a sum of compliances associated to each $g_k$,
+namely
 \begin{equation}
 	J(\Omega) \coloneqq \sum_{k} \int_{\mathcal{D}} A_{\Omega}\sigma(u_k):\epsilon(u_k),
 \end{equation}
-where $u_k$ 
+where $u_k$ is the solution to \eqref{eq:compli_weak} with $g=g_k$.
 
-\noindent\textit{Example 1.} Symmetric cantilever
-
-$\mathcal{D} = (0, 2)\times(0, 1)$
-
-$\Gamma_0 = \{x=0\} \times (0, 1)$ 
-
-$\Gamma_1 = \{x=2\} \times (0.45,0.55)$
-
-$g = (0, -2)^\top$
-
-$V = 1$
-
+\noindent\textit{Example 1.} (Symmetric cantilever)
+We consider the rectangular domain $\mathcal{D} = (0, 2)\times(0, 1)$
+with boundary subsets $\Gamma_0 = \{0\} \times (0, 1)$
+and $\Gamma_1 = \{2\} \times (0.45,0.55)$.
+The vertical force $g = (0, -2)^\top$ is applied on $\Gamma_1$.
+The material area is constrained to $V = 1$.
+We run this example using data parallelism with two processes:
 \begin{lstlisting}
 mpirun -np 2 python test.py 01 # Data
 \end{lstlisting}
-
-Figure \ref{fig:compli1}
+See the results in Figure \ref{fig:compli1}.
 \begin{center}
 \includegraphics[width=0.48\linewidth]{compli1_0.png}
 \hfill
 \includegraphics[width=0.48\linewidth]{compli1_1.png}
 \includegraphics[width=0.85\linewidth]{compli1_2.png}
 \captionof{figure}{
-	(Top) Initial guess and optimized design.
-	(Bottom) Level set function.
+	(Top) Initial guess and optimized design at iteration $i=58$.
+	(Bottom) The level set function $\phi^{i}$ approximates the
+	distance function associated to $\Omega^{i}$.
 }
 \label{fig:compli1}
 \end{center}
 
-\noindent\textit{Example 2.} Three-dimensional symmetric cantilever
-
+\noindent\textit{Example 2.} (Three-dimensional symmetric cantilever)
+We consider the rectangular box domain
 $\mathcal{D} = (0, 2)\times(0, 1)\times(0, 1)$
-
-$\Gamma_0 = \{x=0\} \times (0,1) \times (0,1)$
-
-$\Gamma_1 = \{x=1\} \times (0.4,0.6) \times (0.4,0.6)$
-
-$g = (0, 0, -4)^\top$
-
-$V = 1$
-
+with boundary subsets
+$\Gamma_0 = \{0\} \times (0,1) \times (0,1)$
+and
+$\Gamma_1 = \{1\} \times (0.4,0.6) \times (0.4,0.6)$.
+The force $g = (0, 0, -4)^\top$ is applied on $\Gamma_1$.
+The volume material is constrained to $V = 1$.
+Run this example with
 \begin{lstlisting}
-mpirun -np 2 python test.py 02 # Data
+python test.py 02
 \end{lstlisting}
-
-Figure \ref{fig:compli2}
+The number of tetrahedra was $2\,592\,000$. See Figure \ref{fig:compli2}.
 \begin{center}
 \includegraphics[width=0.48\linewidth]{compli2_0.png}
 \hfill
@@ -1929,19 +1922,21 @@ Figure \ref{fig:compli2}
 \hfill
 \includegraphics[width=0.48\linewidth]{compli2_3.png}
 \captionof{figure}{
-	Iterations of the three-dimensional cantilever.\tred{A: write iteration numbers.}
+The three-dimensional cantilever at	
+$i=0$ and $i=20$ (top);
+$i=50$ and $i=100$ (bottom).
 }
 \label{fig:compli2}
 \end{center}
 
-\noindent\textit{Example 3.} Cantilever problem with two loads
-
+\noindent\textit{Example 3.} (Cantilever with two loads)
+We consider the square domain
 $\mathcal{D} = (0, 1)\times(0, 1)$
-
-$\Gamma_0 = \{x=0\} \times (0, 1)$ 
-
-$\Gamma_1^{\mathrm{I}} = \{x=1\} \times (0,0.1)$
-
+with boundary subsets
+$\Gamma_0 = \{0\} \times (0, 1)$ 
+and
+$\Gamma_1^{\mathrm{I}} = \{1\} \times (0,0.1)$
+and
 $\Gamma_1^{\mathrm{II}} = \{x=1\} \times (0.9,1)$
 
 $g^{\mathrm{I}} = g^{\mathrm{II}} = (0, -2)^\top$
