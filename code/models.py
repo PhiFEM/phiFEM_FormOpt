@@ -911,6 +911,9 @@ class Mechanism(Model):
         E, nu = 20.0, 0.3
         lmbda = E*nu/(1.0 + nu)/(1.0 - 2.0*nu)
         mu = E/2.0/(1.0 + nu)
+        ks = 0.01 # Robin condition parameter
+        eta_in = 2.0
+        eta_out = 1.0
 
         self.zero_vec = as_vector(dim*[0.0])
         self.Id = Identity(dim)
@@ -920,10 +923,13 @@ class Mechanism(Model):
             2.0*mu*self.epsilon(w)
         )
         self.A = lambda w: (
-            conditional(lt(w, 0.0), 1.0, 1e-4)
+            conditional(lt(w, 0.0), 1.0, 1e-2)
         )
         self.chi = lambda w: (
             conditional(lt(w, 0.0), 1.0, 0.0)
+        )
+        self.robin = lambda w: (
+            ks*w
         )
         
     def pde(self, phi):
@@ -934,20 +940,29 @@ class Mechanism(Model):
         ev = self.epsilon(v)
 
         W = self.A(phi)*inner(su, ev)*self.dx
-        W -= dot(self.g, v)*self.ds_g
-        
+        W -= dot(self.g, v)*self.ds_g[1] # Neumann condition on input boundary
+        W += dot(self.robin(u), v)*self.ds_g[0] # Robin condition on output boundary
+                      
         return [(W, self.bc)]
 
     def adjoint(self, phi, U):
-        return []
+    
+        p = TrialFunction(self.space)
+        r = TestFunction(self.space)
+        sp = self.sigma(p)
+        er = self.epsilon(r)
+
+        W = self.A(phi)*inner(sp, er)*self.dx
+        W += 2.0*r[0]*self.ds_g[1] + r[0]*self.ds_g[0] # rhs for adjoint, on both input and output
+        W += dot(self.robin(p), r)*self.ds_g[0] # Robin condition on output boundary
+        
+        return [(W, self.bc)]
 
     def cost(self, phi, U):
         
         u = U[0]
-        su = self.sigma(u)
-        eu = self.epsilon(u)
 
-        J = self.A(phi)*(inner(su, eu))*self.dx
+        J = 2.0*u[0]*self.ds_g[1] + u[0]*self.ds_g[0] 
         
         return J
 
@@ -960,12 +975,15 @@ class Mechanism(Model):
     def derivative(self, phi, U, P):
         
         u = U[0]
+        p = P[0]
         su = self.sigma(u)
         eu = self.epsilon(u)
+        sp = self.sigma(p)
+        ep = self.epsilon(p)
 
         S0_J = self.zero_vec
-        S1_J = 2.0*grad(u).T*su 
-        S1_J -= inner(su, eu)*self.Id
+        S1_J = - grad(u).T*sp - grad(p).T*su  
+        S1_J += inner(su, ep)*self.Id
         S1_J *= self.A(phi)
             
         S0_C = self.zero_vec
@@ -982,9 +1000,11 @@ class Mechanism(Model):
         
         B = 0.1*dot(th, xi)*self.dx
         B += inner(grad(th), grad(xi))*self.dx
-        B += 1e4*dot(th, nv)*dot(xi, nv)*self.ds
+        B += 1e5*dot(th, nv)*dot(xi, nv)*self.ds
         for sb in self.sub:
             B += 1e4*sb*dot(th, xi)*self.dx
+            
+        # Also need to modify a bit the bilinear form, so that the input and output regions do not move ... see the paper    
         
         return B, False        
         

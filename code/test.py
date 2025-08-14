@@ -8,7 +8,8 @@ from models import (
     InverseElasticity,
     Heat,
     HeatPlus,
-    HeatMultiple
+    HeatMultiple,
+    Mechanism
 )
 
 import numpy as np
@@ -2932,12 +2933,12 @@ def test_30():
     """
     Mechanism 2D - Data Parallelism
 
-    Run `mpirun -np <nbr of processes> python test.py 20`.
-    For instance, `mpirun -np 2 python test.py 20`.
+    Run `mpirun -np <nbr of processes> python test.py 30`.
+    For instance, `mpirun -np 2 python test.py 30`.
     """
 
     test_name = "Mechanism 2D - Data Parallelism"
-    test_path = Path("../results/t20/")
+    test_path = Path("../results/t30/")
     dim = 2
     rank_dim = 2
     mesh_size = 0.015
@@ -2949,17 +2950,20 @@ def test_30():
         (1.0, 0.57),        
         (1.0, 1.0),
         (0.0, 1.0),
+        (0.0, 0.95),        
         (0.0, 0.53),
-        (0.0, 0.47),        
+        (0.0, 0.47),
+        (0.0, 0.05),                
     ])
     
     dir_idx, dir_mkr = [6], 1
-    dir_idx2, dir_mkr2 = [8], 2    
+    dir_idx2, dir_mkr2 = [10], 2    
     rob_idx, rob_mkr = [3], 3
-    neu_idx, neu_mkr = [7], 4
+    neu_idx, neu_mkr = [8], 4
 
     boundary_parts = [
         (dir_idx, dir_mkr, "dir"),
+        (dir_idx2, dir_mkr2, "dir"),        
         (rob_idx, rob_mkr, "rob"),
         (neu_idx, neu_mkr, "neu"),        
     ]
@@ -2984,7 +2988,7 @@ def test_30():
     # Dirichlet condition
     dirichlet_bcs = dib.homogeneous_dirichlet(
         domain, space, boundary_tags,
-        [dir_mkr], rank_dim
+        [dir_mkr,dir_mkr2], rank_dim
     )
 
     # Boundary to force application 
@@ -2994,10 +2998,10 @@ def test_30():
         [rob_mkr,neu_mkr]
     )
     
-    area = 1.0
-    g = (0.0, -2.0)
+    area = 0.2
+    g = (0.5, 0.0)
     # Create the model
-    md = Compliance(
+    md = Mechanism(
         dim, domain, space, g, ds_g,
         dirichlet_bcs, area, test_path
     )
@@ -3027,7 +3031,7 @@ def test_30():
     # centers += [(0.3 + i*0.7, 1.0) for i in range(3)]
 
     # Second set of centers:
-    centers = [(0.0, 0.5), (2.0, 0.35), (2.0, 0.65)]
+    centers = [(2.0, 0.35), (2.0, 0.65)]
     centers += [((1+i)*0.25, 0.0) for i in range(8)]
     centers += [(i*0.5, 0.25) for i in range(5)]
     centers += [(0.25 + i*0.5, 0.5) for i in range(4)]
@@ -3076,7 +3080,8 @@ test_functions = {
     "19": test_19,
     "20": test_20,
     "21": test_21,
-    "22": test_22
+    "22": test_22,
+    "30": test_30,    
 }
 
 def main():
