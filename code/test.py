@@ -45,6 +45,7 @@ test_19 : ?
 test_20 : Symmetric Cantilever 2D (non-rectangular domain) - Data Parallelism
 test_21 : Heat conduction with four sources (single) - Data Parallelism
 test_22 : Heat conduction with four sources (multiple) - Task Parallelism
+test_30 : Mechanism (Antoine - in progress) 
 """
 
 
@@ -2924,6 +2925,133 @@ def test_22():
         reinit_step=4,
         reinit_pars=(12, 0.01)
     )
+
+
+
+def test_30():
+    """
+    Mechanism 2D - Data Parallelism
+
+    Run `mpirun -np <nbr of processes> python test.py 20`.
+    For instance, `mpirun -np 2 python test.py 20`.
+    """
+
+    test_name = "Mechanism 2D - Data Parallelism"
+    test_path = Path("../results/t20/")
+    dim = 2
+    rank_dim = 2
+    mesh_size = 0.015
+    
+    vertices = np.array([
+        (0.0, 0.0),
+        (1.0, 0.0),
+        (1.0, 0.43),
+        (1.0, 0.57),        
+        (1.0, 1.0),
+        (0.0, 1.0),
+        (0.0, 0.53),
+        (0.0, 0.47),        
+    ])
+    
+    dir_idx, dir_mkr = [6], 1
+    dir_idx2, dir_mkr2 = [8], 2    
+    rob_idx, rob_mkr = [3], 3
+    neu_idx, neu_mkr = [7], 4
+
+    boundary_parts = [
+        (dir_idx, dir_mkr, "dir"),
+        (rob_idx, rob_mkr, "rob"),
+        (neu_idx, neu_mkr, "neu"),        
+    ]
+
+    # Create gmsh domain for Data Parallelism
+    output = dib.create_domain_2d_DP(
+        vertices, boundary_parts, mesh_size,
+        path = test_path,
+        plot = False
+    )
+    
+    domain, nbr_tri, boundary_tags = output
+
+    if rank == 0:
+        print("\n\t" + test_name + "\n")
+        print(f"> Path = {test_path}")
+        print(f"> Nbr of triangles = {nbr_tri}")
+        
+    # Space for the PDE solution
+    space = dib.create_space(domain, "CG", rank_dim)
+    
+    # Dirichlet condition
+    dirichlet_bcs = dib.homogeneous_dirichlet(
+        domain, space, boundary_tags,
+        [dir_mkr], rank_dim
+    )
+
+    # Boundary to force application 
+    ds_g = dib.marked_ds(
+        domain,
+        boundary_tags,
+        [rob_mkr,neu_mkr]
+    )
+    
+    area = 1.0
+    g = (0.0, -2.0)
+    # Create the model
+    md = Compliance(
+        dim, domain, space, g, ds_g,
+        dirichlet_bcs, area, test_path
+    )
+
+    @dib.region_of(domain)
+    def sub_domain(x):
+        # 0.42 < x[1] < 0.58
+        # 1.95 < x[0]
+        ineqs = [
+            x[1] - 0.42,
+            0.58 - x[1],
+            x[0] - 1.90
+        ]
+        return ineqs
+    
+    md.sub = [sub_domain.expression()]
+
+    # Initial guess: centers and radii
+
+    # First set of centers:
+    # centers = [(2.0, 0.35), (2.0, 0.65), (2.0, 0.0), (2.0, 1.0)]
+    # centers += [(0.0, 0.25), (0.0, 0.5), (0.0, 0.75)]
+    # centers += [(0.3 + i*0.7, 0.0) for i in range(3)]
+    # centers += [(0.65 + i*0.7, 0.25) for i in range(2)]
+    # centers += [(0.3 + i*0.7, 0.5) for i in range(3)]
+    # centers += [(0.65 + i*0.7, 0.75) for i in range(2)]
+    # centers += [(0.3 + i*0.7, 1.0) for i in range(3)]
+
+    # Second set of centers:
+    centers = [(0.0, 0.5), (2.0, 0.35), (2.0, 0.65)]
+    centers += [((1+i)*0.25, 0.0) for i in range(8)]
+    centers += [(i*0.5, 0.25) for i in range(5)]
+    centers += [(0.25 + i*0.5, 0.5) for i in range(4)]
+    centers += [(i*0.5, 0.75) for i in range(5)]
+    centers += [((1+i)*0.25, 1.0) for i in range(8)]
+
+    centers = np.array(centers)
+    radii = np.repeat(0.1, centers.shape[0])
+
+    # Create the initial level set function
+    md.create_initial_level(centers, radii)
+    # Save as initial.xdmf
+    md.save_initial_level(comm)
+    
+    md.runDP(
+        ctrn_tol = 1e-3,
+        dfactor = 1e-1,
+        lv_iter = (10, 16),
+        reinit_step = 4,
+        reinit_pars = (20, 0.08),
+        smooth = True,
+        random_pars = (111, 0.05)
+    )
+
 
 
 test_functions = {
