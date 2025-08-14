@@ -3056,6 +3056,135 @@ def test_30():
         random_pars = (111, 0.05)
     )
 
+def test_31():
+    """
+    Mechanism 2D - Data Parallelism
+
+    Run `mpirun -np <nbr of processes> python test.py 31`.
+    For instance, `mpirun -np 2 python test.py 31`.
+    """
+
+    test_name = "Mechanism 2D - Data Parallelism"
+    test_path = Path("../results/t31/")
+    dim = 2
+    rank_dim = 2
+    mesh_size = 0.01
+    
+    vertices = np.array([
+        (0.0, 0.0),
+        (1.0, 0.0),
+        (1.0, 0.47),
+        (1.0, 0.53),        
+        (1.0, 1.0),
+        (0.0, 1.0),
+        (0.0, 0.95),        
+        (0.0, 0.53),
+        (0.0, 0.47),
+        (0.0, 0.05),                
+    ])
+    
+    dir_idx, dir_mkr = [6], 1
+    dir_idx2, dir_mkr2 = [10], 2    
+    rob_idx, rob_mkr = [3], 3
+    neu_idx, neu_mkr = [8], 4
+
+    boundary_parts = [
+        (dir_idx, dir_mkr, "dir"),
+        (dir_idx2, dir_mkr2, "dir"),        
+        (rob_idx, rob_mkr, "rob"),
+        (neu_idx, neu_mkr, "neu"),        
+    ]
+
+    # Create gmsh domain for Data Parallelism
+    output = dib.create_domain_2d_DP(
+        vertices, boundary_parts, mesh_size,
+        path = test_path,
+        plot = False
+    )
+    
+    domain, nbr_tri, boundary_tags = output
+
+    if rank == 0:
+        print("\n\t" + test_name + "\n")
+        print(f"> Path = {test_path}")
+        print(f"> Nbr of triangles = {nbr_tri}")
+        
+    # Space for the PDE solution
+    space = dib.create_space(domain, "CG", rank_dim)
+    
+    # Dirichlet condition
+    dirichlet_bcs = dib.homogeneous_dirichlet(
+        domain, space, boundary_tags,
+        [dir_mkr,dir_mkr2], rank_dim
+    )
+
+    # Boundary to force application 
+    ds_g = dib.marked_ds(
+        domain,
+        boundary_tags,
+        [rob_mkr,neu_mkr]
+    )
+    
+    area = 0.2
+    g = (0.5, 0.0)
+    # Create the model
+    md = Mechanism(
+        dim, domain, space, g, ds_g,
+        dirichlet_bcs, area, test_path
+    )
+
+    @dib.region_of(domain)
+    def sub_domain1(x):
+        # 0.42 < x[1] < 0.58
+        # 0.90 < x[0]
+        ineqs = [
+            x[1] - 0.46,
+            0.54 - x[1],
+            x[0] - 0.90
+        ]
+        return ineqs
+
+    @dib.region_of(domain)
+    def sub_domain2(x):
+        # 0.42 < x[1] < 0.58
+        # x[0] < 0.1
+        ineqs = [
+            x[1] - 0.46,
+            0.54 - x[1],
+            0.1 - x[0]
+        ]
+        return ineqs
+    
+    #md.sub = [sub_domain1.expression(), sub_domain2.expression()]
+
+
+    centers = [(1.0, 0.10), (1.0, 0.20), (1.0, 0.80), (1.0, 0.90), ]
+    centers += [(0.8 + i*0.1, 0.0) for i in range(3)]
+    centers += [(i/3.0, 0.25) for i in range(5)]
+    centers += [(0.5, 0.5), (2.0/3.0 + 0.05, 0.5)]
+    centers += [(i/3.0, 0.75) for i in range(5)]
+    centers += [(0.8 + i*0.1, 1.0) for i in range(3)]
+    
+
+    centers = np.array(centers)
+    radii = np.repeat(0.075, centers.shape[0])
+
+    # Create the initial level set function
+    md.create_initial_level(centers, radii)
+    # Save as initial.xdmf
+    md.save_initial_level(comm)
+    
+    md.runDP(
+        niter=200,
+        ctrn_tol=1e-3,
+        dfactor=0.1,
+        lv_time=(0.001, 0.01),
+        lv_iter=(12, 20),
+        reinit_step=4,
+        reinit_pars=(16, 0.01),
+        smooth=True
+    )
+
 
 
 test_functions = {
@@ -3081,7 +3210,8 @@ test_functions = {
     "20": test_20,
     "21": test_21,
     "22": test_22,
-    "30": test_30,    
+    "30": test_30,
+    "31": test_31    
 }
 
 def main():
