@@ -3068,7 +3068,7 @@ def test_31():
     test_path = Path("../results/t31/")
     dim = 2
     rank_dim = 2
-    mesh_size = 0.01
+    mesh_size = 0.005
     
     vertices = np.array([
         (0.0, 0.0),
@@ -3161,7 +3161,7 @@ def test_31():
     centers = [(1.0, 0.10), (1.0, 0.20), (1.0, 0.80), (1.0, 0.90), ]
     centers += [(0.8 + i*0.1, 0.0) for i in range(3)]
     centers += [(i/3.0, 0.25) for i in range(5)]
-    centers += [(0.5, 0.5), (2.0/3.0 + 0.05, 0.5)]
+    centers += [(0.5, 0.5), (0.75, 0.5)]
     centers += [(i/3.0, 0.75) for i in range(5)]
     centers += [(0.8 + i*0.1, 1.0) for i in range(3)]
     
@@ -3175,13 +3175,13 @@ def test_31():
     md.save_initial_level(comm)
     
     md.runDP(
-        niter=200,
+        niter=400,
         ctrn_tol=1e-3,
         dfactor=0.1,
-        lv_time=(0.001, 0.01),
-        lv_iter=(12, 20),
+        lv_time=(0.001, 0.05),
+        lv_iter=(12, 25),
         reinit_step=4,
-        reinit_pars=(16, 0.01),
+        reinit_pars=(20, 0.01),
         smooth=True
     )
 
