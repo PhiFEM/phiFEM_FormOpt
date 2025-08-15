@@ -34,6 +34,9 @@
 \newtheorem{definition}{Definition}
 \newtheorem{proposition}{Proposition}
 
+% HIDE OR UNHIDE TEXT
+\newcommand{\rood}[1]{\textcolor{blue}{#1}}
+%\newcommand{\rood}[1]{}
 
 
 \hypersetup{
@@ -329,13 +332,13 @@ Other examples of tensor representation of the shape derivative are provided in 
 The uniqueness in determining cavities has been investigated in \cite{MR1772729}.
 The shape sensitivity analysis for a similar problem was investigated in \cite{MEFTAHI20151554}, for a different cost function and using strong formulations rather than weak formulations of the PDEs.
 The focus in \cite{MEFTAHI20151554} is on the Hadamard form rather than the distributed shape derivative.
-\tred{A: in fact there are several issues in \cite{MEFTAHI20151554}, for instance they use strong formulations in the variational formulations but they do not have enough regularity for that. But I don't think we need to discuss that.}
+\rood{A: in fact there are several issues in \cite{MEFTAHI20151554}, for instance they use strong formulations in the variational formulations but they do not have enough regularity for that. We won't discuss that here, as this is beyond the scope.}
 
 
 
 \textbf{Inverse problem.}
 %\tred{A: add figure to illustrate the geometry.}%Ready!
-Let $\Gamma_0$, $\Gamma_1$ be subsets of $\Gamma$ such that $\Gamma=\Gamma_1\cup\Gamma_2$. \tred{A: do you mean $\Gamma=\Gamma_0\cup\Gamma_1$?}
+Let $\Gamma_0$, $\Gamma_1$ be subsets of $\Gamma:=\partial\hold$ such that $\Gamma=\Gamma_0\cup\Gamma_1$. 
 Let $H_{\Gamma_0}(\mathcal{D})^d$ be the space of functions
 \begin{equation*}
 	H_{\Gamma_0}(\mathcal{D})^d\coloneqq\left\{ u\in H(\mathcal{D})^{d}\mid u|_{\Gamma_0}=\boldsymbol{0}\right\}. 
@@ -346,7 +349,7 @@ The strain and stress tensors are given by
 	+ \lambda (\mathrm{div}w) I,
 \end{equation*}
 where $\mu$ and $\lambda$ are the Lam\'e parameters.
-Let $f$ and $g$ be vector-valued functions defined on $\Gamma_1$.
+Let $f\in H^{1/2}(\Gamma_1)^d$ and $g\in H^{1/2}(\Gamma_1)^d$ be vector-valued functions defined on $\Gamma_1$.
 Let $\alpha$ and $\beta$ be positive weights.
 \begin{center}
 \includegraphics[width=0.7\linewidth]{elasticity_dom.png}
@@ -359,23 +362,27 @@ We follow a Kohn-Vogelius-type approach, considering the shape optimization prob
 \begin{equation} \label{eq:cost}
 	\min_{\Omega \subset \mathcal{D}}
 	J(\Omega) \coloneqq
-	\frac{\alpha}{2}\int_{\mathcal{D}}\left|u-v\right|^{2} + 
-	\frac{\beta}{2}\int_{\Gamma_{1}}\left|u-v\right|^{2}
+	\frac{\alpha}{2}\int_{\mathcal{D}}\left|u-y\right|^{2} + 
+	\frac{\beta}{2}\int_{\Gamma_{1}}\left|u-y\right|^{2}
 \end{equation}
-where $u$ and $v$ are the solutions to
+where $u$ and $y$ are the solutions to the transmission problems
 \begin{equation} \label{eq:f-prob}
 	\begin{array}{rcl}
-    -\mathrm{div} A_{\Omega} \sigma(u) = 0 & \text{in} & \mathcal{D} \\
+    -\mathrm{div} A_{\Omega} \sigma(u) = 0 & \text{in} & \Om \text{ and }  \hold\setminus\overline \Omega \\
                                 u = 0 & \text{on} & \Gamma_{0} \\
-                 A_{\Omega} \sigma(u)n = f & \text{on} & \Gamma_{1}                     
+                 A_{\Omega} \sigma(u)n = f & \text{on} & \Gamma_{1}   \\
+				 (A_{\Omega} \sigma(u)n)^+ = (A_{\Omega} \sigma(u)n)^- & \text{on} & \partial\Om\\      
+				 u^+ = u^- & \text{on} & \partial\Om      				              
 	\end{array}	
 \end{equation}
 and
 \begin{equation} \label{eq:g-prob}
 	\begin{array}{rcl}
-    -\mathrm{div} A_{\Omega} \sigma(v) = 0 & \text{in} & \mathcal{D} \\
-                                v = 0 & \text{on} & \Gamma_{0} \\
-                                v = g & \text{on} & \Gamma_{1}     
+    -\mathrm{div} A_{\Omega} \sigma(y) = 0 & \text{in} & \Om  \text{ and }  \hold\setminus\overline \Omega \\
+                                y = 0 & \text{on} & \Gamma_{0} \\
+                                y = g & \text{on} & \Gamma_{1}   \\
+								(A_{\Omega} \sigma(y)n)^+ = (A_{\Omega} \sigma(y)n)^- & \text{on} & \partial\Om\\      
+								y^+ = y^- & \text{on} & \partial\Om       
 	\end{array}
 \end{equation}
 respectively, and $A_{\Omega}:\overline{\mathcal{D}} \rightarrow \mathds{R}$ is given by
@@ -383,7 +390,7 @@ respectively, and $A_{\Omega}:\overline{\mathcal{D}} \rightarrow \mathds{R}$ is 
 A_{\Omega} = \kappa\chi_{\Omega} + \chi_{\overline{\mathcal{D}}\setminus\Omega}
 \quad \text{with }\kappa>0.
 \end{equation}
-See Figure \ref{fig:elast_dom} for an illustration of the geometry. In \eqref{eq:cost}, observe that $u$ and $v$ depend on $\Omega$ due to
+See Figure \ref{fig:elast_dom} for an illustration of the geometry. In \eqref{eq:cost}, observe that $u$ and $y$ depend on $\Omega$ due to
 the presence of $A_\Omega$ in the above equations.
 We present the model for a single measurement for simplicity. 
 For several measurements, one can simply sum over the measurements in \eqref{eq:cost}.
@@ -404,19 +411,17 @@ Find $u \in  H^1_{\Gamma_0}(\mathcal{D})^d$ such that
 	\quad
 	\forall \, w \in  H^1_{\Gamma_0}(\mathcal{D})^d.
 \end{equation}
-\tred{A: should we write the regularity of $f,g$? I think the extension should satisfy $g\in H^1(\hold)$.}
-By extending $g$ to the whole domain,
-the weak formulation of \eqref{eq:g-prob}
-is written in such a way that we seek a solution
-in $H^1_{0}(\mathcal{D})^d$:
+It is convenient to lift the non-homogeneous Dirichlet condition $v=g$ on $\Gamma_1$ in \eqref{eq:g-prob}.
+To this end, we assume that there exists an extension $g\in H^1(\hold)^d$, using the same notation for simplicity.
+This allows to us to rewrite \eqref{eq:g-prob} using the equivalent weak formulation:
 Find $v \in  H^1_{0}(\mathcal{D})^d$ such that
 \begin{equation} \label{eq:w-g}
 	\int_{\mathcal{D}} A_{\Omega}\sigma(v + g):\epsilon(w) = 0
 	\quad
-	\forall \, w \in  H^1_{0}(\mathcal{D})^d.
+	\forall \, w \in  H^1_{0}(\mathcal{D})^d,
 \end{equation}
-Thus, ${v + g}$ solves \eqref{eq:g-prob}.
-Considering the cost functional \eqref{eq:cost}
+and ${v + g} =y$ solves \eqref{eq:g-prob}.
+Considering the cost functional~\eqref{eq:cost}
 and the weak formulations, we write
 the Lagrangian functional
 as follows:
@@ -480,7 +485,7 @@ $\lambda$ and $\mu$. In terms of Kronecker symbols,
 \begin{equation}
 	\mathrm{C}_{ijkl} \coloneqq \lambda \delta_{ij} \delta_{kl} + \mu(\delta_{ik}\delta_{jl} + \delta_{il}\delta_{jk}).
 \end{equation}
-Applying the change of variable $x \mapsto T_t(x)$ and using the fact that $T_t=I$ on $\Gamma_1$, we obtain
+Applying the change of variable $x \mapsto T_t(x)$ and using the fact that $T_t|_{\Gamma_1}=I$ on $\Gamma_1$, we obtain
 \begin{equation}
 	\mathcal{G}(t,\varphi,\psi,\rho,\varrho) =
 	\mathcal{G}_{\mathrm{cost}} +
@@ -519,6 +524,8 @@ with $S_0^J$ and $S_1^J$ given by
 			  & \quad + A_{\Omega} \left({Dv}^{\top}\sigma(q) + {Dq}^{\top}\sigma(v+g)\right),
 \end{align*}
 respectively.
+\tred{A: I think there is an error, it should be $-A_{\Omega} \left({Du}^{\top}\sigma(p) + {Dp}^{\top}\sigma(u)\right)$, and $-A_{\Omega} \left({Dv}^{\top}\sigma(q) + {Dq}^{\top}\sigma(v+g)\right)$, no?}
+
 
 \textbf{Hadamard form.} Even though our numerical algorithm is based on the distributed expression~\ref{eq:SDelast_inv}, it is instructive to compute the Hadamard form of the shape derivative, following Proposition~\ref{tensor_relations}.
 Using \eqref{eq:general_boundary_exp} and using the fact that the jump of $|u-v-g|^2$ on $\partial\Om$ vanishes, we get
