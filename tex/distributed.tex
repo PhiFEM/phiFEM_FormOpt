@@ -536,12 +536,31 @@ Using \eqref{eq:general_boundary_exp} and using the fact that the jump of $|u-v-
 	$G :=  \mathcal{G}^+- \mathcal{G}^-$ and
 \begin{align*}
 	%%%%
-	\mathcal{G} & := \left(A_{\Omega}\sigma(u):\epsilon(p) + A_{\Omega}\sigma(v+g):\epsilon(q)\right)\\
-			  & \quad + A_{\Omega} \left({Du}^{\top}\sigma(p) + {Dp}^{\top}\sigma(u)\right)n\cdot n\\
-			  & \quad + A_{\Omega} \left({Dv}^{\top}\sigma(q) + {Dq}^{\top}\sigma(v+g)\right)n\cdot n \text{ on }\partial\Om.
+	\mathcal{G} & := A_{\Omega}\sigma(u):\epsilon(p) + A_{\Omega}\sigma(v+g):\epsilon(q)\\
+			  & \quad - A_{\Omega} \left({Du}^{\top}\sigma(p) + {Dp}^{\top}\sigma(u)\right)n\cdot n\\
+			  & \quad - A_{\Omega} \left({Dv}^{\top}\sigma(q) + {Dq}^{\top}\sigma(v+g)\right)n\cdot n \text{ on }\partial\Om.
 \end{align*}
 
-\tred{A: maybe there could be some simplifications, but we don't really need to optimize this formula anyway.}
+\rood{A: we can simplify as follows, but we don't need to write this formula in the paper as this is too detailed. We have
+\begin{align*}
+	& A_{\Omega}\sigma(u):\epsilon(p)= A_{\Omega}\sigma(u): Dp\\
+& = A_{\Omega}\sigma(u)n \cdot Dp n + A_{\Omega}\sigma(u)(I-n\otimes n):Dp(I-n\otimes n) 
+\end{align*}
+This yields the simplification:
+\begin{align*}
+	%%%%
+	\mathcal{G} & := A_{\Omega}\sigma(u)(I-n\otimes n) : Dp(I-n\otimes n)\\
+	&\quad + A_{\Omega}\sigma(v+g)(I-n\otimes n) : Dq(I-n\otimes n) \\ 
+			  & \quad - A_{\Omega} \sigma(p) n\cdot {Du} n\\
+			  & \quad - A_{\Omega} \sigma(q)n\cdot Dv n \text{ on }\partial\Om.
+\end{align*}
+This is a splitting in normal and tangential components, as $A_{\Omega}\sigma(u)(I-n\otimes n)$ and $Dp(I-n\otimes n)$ are tangential for instance.
+Then, when taking the jump of $\mathcal{G}$ accross $\partial\Om$, there are a few simplifications, using the transmission conditions, and
+\begin{align*}
+& 	[[A_{\Omega}\sigma(u)(I-n\otimes n) : Dp(I-n\otimes n) ]] \\
+& =  [[A_{\Omega}]]\sigma(u)(I-n\otimes n) : Dp(I-n\otimes n)  
+\end{align*}
+}
 
 
 % \textbf{Bilinear form.}
@@ -837,8 +856,8 @@ For each test, there is a corresponding folder in \code{results/},
 where the results are saved.
 
 The files \code{load.py} and \code{plots.py} contain auxiliary code
-for visualizing the results. Since the results are saved in XDMF format,
-we recommend ParaView to view them. \tred{A: add some citation for paraview.}
+for visualizing the results. 
+We recommend ParaView \cite{10.5555/2789330} to view the results which are saved in XDMF format. 
 
 Several classes and functions are used internally, and the user does not need
 to understand how to use them. Below, we describe the stages the user must follow,
@@ -1837,28 +1856,32 @@ subject to
 \begin{equation}\label{eq:compli_constr}
 	\int_{\mathcal{D}} \chi_{\Omega} = V,
 \end{equation}
-where $u$ is the solution to
-\begin{equation}\label{eq:compli_prob}
-	\begin{aligned}
-	   -\operatorname{div} A_{\Omega} \sigma(u) &= 0 && \text{in } \mathcal{D}\\
-											 u  &= 0 && \text{on } \Gamma_{0}\\
-					     A_{\Omega} \sigma(u)n  &= g && \text{on } \Gamma_{1} \\
-					     A_{\Omega} \sigma(u)n  &= 0 && \text{on } \Gamma \setminus (\Gamma_{1} \cup \Gamma_{1})						 
-	\end{aligned}
+where $u$ is the solution to the variational formulation:
+Find $u \in  H^1_{\Gamma_0}(\mathcal{D})^d$ such that
+\begin{equation}\label{eq:compli_weak}
+\int_{\mathcal{D}} A_{\Omega}\sigma(u):\epsilon(v) = \int_{\Gamma_1} g \cdot v
+\qquad
+\forall \, v \in  H^1_{\Gamma_0}(\mathcal{D})^d,
 \end{equation}
 and $A_{\Omega}:\overline{\mathcal{D}} \rightarrow \mathds{R}$ is given by
 \begin{equation}\label{eq:compli_AOmega}
 	A_{\Omega} = \chi_{\Omega} + {10}^{-4}\chi_{\overline{\mathcal{D}}\setminus\Omega}.
 \end{equation}
-
-The weak formulation of \eqref{eq:compli_prob} reads:
-Find $u \in  H^1_{\Gamma_0}(\mathcal{D})^d$ such that
-\begin{equation}\label{eq:compli_weak}
-\int_{\mathcal{D}} A_{\Omega}\sigma(u):\epsilon(v) = \int_{\Gamma_1} g \cdot v
-\qquad
-\forall \, v \in  H^1_{\Gamma_0}(\mathcal{D})^d.
+The corresponding strong formulation is
+\begin{equation}\label{eq:compli_prob}
+	\begin{aligned}
+	   -\operatorname{div} A_{\Omega} \sigma(u) &= 0 && \text{in } \Om \text{ and }\Om\setminus\overline{\mathcal{D}}\\
+											 u  &= 0 && \text{on } \Gamma_{0}\\
+					     A_{\Omega} \sigma(u)n  &= g && \text{on } \Gamma_{1} \\
+					     A_{\Omega} \sigma(u)n  &= 0 && \text{on } \Gamma \setminus (\Gamma_{1} \cup \Gamma_{1})	\\
+						 (A_{\Omega} \sigma(u)n)^+ &= (A_{\Omega} \sigma(u)n)^- && \text{on }  \partial\Om\\      
+						 u^+ &= u^- && \text{on }  \partial\Om   					 
+	\end{aligned}
 \end{equation}
-The solution to the adjoint problem can be written as $p=-2u$.
+
+
+
+The solution to the adjoint problem is $p=-2u$.
 From \eqref{eq:compli_constr}, the constraint function is given by
 \begin{equation*}
 	C(\Omega) = \frac{1}{V} \int_{\mathcal{D}} \chi_{\Omega}.
@@ -2016,9 +2039,7 @@ Figure \ref{fig:compli5}
 \label{sub:heat}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\tred{Also add few references here.}
-
-\cite{GAO2008805}
+Topology optimization for efficient thermal management plays a crucial role in modern applications such as battery thermal regulation \cite{Mo2021}, heat exchangers \cite{GAO2008805}, additive-manufactured cooling channels \cite{LamarcheGagnon2024}, and temperature-sensitive components in aerospace systems.
 
 Let $\Gamma_0$ be a subset of $\Gamma$.
 Let $V$ be a prefixed volume, less than the volume of $\mathcal{D}$.
@@ -2031,7 +2052,7 @@ subject to
 \begin{equation}
 	\int_{\mathcal{D}} \chi_{\Omega} = V,
 \end{equation}
-where $u$ is the solution to
+where $u$ is the solution to \tred{A: when writing the strong formulation we should always write it using transmission conditions to be rigorous. That's why I usually prefer to write first the wek formulation and then the strong formulation.}
 \begin{equation} \label{eq:heat_prob}
 	\begin{aligned}
 	-\operatorname{div}(A_{\Omega} \nabla u) &= f && \text{in } \mathcal{D}\\
@@ -2048,7 +2069,7 @@ According to \eqref{eq:problem}, the constraint function for this problem is wri
 	C(\Omega) = \frac{1}{V} \int_{\mathcal{D}} \chi_{\Omega}.
 \end{equation}
 
-weak formulation:
+The weak formulation is:
 Find $u \in  H^1_{\Gamma_0}(\mathcal{D})$ such that
 \begin{equation} \label{eq:heat_weak}
 	\int_{\mathcal{D}} A_{\Omega} \nabla u \cdot \nabla v =
@@ -2056,22 +2077,19 @@ Find $u \in  H^1_{\Gamma_0}(\mathcal{D})$ such that
 	\quad
 	\forall \, v \in  H^1_{\Gamma_0}(\mathcal{D}).
 \end{equation}
-
-derivative components
+The shape derivative components are given by
 \begin{align*}
 	S^J_0 &= 2u\nabla f \\
-	S^J_1 &= \left(2uf-A_{\Omega}\left|\nabla u\right|^{2}\right)I+2A_{\Omega}\nabla u\otimes\nabla u
+	S^J_1 &= \left(2uf-A_{\Omega}\left|\nabla u\right|^{2}\right)I+2A_{\Omega}\nabla u\otimes\nabla u,
 \end{align*}
-
+and
 \begin{equation*}
 	S^C_0 = \boldsymbol{0},\quad S^C_1 = \frac{1}{V} \chi_\Omega I
 \end{equation*}
-
-bilinear form
+The  bilinear form is
 \begin{equation} \label{eq:heat_biform}
 	B(\theta, \xi) = \int_{\mathcal{D}} D\theta : D\xi .
 \end{equation}
-
 In all examples, $\mathcal{D} = (0, 1)\times(0, 1)$
 
 \noindent\textit{Example 1.}
@@ -2244,7 +2262,7 @@ Figure \ref{fig:heat5}
 \label{sub:pop}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\tred{A: here also some references and emphasize that the PDE is nonlinear.}
+\tred{A: here also some references}
 
 Here we provide an example where the PDE constraint is non-linear. \tred{A: should explain how the PDE is solved. Newton?}
 Let $V$ be a prefixed volume, less than the volume of $\mathcal{D}$.
@@ -2378,10 +2396,10 @@ The parallel computing capacities with three different modes is also an importan
 The built-in Proximal-Perturbed Lagrangian is also a useful feature to handle shape constraints, in particular volume constraints which are commonplace in shape optimization problems. 
 
 
-Despite the versatility of FormOpt, several extensions will be considered in future research.
+Despite the versatility of FormOpt, there are are several potential that will be explored in future research.
 The extension to higher-order tensor representation of shape derivatives should be straightforward and will be useful for applications, for instance to consider problems involving the biLaplacian \cite{LL2024}.
-The extension to tensor representations including boundary term is important for applications, but is more delicate from an implementation point of view, as it will require more complex discretization methods to handle the boundary terms \tred{A: cite CUTfem, Xfem, etc ... } 
-Other natural extensions are time-dependent problems and  automatic differentiation capabilities \cite{MR4233697,Paganini2021} to compute the adjoint and shape derivative.
+The extension to tensor representations including boundary term is important for applications, but is more delicate from an implementation perspective, as it requires advanced discretization techniques to handle the boundary terms, such as unfitted finite element methods including CutFEM \cite{Burman1} and XFEM \cite{belytschko2001arbitrary}. 
+Other natural extensions are time-dependent problems and  automatic differentiation capabilities \cite{Paganini2021,BLAUTH2023101577,MR4233697} to compute the adjoint and shape derivative.
 
 
 \tred{A: I am also thinking that we do not have a test with many sources or measurements, to illustrate the task and mixed parallelisms. Maybe we could try the elastic inverse problem with more sources (with small compact support maybe), like 12 sources? Or maybe define a sort of simplified EIT with more sources. I think I will try to implement this module myself. }
