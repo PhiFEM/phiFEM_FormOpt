@@ -31,6 +31,11 @@
 \newcommand{\tred}{\textcolor{red}}
 \newcommand{\tblue}{\textcolor{blue}}
 
+\newcommand{\fopt}{\texttt{FormOpt} }
+\newcommand{\fx}{\texttt{FEniCSx}}
+
+
+
 \newtheorem{definition}{Definition}
 \newtheorem{proposition}{Proposition}
 
@@ -90,12 +95,16 @@
 \maketitle
 
 \begin{abstract}
-We present a toolbox for shape and topology optimization using the software package FEniCSx.
-We employ an optimize-then-discretize approach based on the distributed shape derivative and its tensor representation, thus following the approach of \cite{MR3843884}.
-The numerical shape modeling uses a standard level set method.
-The implementation supports three different modes for parallel computing: data, task and mixed parallelisms, thus allowing for an efficient resolution of the problems.
-On one hand, the built-in features of FEniCSx for parallelizing the mesh are used.
-On the other hand, we also implement a parallelization of the source terms in the underlying partial differential equations. The user can then conveniently use a combination of the two modes for parallel computing.
+	This article presents the toolbox \fopt for two- and three-dimensional shape and topology optimization with parallel computing capabilities, built on the \fx\,  software framework. 
+	We introduce fundamental concepts of shape sensitivity analysis and their numerical applications for educational purposes, while also emphasizing computational efficiency via parallelism for practitioners.
+	We adopt an optimize-then-discretize strategy based on the distributed shape derivative and its tensor representation, following the approach of \cite{MR3843884} and extending it in several directions.
+The numerical shape modeling relies on  a level set method, whose evolution is driven by a descent direction computed from the shape derivative.
+Geometric constraints are treated accurately through a Proximal-Perturbed Lagrangian approach.
+\fopt leverages the powerful features of  \fx, particularly its support for weak formulations of partial differential equations, diverse finite element types, and scalable parallelism.
+The implementation supports three different parallel computing modes: data parallelism, task parallelism, and a mixed mode. Data parallelism exploits \fx's mesh partitioning features, and we implement a task parallelism mode which is useful for problems governed by a set of partial differential equations with varying parameters. The mixed mode conveniently combines both strategies to achieve efficient utilization of computational resources.
+% The implementation supports three different modes for parallel computing: data, task and mixed parallelisms, enabling an efficient use of computational resources.
+% On one hand, the built-in features of \fx for parallelizing the mesh are used.
+% On the other hand, we also implement a task parallelization which is useful for problems constrained by a set of partial differential equations with varying parameters. The mixed mode allows to conveniently use a combination of the two modes for parallel computing.
 \end{abstract}
 
 \begin{multicols}{2}
@@ -122,24 +131,24 @@ The topic has found natural applications first  in structural and fluid mechanic
 
 % 2) What are the different approaches + literature review
 Different approaches have been developed for shape and topology optimization. 
-The solid isotropic microstructure with penalty (SIMP) method \cite{MR2008524}, based on a material density approach,  is one of the most popular in structural mechanics and is the basis of many educational codes since the work \cite{Sigmund2014}. 
+The solid isotropic microstructure with penalty (SIMP) method \cite{MR2008524}, based on a material density approach,  is the most popular in structural mechanics and is the basis of many educational codes since the work \cite{Sigmund2014}. 
 It has been extended to different frameworks, beyond structural optimization.
 Another widely used approach is the level-set based approach, with different variations of the method introduced by Osher and Sethian in \cite{MR965860}. 
 Other important methods include phase-field methods \cite{MR2108636} and topological derivative-based methods \cite{MR2235384}. 
 Reference works for the level set approach in structural optimization are \cite{MR1911658,MR2033390}. 
-As the literature on topology optimization is very extensive, we only provide certain illustrative citations, and refer to review papers for a more extensive literature review. 
+Given the vast literature on topology optimization, we provide only a few illustrative references here and refer the reader to review articles for a more comprehensive overview. 
 
 
 % 3) the trend of educational codes + literature
-The offer for softwares for shape and topology optimization is growing quickly.
-Along commercial softwares, many open-source softwares have been developed. 
-For topology optimization in structural mechanics, a trend of educational codes started in 2001 with the 99 line Matlab code by Sigmund published in 2001 \cite{Sigmund2014} and followed by an improved version in \cite{Andreassen2010}. Another pioneering code is the FreeFEM implementation \cite{MR2252743}.
-Codes for various platforms have been developed, such as NGsolve \cite{MR4233697}, FEniCS \cite{BLAUTH2021100646,MR3843884} and Firedrake~\cite{Paganini2021}. 
-See also an open-source Python implementation of the Null Space Optimizer \cite{MR4686093}.
-We refer to  \cite{Gain2013} for a comparison of algorithms.
+%The offer for softwares for shape and topology optimization is growing quickly.
+The range of software available for shape and topology optimization is rapidly expanding.
+Along commercial softwares, numerous open-source tools have been developed.
+For topology optimization in structural mechanics, the trend of educational codes began in 2001 with Sigmund's 99-line \texttt{MATLAB} code \cite{Sigmund2014}, followed by an improved version in \cite{Andreassen2010}. Another pioneering contribution is the \texttt{FreeFEM} implementation \cite{MR2252743}.
+Since then, codes have been released for various platforms, including \texttt{NGsolve} \cite{MR4233697}, \texttt{FEniCS} \cite{BLAUTH2021100646,MR3843884} and \texttt{Firedrake}~\cite{Paganini2021}. 
+An open-source \texttt{Python} implementation of the Null Space Optimizer is also available \cite{MR4686093}. For a comparison of algorithms, we refer to \cite{Gain2013}.
  
 % 4) We use here the distributed shape derivative approach, why it is good?
-The majority of educational papers and implementations for structural optimization and topology optimization are based on the SIMP method, or a variation of the level set method using a Heaviside function (citation). 
+The majority of educational papers and implementations for structural optimization and topology optimization are based on the SIMP method \cite{Sigmund2014}, or a variation of the level set method using a Heaviside function, see the review \cite{vanDijk2013}. 
 In this work we follow another variation of the level set approach based on the notion of shape derivatives \cite{MR2731611,SokZol92}. 
 Educational codes following this approach include \cite{Challis2009,MR2459656}.
 More specifically, we base our approach on the so-called {\it distributed shape derivative}.
@@ -153,7 +162,7 @@ Another important feature of our approach is that it emphasizes the optimize-the
 % 5) The need for parallel computing, and how FenicsX help + recent trend
 As the computational power steadily increases, parallel computing has become commonplace and is often required for large-scale problems. 
 This trend can also be observed in the topology optimization community, with the developments of many educational codes with parallel capabilities recently. 
-Such work include a Julia toolbox \cite{Wegert2025}, a parallel FreeFEM framework \cite{MR4916810}, and a FEniCSx implementation for 2D and 3D topology optimization \cite{Jia2024}.
+Such work include a \texttt{Julia} toolbox \cite{Wegert2025}, a parallel \texttt{FreeFEM} framework \cite{MR4916810}, and a \fx\, implementation for 2D and 3D topology optimization \cite{Jia2024}.
 The new version of cashocs based on FEniCS also added support for parallelism with MPI \cite{BLAUTH2021100646,BLAUTH2023101577}.
 Naturally, we also propose here an evolution of the distributed shape derivative-based \cite{MR3843884} with parallel capabilities.
 Unlike most educational papers on topology optimization which focus on structural mechanics, our objective here is to offer a broader perspective, considering shape optimization problem with general PDE constraints. We also present standard applications involving linear elasticity as a particular case. Another important focus of the present paper is inverse problems, which benefit greatly from the parralelization of the sources.
@@ -163,7 +172,7 @@ Unlike most educational papers on topology optimization which focus on structura
 Our objective is to provide a toolbox that is easy to use for students and practitioners,  and allows to test some shape optimization problems in a fast way.
 We extend the work \cite{MR3843884} in several directions. 
 First, we only rely on finite elements in the present work, while in \cite{MR3843884} finite elements were used to solve the PDE constraints, and finite difference were used to solve the Hamilton-Jacobi equation for the domain evolution. 
-This allows for more flexible geometries, and a better use of the FEniCSx ressources.
+This allows for more flexible geometries, and a better use of the \fx\, ressources.
 We calso consider general PDE constraints, with a diversity of examples, whereas  \cite{MR3843884} was focused on linear elasticity. 
 We also include a framework for considering volume constraints, without using penalization of the cost functional.
 An important improvment is the parallel capabilities, which allow for a dramatic speed-up of the numerical experiments. 
@@ -189,7 +198,7 @@ In Section~\ref{sec:results}, numerical results are given for several model prob
 	% \item Literature review on sequential  codes: The popular “99 line” Matlab code by Sigmund published
 	% in 2001 \cite{Sigmund2014} and following improvments such as \cite{Andreassen2010}, based on Matlab. Comparison of algorithms in \cite{Gain2013}. For FreeFEM \cite{MR2252743}.
 	% NGsolve \cite{MR4233697}.
-    % \item Literature review on code with parallel capabilities: Many recents educational codes available. Julia toolbox \cite{Wegert2025}, a parallel FreeFEM framework \cite{MR4916810}, open-source Python implementation of the Null Space Optimizer for solving Topology Optimization problems \cite{MR4686093}, aFEniCSx implementation for 2D 	and 3D topology optimization \cite{Jia2024}.
+    % \item Literature review on code with parallel capabilities: Many recents educational codes available. Julia toolbox \cite{Wegert2025}, a parallel FreeFEM framework \cite{MR4916810}, open-source Python implementation of the Null Space Optimizer for solving Topology Optimization problems \cite{MR4686093}, a\fx implementation for 2D 	and 3D topology optimization \cite{Jia2024}.
     % \item Literature for other methods such as phase-field methods. As the literature on topology optimization is very extensive, we only provide certain illustrative citations, and refer to review papers for a more extensive literature review. 
 % \item Here we follow a level set approach. Approach based on shape derivatives \cite{MR2731611,SokZol92} Pioneered in \cite{MR2033390,MR1911658}. Also \cite{Challis2009,MR2459656} The paper is a continuation of \cite{MR3843884}.
 % \item The goal is to provide a toolbox that is easy to use and allows to test some shape optimization problems in a fast way. Suited for students and practitioners. The main work for someone using the toolbox is to write an appropriate model (geometry and PDE) and compute $S_1,S_0$.
@@ -783,7 +792,7 @@ Interior holes and curves (formed by line segments) are supported.
 
 
 \item \code{create\_space}:
-This is wrapper function for creating a FEniCSx function space.
+This is wrapper function for creating a \fx function space.
 
 \item \code{homogeneous\_dirichlet}:
 This function creates homogeneous Dirichlet boundary conditions
@@ -2391,7 +2400,7 @@ Also maybe show weak scalabilty tests for parallel computing, as in \cite{Jia202
 %%%%%%%%%%%%%%%%%%%%%%%
 
 In this work we have extended the results of \cite{MR3843884} in several directions, for PDE-constrained shape optimization based on the distributed shape derivative and a level set method. 
-The notable features of the FormOpt toolbox are two and three-dimensional problems with flexible geometries, thanks to the FEM capabilities offered by FEniCSx.
+The notable features of the FormOpt toolbox are two and three-dimensional problems with flexible geometries, thanks to the FEM capabilities offered by \fx.
 The parallel computing capacities with three different modes is also an important development, which allows for efficiency and large scale capabilities. 
 The built-in Proximal-Perturbed Lagrangian is also a useful feature to handle shape constraints, in particular volume constraints which are commonplace in shape optimization problems. 
 
