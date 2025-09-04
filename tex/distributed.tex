@@ -34,6 +34,8 @@
 \newcommand{\fopt}{\texttt{FormOpt} }
 \newcommand{\fx}{\texttt{FEniCSx}}
 
+\newcommand{\id}{\rm{id}}
+
 
 
 \newtheorem{definition}{Definition}
@@ -148,40 +150,36 @@ Since then, codes have been released for various platforms, including \texttt{NG
 An open-source \texttt{Python} implementation of the Null Space Optimizer is also available \cite{MR4686093}. For a comparison of algorithms, we refer to \cite{Gain2013}.
  
 % 4) We use here the distributed shape derivative approach, why it is good?
-The majority of educational papers and implementations for structural optimization and topology optimization are based on the SIMP method \cite{Sigmund2014}, or a variation of the level set method using a Heaviside function, see the review \cite{vanDijk2013}. 
-In this work we follow another variation of the level set approach based on the notion of shape derivatives \cite{MR2731611,SokZol92}. 
-Educational codes following this approach include \cite{Challis2009,MR2459656}.
-More specifically, we base our approach on the so-called {\it distributed shape derivative}.
-In \cite{MR3843884}, an educational code for structural mechanics based on such an approach  was introduced.
-This approach has several advantages, such as higher accuracy \cite{MR2642680,MR3348199} and ease of implementation \cite{MR3535238}. 
-The present work is a natural evolution of \cite{MR3843884}.
-From an educational perspective, it is a way to learn about shape sensitivity analysis.
-Another important feature of our approach is that it emphasizes the optimize-then-discretize approach, as the shape derivative is computed in the infinite-dimensional setting, and a discrete version is then used in the numerical algorithm.
+A significant portion of the literature and educational implementations in structural and topology optimization is based on the SIMP method \cite{Sigmund2014}.
+Another widely used class of methods is the level-set approach, which exists in several variants, as reviewed in \cite{vanDijk2013}. Some formulations employ a Heaviside or smoothed Heaviside function to represent the domain \cite{MR1951408}, while others are built upon the concept of the topological derivative \cite{MR2235384,Novotny2013,MR4916810}.
+A further line of level set-based methods relies on shape sensitivity analysis in the infinite-dimensional setting, using shape derivatives \cite{MR2731611,SokZol92}. Educational codes following this approach include \cite{Challis2009,MR2459656}. These methods typically employ the boundary representation of the shape derivative, known as the Hadamard form, which must then be extended into the domain for use within a level-set framework \cite{MR2225309}.
+In the present work, we base our approach on the so-called {\it distributed} or {\it weak shape derivative} \cite{LAURAIN2020328,MR3535238}.
+This formulation offers several advantages: it yields higher accuracy \cite{MR2642680,MR3348199}, requires weaker regularity assumptions \cite{LAURAIN2020328}, and eliminates the need for domain extensions. An educational code for structural mechanics based on this approach was first proposed in \cite{MR3843884}. The present work represents a natural continuation and extension of \cite{MR3843884},  with more modern features.
+Our overall objective is to provide a framework for learning the fundamental principles of shape sensitivity analysis and their numerical implementation, with an educational focus. At the same time, we place strong emphasis on computational efficiency by leveraging the parallel capabilities of \fx, enabling fast and practical testing of shape optimization problems.
+A distinguishing feature of our approach is its emphasis on the optimize-then-discretize paradigm: the shape derivative is derived in the infinite-dimensional setting, and a discrete version is then used in the numerical algorithm.
 
 
 % 5) The need for parallel computing, and how FenicsX help + recent trend
-As the computational power steadily increases, parallel computing has become commonplace and is often required for large-scale problems. 
-This trend can also be observed in the topology optimization community, with the developments of many educational codes with parallel capabilities recently. 
-Such work include a \texttt{Julia} toolbox \cite{Wegert2025}, a parallel \texttt{FreeFEM} framework \cite{MR4916810}, and a \fx\, implementation for 2D and 3D topology optimization \cite{Jia2024}.
-The new version of cashocs based on FEniCS also added support for parallelism with MPI \cite{BLAUTH2021100646,BLAUTH2023101577}.
-Naturally, we also propose here an evolution of the distributed shape derivative-based \cite{MR3843884} with parallel capabilities.
-Unlike most educational papers on topology optimization which focus on structural mechanics, our objective here is to offer a broader perspective, considering shape optimization problem with general PDE constraints. We also present standard applications involving linear elasticity as a particular case. Another important focus of the present paper is inverse problems, which benefit greatly from the parralelization of the sources.
+With the steady increase in computational power, parallel computing has become not only commonplace but often essential for tackling large-scale problems. 
+This trend is also visible in the topology optimization community, where several recent educational codes incorporate parallel capabilities. 
+Examples include a \texttt{Julia}-based toolbox \cite{Wegert2025}, a parallel \texttt{FreeFEM} framework \cite{MR4916810}, and a \fx\ implementation for 2D and 3D topology optimization \cite{Jia2024}. The latest version of \texttt{cashocs}, built on FEniCS, has also introduced MPI-based parallelism \cite{BLAUTH2021100646,BLAUTH2023101577}.
+In this work, we propose a natural evolution of the distributed shape derivative approach introduced in \cite{MR3843884}, now extended with parallel computing capabilities. 
+Unlike most educational papers on topology optimization, which focus primarily on structural mechanics, our aim is to provide a broader perspective by addressing shape optimization problems subject to different types of PDE constraints.
+A particular emphasis is placed on inverse problems, where task parallelism is especially relevant: such problems typically involve families of PDE constraints with varying parameters \cite{MR4261115}. Standard applications in  structural mechanics and linear elasticity are also included as a particular case.
+
 
 % 6) We extend the previous work in many directions
 
-Our objective is to provide a toolbox that is easy to use for students and practitioners,  and allows to test some shape optimization problems in a fast way.
-We extend the work \cite{MR3843884} in several directions. 
-First, we only rely on finite elements in the present work, while in \cite{MR3843884} finite elements were used to solve the PDE constraints, and finite difference were used to solve the Hamilton-Jacobi equation for the domain evolution. 
-This allows for more flexible geometries, and a better use of the \fx\, ressources.
-We calso consider general PDE constraints, with a diversity of examples, whereas  \cite{MR3843884} was focused on linear elasticity. 
-We also include a framework for considering volume constraints, without using penalization of the cost functional.
-An important improvment is the parallel capabilities, which allow for a dramatic speed-up of the numerical experiments. 
-Three parallelism paradigm are available: data, task and mixed parallelisms.
-Data parallelism is a distribution across multiple processes, task parallelism allows to solve for instance the same PDE with different sources and mixed parallelism is a combination of the two.
-An objective of the paper is also to give an introduction to parralelization and its application to PDE-constrained shape optimization.
-The foundation of the present work it to use a tensor representation of the shape derivative, as in \cite{MR3843884}. 
-Thus, in order to consider a new problem, the main work is to write an appropriate model with an appropriate PDE and geometry, and analytically compute the tensors $S_0,S_1$ of the distributed shape derivative.
-This is an opportunity to learn about basic notions of shape sensitivity analysis.
+% Our objective is to provide a toolbox that is easy to use for students and practitioners,  and allows to test some shape optimization problems in a fast way.
+We extend the work of \cite{MR3843884} in several directions. 
+First, in the present framework we rely exclusively on finite elements, whereas \cite{MR3843884} combined finite elements for solving the PDE constraints with finite differences for solving the Hamilton–Jacobi equation governing domain evolution. This unified finite element approach enables more flexible geometries and makes more efficient use of \fx\ resources.
+Second, while \cite{MR3843884} focused exclusively on linear elasticity, we address more general PDE constraints and illustrate the framework through a broader set of examples. 
+We also provide a systematic way of handling volume constraints without resorting to penalization in the cost functional.
+Another major improvement is the integration of parallel computing, which allows for substantial speedups in numerical experiments. 
+Three paradigms of parallelism are supported: data parallelism, distributing computations across multiple processes; task parallelism, enabling for example the simultaneous solution of the same PDE with different sources and mixed parallelism, combining both approaches.
+An additional objective of this paper is to offer an accessible introduction to parallelization and its application to PDE-constrained shape optimization.
+The foundation of our framework remains the tensor representation of the shape derivative, as in \cite{MR3843884}. Practically, this means that when considering a new problem, the main task is to specify the appropriate PDE and geometry, and to analytically compute the corresponding tensors of the distributed shape derivative.
+%This is an opportunity to learn about basic notions of shape sensitivity analysis.
 
 
 % 7) structure of paper
@@ -220,10 +218,12 @@ In Section~\ref{sec:results}, numerical results are given for several model prob
 
 %\textbf{Notations.}
 Let $\mathcal{D} \subset \mathds{R}^d$ be an open, bounded domain with boundary
-$\Gamma \coloneqq \partial \mathcal{D}$. Let $n$ denote the outward unit normal vector to $\Gamma$.
+$\Gamma \coloneqq \partial \mathcal{D}$.
+Throughout the paper, $\mathcal{D}$ is fixed, while $\Om \subset \overline{\mathcal{D}}$ represents the variable domain subject to optimization.
 The spaces $H^1(\mathcal{D})$ and $H^1_0(\mathcal{D})$ denote the usual Sobolev spaces.
-Given a set $\Omega \subset \overline{\mathcal{D}}$, $\chi_{\Omega}:\overline{\mathcal{D}} \rightarrow \mathds{R}$ denotes
+The notation $\chi_{\Omega}:\overline{\mathcal{D}} \rightarrow \mathds{R}$ stands for
 the indicator function of $\Omega$.
+The notation $n$ is used for both the outward unit normal vector to $\hold$ and to $\Om$. 
 Let $I$ denote the $d$-dimensional identity matrix.
 Let $\left|\cdot\right|_{\infty}$ denote the infinity norm.
 Given a vector-valued function $w \in H^1(\mathcal{D})^d$,
@@ -234,10 +234,10 @@ We use $\boldsymbol{1}$ for a vector of ones. \tred{A: what is the dimension of 
 We consider the following general shape optimization problem with constraints:
 \begin{equation} \label{eq:problem}
 	\min_{\Omega\subset\mathcal{D}} \mathcal{J}(u,\Omega)
-	\quad \text{subject to} \, C(\Omega) = \boldsymbol{1}, E(u,\Om)=0,
+	\quad \text{subject to} \, C(\Omega) = \boldsymbol{1}, e(u,\Om)=0,
 \end{equation}
 where $\mathcal{J}: \mathbb{H}\times \mathds{P}\to\R$ is a cost functional, 
-$C: \mathds{P}\to\R$ is a vector-valued constraint function, $E: \mathbb{H}\times \mathds{P}\to\R$ is a PDE constraint for $u$, and $\mathds{P}$ is a set of subsets of $\hold$, $\mathbb{H}$ is an appropriate function space.
+$C: \mathds{P}\to\R$ is a vector-valued constraint function, $e: \mathbb{H}\times \mathds{P}\to\R$ is a PDE constraint for $u$, and $\mathds{P}$ is a set of subsets of $\hold$, $\mathbb{H}$ is an appropriate function space.
 The additional constraint $C(\Omega) = \boldsymbol{1}$ is typically a geometric constraint, such as a volume or perimeter constraint.
 Assuming $u(\Om)$ is the unique solution of $e(u,\Om)=0$,  we introduce the reduced cost functional $J(\Om):= \mathcal{J}(u(\Om),\Om)$ and we consider the problem:
 \begin{equation} \label{eq:problem}
@@ -252,7 +252,7 @@ We thus consider a diffeomorphism $T_t:\overline{\hold}\to\overline{\hold}$, $t\
 The transformation must be at least bi-Lipschitz, as we will use a change of variables in integrals later to compute the shape derivative.
 We denote its time derivative at $t=0$ as $\VV: = \frac{\partial}{\partial t} T_t|_{t=0}$.
 Alternatively, one can also start with a given $\VV\in\Theta^k(\hold)$, where
-$$ \Theta^k(\hold) := \{\VV\in C^k_c(\R^m,\R^m)| \VV\cdot n_{|\partial\hold\setminus \singset} = 0 \mbox{ and } \VV_{|\singset} = 0\}$$
+$$ \Theta^k(\hold) := \{\VV\in C^k_c(\R^d,\R^d)| \VV\cdot n_{|\partial\hold\setminus \singset} = 0 \mbox{ and } \VV_{|\singset} = 0\}$$
 and $\singset\subset\partial\hold$ is the set of points where the normal $n$ is not defined, i.e., the set of singular points of $\partial\hold$.
 Then, one can build $T_t$ satisfying $\VV\in\Theta^k(\hold)$ using a flow as in the {\it speed method}
 \cite{MR2731611,SokZol92} or using a {\it perturbation of identity} \cite{MR2512810}.
@@ -276,7 +276,7 @@ In any case, once $T_t$ is available and assuming  $\VV\in\Theta^k(\hold)$, we c
 	\end{definition}
 	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%55
 	% When the shape derivative is computed as a volume integral, it is convenient to write it in the following particular form.
-When the cost function and PDE constraints consist of bulk integrals, the shape derivative is also naturally written as a bulk integral, and one can often write it in the following canonical form.  
+	When both the cost functional and the PDE constraints are expressed as bulk integrals, the corresponding shape derivative can likewise be formulated as a bulk integral, and often admits the following canonical form.
 	\begin{definition}[Tensor representation]\label{def:tensor2}
 	Let $\Om\in \mathds{P}$ be open.
 	A shape differentiable function $J : \mathds{P} \rightarrow \R$  admits  a tensor representation of order $1$ if
@@ -293,7 +293,7 @@ When the cost function and PDE constraints consist of bulk integrals, the shape 
 	Expression \eqref{ea:volume_form2} is called distributed, volumetric, or domain expression of the shape derivative.
 	Tensor representations of arbitrary order can be defined in a similar way, see \cite{MR3535238}.
 The order of the representation is essentially the maximal order of the differential operators appearing in the variational formulation of the PDE constraint and in the cost functional, see \cite{MR4531392,LL2024} for examples of tensor representations of order two. 
-Tensor representation can also be formulated when the cost function and PDE constraints contain boundary term, see \cite{MR3535238}.
+Tensor representations can also be formulated when the cost function and PDE constraints contain boundary terms, see \cite{MR3535238}.
 Here we only discuss representations of order one and bulk integrals for the sake of simplicity.
 
 	Under natural regularity assumptions, the shape derivative only depends on the restriction of the normal component $\VV\cdot n$ to the interface $\partial\Om$.  
@@ -319,11 +319,12 @@ Applying the divergence theorem, this structure follows immediatly from the tens
 	where $+$ and $-$ denote the traces on $\partial\Om$ of the restrictions of $\Sb_1$ to $\Omega$ and $\hold\setminus\overline \Omega$, respectively. 
 	\end{proposition}
 	See \cite[Proposition~1]{LAURAIN2020328} and \cite[Proposition~4.3]{MR3535238} for proofs of Proposition \ref{tensor_relations} in more general settings.
-	The Hadamard formula \eqref{eq:general_boundary_exp} is the basis for most shape derivative-based numerical methods, such as \cite{MR2033390}.
-In this paper we pursue the distributed expression-based approach described in \cite{MR3843884} using \eqref{ea:volume_form2}.
+	The Hadamard formula \eqref{eq:general_boundary_exp} is the basis of most shape derivative–based numerical methods \cite{MR2252743,MR2033390,vanDijk2013}. It provides a natural way to express the shape derivative and derive a descent direction for optimization algorithms via the shape gradient $G$, and it integrates well with the original level-set method formulation \cite{MR965860} based on the Hamilton–Jacobi equation.
+	However, this approach has certain drawbacks, such as stronger regularity requirements on $\Sb_1$ in Proposition~\ref{tensor_relations} compared to Definition~\ref{def:tensor2}. By contrast, the distributed shape derivative eliminates the need for domain extensions, and several recent studies have shown that it achieves higher accuracy \cite{MR2642680,MR3348199}.
+In this work, we pursue the distributed expression-based approach described in \cite{MR3843884} using \eqref{ea:volume_form2}.
 	A Lagrangian approach is employed to compute the tensor representation \eqref{ea:volume_form2}.
 	
-We will use the following notation for the shape derivatives of the cost and constraint functionals:
+Throughout the paper, we will use the following notation for the shape derivatives of the cost and constraint functionals:
 	\begin{equation}
 		dJ(\Omega;\VV) = \int_{\mathcal{D}} S_0^J \cdot \theta + S_1^J : D\theta, 
 	\end{equation}
@@ -336,12 +337,11 @@ We will use the following notation for the shape derivatives of the cost and con
 \label{sec:model_prob}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-In order to illustrate a concrete example of the calculation of a tensor representation \eqref{ea:volume_form2}, we consider a standard inverse problem in linear elasticity. 
-Other examples of tensor representation of the shape derivative are provided in Section~\ref{sec:results}.
-The uniqueness in determining cavities has been investigated in \cite{MR1772729}.
-The shape sensitivity analysis for a similar problem was investigated in \cite{MEFTAHI20151554}, for a different cost function and using strong formulations rather than weak formulations of the PDEs.
-The focus in \cite{MEFTAHI20151554} is on the Hadamard form rather than the distributed shape derivative.
+In order to illustrate a concrete example of the calculation of a tensor representation \eqref{ea:volume_form2}, we consider a standard inverse problem in linear elasticity, where the objective is to reconstruct the shape of an inclusion with different elastic material parameters, from boundary and/or domain measurements.
+The uniqueness and stability of identifying a rigid inclusion in an elastic body from a boundary measurement have been investigated in \cite{Morassi2009}, while the case of cavities was addressed in \cite{MR1772729}.
+Shape sensitivity analysis for a related problem was studied in \cite{MEFTAHI20151554}, but with a different cost functional and using strong, rather than weak, formulations of the PDEs. The emphasis in \cite{MEFTAHI20151554} is on the Hadamard form \eqref{eq:general_boundary_exp} of the shape derivative, rather than on the distributed formulation \eqref{ea:volume_form2}.
 \rood{A: in fact there are several issues in \cite{MEFTAHI20151554}, for instance they use strong formulations in the variational formulations but they do not have enough regularity for that. We won't discuss that here, as this is beyond the scope.}
+Further examples of tensor representation of the shape derivative for other PDEs are provided in Section~\ref{sec:results}.
 
 
 
@@ -352,7 +352,7 @@ Let $H_{\Gamma_0}(\mathcal{D})^d$ be the space of functions
 \begin{equation*}
 	H_{\Gamma_0}(\mathcal{D})^d\coloneqq\left\{ u\in H(\mathcal{D})^{d}\mid u|_{\Gamma_0}=\boldsymbol{0}\right\}. 
 \end{equation*}
-The strain and stress tensors are given by
+The strain and stress tensors are given by, respectively,
 \begin{equation*}
 	\epsilon(w)\coloneqq\frac{Dw+{Dw}^{\top}}{2},\quad\sigma(w)\coloneqq2\mu\,\epsilon(w) 
 	+ \lambda (\mathrm{div}w) I,
@@ -363,11 +363,11 @@ Let $\alpha$ and $\beta$ be positive weights.
 \begin{center}
 \includegraphics[width=0.7\linewidth]{elasticity_dom.png}
 \captionof{figure}{
-	Domain configuration for the inverse problem in elasticity.
+	Geometric configuration for the inverse problem in elasticity.
 }
 \label{fig:elast_dom}
 \end{center}
-We follow a Kohn-Vogelius-type approach, considering the shape optimization problem:
+We follow a Kohn-Vogelius-type approach \cite{KohnVogelius1984}, considering the shape optimization problem:
 \begin{equation} \label{eq:cost}
 	\min_{\Omega \subset \mathcal{D}}
 	J(\Omega) \coloneqq
@@ -412,7 +412,7 @@ For several measurements, one can simply sum over the measurements in \eqref{eq:
 \textbf{The state and adjoint problems.}
 Now we write the weak formulations of \eqref{eq:f-prob} and \eqref{eq:g-prob},
 and of their corresponding adjoint problems.
-The weak formulation of \eqref{eq:f-prob} reads:
+The weak formulation of~\eqref{eq:f-prob} reads:
 Find $u \in  H^1_{\Gamma_0}(\mathcal{D})^d$ such that
 \begin{equation} \label{eq:w-f}
 	\int_{\mathcal{D}} A_{\Omega}\sigma(u):\epsilon(w) =
@@ -443,7 +443,7 @@ as follows:
 with
 \begin{align*}
 	\mathcal{L}_{\mathrm{cost}}    &= \frac{\alpha}{2}\int_{\mathcal{D}} \left|\varphi-\psi - g\right|^{2} + \frac{\beta}{2}\int_{\Gamma_{1}} \left|\varphi - g \right|^{2}, \\
-	\mathcal{L}_{\mathrm{state}[f]}   &= \int_{\mathcal{D}} A_{\Omega} \sigma(\varphi) : \epsilon(\rho) - \int_{\Gamma_{1}} f \cdot \rho, \quad\text{and}\\
+	\mathcal{L}_{\mathrm{state}[f]}   &= \int_{\mathcal{D}} A_{\Omega} \sigma(\varphi) : \epsilon(\rho) - \int_{\Gamma_{1}} f \cdot \rho, \\
 	\mathcal{L}_{\mathrm{state}[g]} &= \int_{\mathcal{D}} A_{\Omega} \sigma(\psi + g) : \epsilon(\varrho),
 \end{align*}
 where $\Omega\subset\mathcal{D}$ and $\varphi, \psi, \rho, \varrho$ are functions in $H^1_{\Gamma_0}(\mathcal{D})^d$.
@@ -451,18 +451,18 @@ where $\Omega\subset\mathcal{D}$ and $\varphi, \psi, \rho, \varrho$ are function
 By differentiating $\mathcal{L}$ with respect to $\varphi$ and $\psi$,
 we obtain the adjoint equations:
 Find $p \in  H^1_{\Gamma_0}(\mathcal{D})^d$ and $ q\in H^1_0(\mathcal{D})^d$ such that
-\begin{align*}
-	\partial_{\varphi}\mathcal{L}(u,v,p,q)(r)&=0 & \forall \, r \in  H^1_{\Gamma_0}(\mathcal{D})^d,\\
-	\partial_{\psi}\mathcal{L}(u,v,p,q)(r)&=0 & \forall \, r \in  H^1_0(\mathcal{D})^d.
-\end{align*}
-From the first equation we have the first adjoint problem:
+\begin{align}
+\label{dL1}	\partial_{\varphi}\mathcal{L}(u,v,p,q)(r)&=0 & \forall \, r \in  H^1_{\Gamma_0}(\mathcal{D})^d,\\
+\label{dL2}	\partial_{\psi}\mathcal{L}(u,v,p,q)(r)&=0 & \forall \, r \in  H^1_0(\mathcal{D})^d.
+\end{align}
+From \eqref{dL1} we obtain the first adjoint problem:
 Find $p \in  H^1_{\Gamma_0}(\mathcal{D})^d$ such that
 \begin{align*} \label{eq:f-adj}
 \int_{\mathcal{D}} A_{\Omega}\sigma(p):\epsilon(r) & = -\alpha \int_{\mathcal{D}} (u-v-g) \cdot r \\
 &\quad -\beta \int_{\Gamma_1} (u - g) \cdot r \quad
 \forall \, r \in  H^1_{\Gamma_0}(\mathcal{D})^d.
 \end{align*}
-From the second equation we have the second adjoint problem:
+From \eqref{dL2} we get the second adjoint problem:
 Find $q \in  H^1_{0}(\mathcal{D})^d$ such that
 \begin{equation*} \label{eq:g-adj}
 	\int_{\mathcal{D}} A_{\Omega}\sigma(q):\epsilon(r) =
@@ -473,10 +473,12 @@ Observe that both the state and the adjoint problems are linear.
 %%%%%%%%%%%%
 \textbf{Shape derivative components.}
 Let $T_t:\overline{\hold}\to\overline{\hold}$, $t\in [0,\tau]$ be a diffeomorphism as described in Section~\ref{sec:shape-opt} and $\Om_t := T_t(\Om)$.
-We assume in addition that $T_t=I$ on $\Gamma_1$, where the measurements are taken.
+Let $\id$ denote the identity mapping.
+We assume in addition that $T_t|_{\Gamma_1}=\id$ on $\Gamma_1$, where the measurements are taken.
 Note that the Lagrangian $\mathcal{L}$ in \eqref{eq:elastic_lag} depends on $\Om_t$  through $A_{\Om_t}$.
 The standard procedure to compute the shape derivative is to first perform a change of variables $x\mapsto T_t(x)$ in the integrals of $\mathcal{L}$, in order to transform $A_{\Om_t}$ into $A_{\Om}$.
-In order to compensate for this change of variables, one needs to reparameterize $\mathcal{L}$ by composing the functions with $T_t^{-1}$; see \cite{MR4531392} for a more detailed explanation. Thus we introduce the so-called shape-Lagrangian as
+In order to compensate for this change of variables, one needs first to reparameterize $\mathcal{L}$ by composing the functions with $T_t^{-1}$; see \cite{MR4531392} for a more detailed explanation. 
+To this end, we introduce the so-called {\it shape-Lagrangian} as
 \begin{align*}
 	& \mathcal{G}(t,\varphi,\psi,\rho,\varrho) \\
 	& \coloneqq \mathcal{L}\left(\Omega_{t},\varphi\circ T_{t}^{-1},\psi\circ T_{t}^{-1},\rho\circ T_{t}^{-1},\varrho\circ T_{t}^{-1}\right)
@@ -489,12 +491,12 @@ For $t\in[0, t_1]$ and $w \in H^1(\mathcal{D})^d$, let
 It holds that $E(t,w) = \epsilon\left(w\circ T_{t}^{-1}\right)\circ T_{t}$.
 In particular, $E(0, w) = \epsilon(w)$.
 On the other hand, recall that $\sigma = \mathrm{C}\epsilon$,
-where $\mathrm{C}$ is the 4-index stiffness tensor associated to
-$\lambda$ and $\mu$. In terms of Kronecker symbols,
+where $\mathrm{C}$ is the $4$-index stiffness tensor associated to
+$\lambda$ and $\mu$. In terms of Kronecker symbols, it reads
 \begin{equation}
 	\mathrm{C}_{ijkl} \coloneqq \lambda \delta_{ij} \delta_{kl} + \mu(\delta_{ik}\delta_{jl} + \delta_{il}\delta_{jk}).
 \end{equation}
-Applying the change of variable $x \mapsto T_t(x)$ and using the fact that $T_t|_{\Gamma_1}=I$ on $\Gamma_1$, we obtain
+Applying the change of variable $x \mapsto T_t(x)$ in $\mathcal{G}(t,\cdot)$ and using the fact that $T_t|_{\Gamma_1}=\id$ on $\Gamma_1$, we obtain
 \begin{equation}
 	\mathcal{G}(t,\varphi,\psi,\rho,\varrho) =
 	\mathcal{G}_{\mathrm{cost}} +
@@ -503,20 +505,20 @@ Applying the change of variable $x \mapsto T_t(x)$ and using the fact that $T_t|
 \end{equation}
 with
 \begin{align*}
-	\mathcal{G}_{\mathrm{cost}}     &= \frac{\alpha}{2}\int_{\mathcal{D}}\left|\varphi-\psi-g\circ T_{t}\right|^{2}\xi(t)+\frac{\beta}{2}\int_{\Gamma_{1}}\left|\phi-g\right|^{2}, \\
-	\mathcal{G}_{\mathrm{state}[f]} &= \int_{\mathcal{D}}A_{\Omega}\mathrm{C}E(t,\phi):E(t,\rho)\xi(t)-\int_{\Gamma_{1}}f\cdot\rho, \;\, \text{and}\\
-	\mathcal{G}_{\mathrm{state}[g]} &= \int_{\mathcal{D}}A_{\Omega}\mathrm{C}E(t,\varphi + g\circ T_{t}):E(t,\varrho)\xi(t),
+	\mathcal{G}_{\mathrm{cost}}     &:= \frac{\alpha}{2}\int_{\mathcal{D}}\left|\varphi-\psi-g\circ T_{t}\right|^{2}\xi(t)+\frac{\beta}{2}\int_{\Gamma_{1}}\left|\phi-g\right|^{2}, \\
+	\mathcal{G}_{\mathrm{state}[f]} &:= \int_{\mathcal{D}}A_{\Omega}\mathrm{C}E(t,\phi):E(t,\rho)\xi(t)-\int_{\Gamma_{1}}f\cdot\rho, \\
+	\mathcal{G}_{\mathrm{state}[g]} &:= \int_{\mathcal{D}}A_{\Omega}\mathrm{C}E(t,\varphi + g\circ T_{t}):E(t,\varrho)\xi(t),
 \end{align*}
 where $\xi(t):=\det DT_t$.
-Then, one can show that the shape derivative is given as the partial derivative of the shape-Lagrangian with respect to $t$, using for instance the averaged adjoint method \cite{MR3535238} or \cite{MR2731611}.
+Then, one can show that the shape derivative is given as the partial derivative of the shape-Lagrangian with respect to $t$, using for instance the results of \cite[Chapter~10, Section~5.4]{MR2731611} or the averaged adjoint method \cite{MR3535238}.
 This yields
 \begin{equation}
-	dJ(\Omega; \theta) = \partial_{t}\mathcal{G}(0, u, v, p, q),
+	dJ(\Omega; \theta) = \partial_{t}\mathcal{G}(0, u, v, p, q).
 \end{equation}
 Using the formulas
 \begin{align*}
-	\mathrm{C}M:N &= M\vcentcolon\mathrm{C}N \quad \forall\,M,N\in\mathds{R}^{d\times d}\\
-	\partial_t E(0,w) &= -\frac{Dw\,D\theta + (Dw\,D\theta)^\top}{2}
+	\mathrm{C}M:N &= M\vcentcolon\mathrm{C}N \quad \forall\,M,N\in\mathds{R}^{d\times d},\\
+	\partial_t E(0,w) &= -\frac{Dw\,D\theta + (Dw\,D\theta)^\top}{2},
 \end{align*}
 we obtain
 \begin{equation}\label{eq:SDelast_inv}
@@ -536,16 +538,16 @@ respectively.
 \tred{A: I think there is an error, it should be $-A_{\Omega} \left({Du}^{\top}\sigma(p) + {Dp}^{\top}\sigma(u)\right)$, and $-A_{\Omega} \left({Dv}^{\top}\sigma(q) + {Dq}^{\top}\sigma(v+g)\right)$, no?}
 
 
-\textbf{Hadamard form.} Even though our numerical algorithm is based on the distributed expression~\ref{eq:SDelast_inv}, it is instructive to compute the Hadamard form of the shape derivative, following Proposition~\ref{tensor_relations}.
+\textbf{Hadamard form.} Even though our numerical algorithm is based on the distributed expression~\eqref{eq:SDelast_inv}, it is instructive to compute the Hadamard form of the shape derivative, following Proposition~\ref{tensor_relations}.
 Using \eqref{eq:general_boundary_exp} and using the fact that the jump of $|u-v-g|^2$ on $\partial\Om$ vanishes, we get
 \begin{equation}
 	dJ(\Omega;\theta) = \int_{\partial \Omega} G\, \theta\cdot n,
 	\end{equation}
 	with
-	$G :=  \mathcal{G}^+- \mathcal{G}^-$ and
+	$G :=  \mathfrak{G}^+- \mathfrak{G}^-$ and 
 \begin{align*}
 	%%%%
-	\mathcal{G} & := A_{\Omega}\sigma(u):\epsilon(p) + A_{\Omega}\sigma(v+g):\epsilon(q)\\
+	\mathfrak{G} & := A_{\Omega}\sigma(u):\epsilon(p) + A_{\Omega}\sigma(v+g):\epsilon(q)\\
 			  & \quad - A_{\Omega} \left({Du}^{\top}\sigma(p) + {Dp}^{\top}\sigma(u)\right)n\cdot n\\
 			  & \quad - A_{\Omega} \left({Dv}^{\top}\sigma(q) + {Dq}^{\top}\sigma(v+g)\right)n\cdot n \text{ on }\partial\Om.
 \end{align*}
@@ -558,13 +560,13 @@ Using \eqref{eq:general_boundary_exp} and using the fact that the jump of $|u-v-
 This yields the simplification:
 \begin{align*}
 	%%%%
-	\mathcal{G} & := A_{\Omega}\sigma(u)(I-n\otimes n) : Dp(I-n\otimes n)\\
+	\mathfrak{G} & := A_{\Omega}\sigma(u)(I-n\otimes n) : Dp(I-n\otimes n)\\
 	&\quad + A_{\Omega}\sigma(v+g)(I-n\otimes n) : Dq(I-n\otimes n) \\ 
 			  & \quad - A_{\Omega} \sigma(p) n\cdot {Du} n\\
 			  & \quad - A_{\Omega} \sigma(q)n\cdot Dv n \text{ on }\partial\Om.
 \end{align*}
 This is a splitting in normal and tangential components, as $A_{\Omega}\sigma(u)(I-n\otimes n)$ and $Dp(I-n\otimes n)$ are tangential for instance.
-Then, when taking the jump of $\mathcal{G}$ accross $\partial\Om$, there are a few simplifications, using the transmission conditions, and
+Then, when taking the jump of $\mathfrak{G}$ accross $\partial\Om$, there are a few simplifications, using the transmission conditions, and
 \begin{align*}
 & 	[[A_{\Omega}\sigma(u)(I-n\otimes n) : Dp(I-n\otimes n) ]] \\
 & =  [[A_{\Omega}]]\sigma(u)(I-n\otimes n) : Dp(I-n\otimes n)  
@@ -597,7 +599,7 @@ Then, when taking the jump of $\mathcal{G}$ accross $\partial\Om$, there are a f
 
 
 In this section we describe the main steps of the algorithm, which can be summarized as follows. 
-We employ the level set method, introduced by Osher and Sethian \cite{MR965860}, to update $\Om$. 
+We employ the level set method, introduced by Osher and Sethian~\cite{MR965860}, to update $\Om$. 
 In this method, the shape $\Om$ is represented as the subzero level set of a function $\phi$:
 \begin{equation} \label{eq:subdomain}
 	\Omega \coloneqq \left\{x\in\mathcal{D}\mid \phi(x)<0\right\},
@@ -649,7 +651,7 @@ the level set function by solving the following transport-like equation on a sho
 	The implementation is described in Subsection \ref{sub:level}.
 
 	These are the key steps of the algorithm, summarized in Algorithm~\ref{eq:algo_lv}.
-The numerical implementation also involves other procedures such as reinitialization, the stopping criterion, Lagrangian approach for handling constraints, which
+The numerical implementation also involves a reinitialization, a Lagrangian approach for handling constraints, and a stopping criterion, which
 will be explained in the following subsections.
 
 
@@ -672,6 +674,7 @@ will be explained in the following subsections.
 	\State Solve the \textbf{transport} equation \eqref{eq:transport0} with $\theta$.
 	\Statex \hspace{3em} Let $\phi^{i+1}:\overline{\mathcal{D}} \rightarrow \mathds{R}$ be the solution.
 \EndFor
+\State \tred{Add stopping criterion?}
 \end{algorithmic}
 \end{algorithm}
 
