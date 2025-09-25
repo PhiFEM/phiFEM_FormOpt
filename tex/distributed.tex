@@ -2285,9 +2285,20 @@ Figure \ref{fig:heat5}
 \label{sub:pop}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\tred{A: here also some references}
+%\tred{A: here also some references} J: I cited Murray's book. 
 
-Here we provide an example where the PDE constraint is non-linear. \tred{A: should explain how the PDE is solved. Newton?}
+We present an example in which the PDE constraint is nonlinear.
+Consider the problem of spatially distributing resources in order
+to maximize the population size of a species that consumes
+those resources.
+We assume that the dynamics of the population is 
+governed by the logistic equation with a diffusive term.
+Since the temporal derivative is absent,
+the objective is to maximize the population size in the long-time regime,
+when the species distribution has reached a stationary state.
+In this setting, the PDE constraint takes the form
+of a nonlinear diffusion equation \cite{MR1908418}.
+
 Let $V$ be a prefixed volume, less than the volume of $\mathcal{D}$.
 The problem reads
 \begin{equation} \label{eq:log_cost}
@@ -2311,12 +2322,17 @@ and $K_{\Omega}:\overline{\mathcal{D}} \rightarrow \mathds{R}$ is given by
 	K_{\Omega} = \chi_{\Omega} + {10}^{-2}\chi_{\overline{\mathcal{D}}\setminus\Omega}.
 \end{equation}
 According to \eqref{eq:problem}, the constraint function for this problem is written as
-\begin{equation}
+\begin{equation} \label{eq:log_const}
 	C(\Omega) = \frac{1}{V} \int_{\mathcal{D}} \chi_{\Omega}.
 \end{equation}
-Here, $u$ represents the population size,
-$r$ is a positive constant that represents the growth rate of the population,
-and the positive function $K_{\Omega}$ represents the carrying capacity of the environment.
+Here, $u$ represents the equilibrium population density,
+$r$ is a positive constant that represents the growth rate of the population in the logistic model,
+and the positive function $K_{\Omega}$ represents the spatially varying carrying capacity, i.e.,
+the maximum equilibrium population density that the available resources can sustain at each point.
+Equation \eqref{eq:log_KOmega} indicates the presence of two types of resources,
+with one permitting significantly higher growth than the other.
+Moreover, we constrain the distribution of the main resource
+to be supported on a region of volume $V$.
 
 The weak formulation of \eqref{eq:log_prob} is the following:
 Find $u\in H^1(\mathcal{D})$ such that
@@ -2324,25 +2340,24 @@ Find $u\in H^1(\mathcal{D})$ such that
 	\int_{\mathcal{D}}\nabla u \cdot \nabla v =
     \int_{\mathcal{D}}ru\left(1-\frac{u}{K_{\Omega}}\right)v
     \quad
-    \forall \, v \in  H^1(\mathcal{D})
+    \forall \, v \in  H^1(\mathcal{D}).
 \end{equation}
-In the same manner as ?,
-from the Lagrangian functional we can obtain
-the adjoint equation:
+From the Lagrangian functional (construted as in Section \ref{sec:model_prob})
+we can obtain the adjoint equation (which is linear):
 Find $p\in H^1(\mathcal{D})$ such that
 \begin{equation*}
 	\int_{\mathcal{D}}\nabla p \cdot \nabla q +
     \int_{\mathcal{D}}r\left(\frac{2u}{K_{\Omega}}-1\right)pq = 
     \int_{\mathcal{D}}q
     \quad
-    \forall \, q \in  H^1(\mathcal{D})
+    \forall \, q \in  H^1(\mathcal{D}).
 \end{equation*}
 The derivative components
-of the cost functional and the constraint are
+of the cost functional \eqref{eq:log_cost} and the constraint \eqref{eq:log_const} are
 \begin{align*}
 	S^J_0 &= \boldsymbol{0},\\
 	S^J_1 &= \left(\nabla u\cdot\nabla p-u-ru\left(1-\frac{u}{K_{\Omega}}\right)p\right)I \\
-		  &-(\nabla u\otimes\nabla p+\nabla p\otimes\nabla u)	
+		  &-(\nabla u\otimes\nabla p+\nabla p\otimes\nabla u),	
 \end{align*}
 and
 \begin{equation*}
@@ -2354,34 +2369,51 @@ The bilinear form used in this problem was
 	\int_{\mathcal{D}} D\theta : D\xi +
 	{10}^4 \int_{\partial \mathcal{D}}  (\theta \cdot n) (\xi \cdot n),	
 \end{equation*}
-with $\mathbb{H}=H^1(\mathcal{D})$.
+with $\theta, \xi \in \mathbb{H}=H^1(\mathcal{D})$.
 
+%\tred{A: should explain how the PDE is solved. Newton?} J: Yes, Newton.
 \noindent\textit{Example.}
 We solve problem \eqref{eq:log_cost}--\eqref{eq:log_prob} on
-the domain $\mathcal{D} = (0,1)\times(0,1)$
-subject to a resource constraint $V=0.5$, which correspond to half
-the area of the domain.
+the unit square $\mathcal{D} = (0,1)\times(0,1)$, and
+subject to a resource constraint $V=0.5$,
+which correspond to half the area of the domain.
 Tests for several values of $r$ are performed; see Figure~\ref{fig:log}.
 All tests are performed using data parallelism across two processes:
-
+%
 \begin{lstlisting}
 mpirun -np 2 python test.py 14 # Data (r=10)
 mpirun -np 2 python test.py 15 # Data (r=40)
 mpirun -np 2 python test.py 16 # Data (r=100)	 
 \end{lstlisting}
-
-For Newton method, we pass
-the derivative $DF(u,\cdot)(\delta u)$
-of the state equation $F(u,\cdot)=0$ (equation \eqref{eq:log_weak})
+%
+Newton's method was employed to solve the state equation.
+We pass to the \code{pde} method equation \eqref{eq:log_weak} in the form 
+$F(u,\cdot)=0$, its derivative $DF(u,\cdot)(\delta u)$,
 and the positive function
-\begin{equation*}
-	u_0(x,y)=1 + 0.2 \sin(6\pi x)\sin(6\pi y)
-	\quad
-	(x,y)\in\overline{\mathcal{D}}
-\end{equation*}
-to start the iterations.
+$u_0(x,y) = 1 + 0.2 \sin(6\pi x)\sin(6\pi y)$
+as initial guess for $u$:
+%
+\begin{lstlisting}
+def pde(self, phi):
+	
+	u = Coefficient(self.space)
+	v = TestFunction(self.space)
+	du = TrialFunction(self.space)
 
+	F = self.d*dot(grad(u), grad(v))*self.dx
+	F -= self.L(u, phi)*u*v*self.dx
 
+	DF = self.d*dot(grad(du), grad(v))*self.dx
+	DF -= self.DL(u, phi)*du*v*self.dx
+
+	return [(F, [], DF, u, self.ini_func)]
+\end{lstlisting}
+%
+The \code{ini\_func} attribute contains $u0$.
+In this case, there are no Dirichlet boundary conditions for
+the state equation, so we specify an empty list \code{[]}
+after \code{F}.
+%
 \begin{center}
 \includegraphics[width=0.48\linewidth]{log_0.png}
 \hfill
