@@ -3,7 +3,8 @@ import numpy as np
 
 from plots import (
     plot_basic,
-    see_initial_guess
+    see_initial_guess,
+    plot_results_for_doc
 )
 
 from pathlib import Path
@@ -133,7 +134,9 @@ def test_09():
     dir = np.array(vertices[(dir_idx[0]-1):(dir_idx[-1]+1)])
     boundaries = [(dir, "red")]
     
-    plot_basic(test_path, boundaries)
+    #plot_basic(test_path, boundaries)
+    plot_results_for_doc(test_path, 0, [[0, 1], [0, 1]], 4, Path("../tex/heat1_0.png"), boundaries)
+    plot_results_for_doc(test_path, 204, [[0, 1], [0, 1]], 4,  Path("../tex/heat1_1.png"), boundaries)
 
 def test_10():
     

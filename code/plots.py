@@ -209,6 +209,21 @@ def plot_domain(domain, title = None):
     if title: plotter.add_title(title)
     plotter.show()
 
+def plot_results_for_doc(h5file, niter, lims, lw, path_name, boundaries = None):
+    
+    with h5py.File(h5file / "results.h5", "r") as f:
+        
+        points = f["/Mesh/mesh/geometry"][:]
+        cells = f["/Mesh/mesh/topology"][:]
+        
+        phi_group = f["/Function/phi"]
+
+        plot_level_for_doc(
+            points, cells, phi_group[str(niter)][:, 0],
+            lims = lims, lw = lw,
+            filename = path_name, boundaries = boundaries
+        )
+
 def plot_results(h5file, p, boundaries = None):
 
     with h5py.File(h5file, "r") as f:
@@ -263,6 +278,40 @@ def plot_2D_spacial(x_coords, y_coords, cells, values, figsize = None, save_path
         plt.savefig(save_path, format = save_path.split('.')[-1], dpi=300)
     else:
         plt.show()
+
+def plot_level_for_doc(points, cells, values, lims, lw, boundaries = None, figsize = None, filename = None):
+
+    x_coords, y_coords = points[:, 0], points[:, 1]
+
+    triang = mtri.Triangulation(x_coords, y_coords, cells)
+
+    fig, ax = plt.subplots(figsize = figsize)
+    ax.tricontourf(
+        triang,
+        values,
+        levels = [min(values), 0., max(values)],
+        colors = ["black", (0.9, 0.9, 0.9)] 
+    )
+    ax.set_aspect('equal')
+    
+    ax.set_xlim(lims[0])
+    ax.set_ylim(lims[1])
+    ax.set_xticks([])
+    ax.set_yticks([])
+    ax.tick_params(bottom=False, left=False)
+    for spine in ax.spines.values():
+        spine.set_visible(False)
+    #ax.set_position([0, 0, 1, 1])
+
+    fig.tight_layout()
+
+    if boundaries:
+        for xy, cl in boundaries:
+            ax.plot(xy[:, 0], xy[:, 1], color = cl, linewidth=lw)
+
+    if filename:
+        # format = filename.suffix[1:]
+        plt.savefig(filename, dpi = 300, pad_inches=0, bbox_inches='tight')
 
 def plot_level(dim, points, cells, values, lims = None, boundaries = None, figsize = None, title = None, filename = None):
     if dim == 2:

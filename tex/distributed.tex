@@ -2091,8 +2091,8 @@ According to \eqref{eq:problem}, the constraint function for this problem is wri
 \begin{equation}
 	C(\Omega) = \frac{1}{V} \int_{\mathcal{D}} \chi_{\Omega}.
 \end{equation}
-
-The weak formulation is:
+%
+The weak formulation of \eqref{eq:heat_prob} reads:
 Find $u \in  H^1_{\Gamma_0}(\mathcal{D})$ such that
 \begin{equation} \label{eq:heat_weak}
 	\int_{\mathcal{D}} A_{\Omega} \nabla u \cdot \nabla v =
@@ -2100,41 +2100,45 @@ Find $u \in  H^1_{\Gamma_0}(\mathcal{D})$ such that
 	\quad
 	\forall \, v \in  H^1_{\Gamma_0}(\mathcal{D}).
 \end{equation}
+In this case, the adjoint problem is the same as \eqref{eq:heat_weak}
+(excetp by a minus sign on the right-hand side), and thus $p=-u$.
 The shape derivative components are given by
 \begin{align*}
-	S^J_0 &= 2u\nabla f \\
-	S^J_1 &= \left(2uf-A_{\Omega}\left|\nabla u\right|^{2}\right)I+2A_{\Omega}\nabla u\otimes\nabla u,
+	S^J_0 &= 2u\nabla f, \\
+	S^J_1 &= (2uf-A_{\Omega}{|\nabla u|}^{2})I +
+				2A_{\Omega}\nabla u\otimes\nabla u
 \end{align*}
-and
+for the cost functional, and
 \begin{equation*}
 	S^C_0 = \boldsymbol{0},\quad S^C_1 = \frac{1}{V} \chi_\Omega I
 \end{equation*}
-The  bilinear form is
-\begin{equation} \label{eq:heat_biform}
-	B(\theta, \xi) = \int_{\mathcal{D}} D\theta : D\xi .
-\end{equation}
-In all examples, $\mathcal{D} = (0, 1)\times(0, 1)$
+for the constraint function.
+In all examples, we use the square domain $\mathcal{D} = (0, 1)\times(0, 1)$.
 
 \noindent\textit{Example 1.}
-
-$\Gamma_0 = (0.4, 0.6)\times\{y=0\}$
-
-$f \equiv 1$
-
-$V = 0.25$
-
+We apply a uniform heat $f \equiv 1$,
+with volume constraint $V = 0.25$ and
+fixed temperature $u=0$ on $\Gamma_0 = (0.4, 0.6)\times\{y=0\}$.
+The test is carry out using data parallelism with two processes:
 \begin{lstlisting}
 mpirun -np 2 python test.py 09 # Data
 \end{lstlisting}
-
-Figure \ref{fig:heat1}
+See the results in Figure \ref{fig:heat1}.
+In this example, we have employed the bilinear form
+\begin{equation*}
+	B(\theta, \xi) = \int_{\mathcal{D}} D\theta : D\xi
+	+ {10}^4(\theta \cdot \xi) \chi_{\Omega_0}, 
+\end{equation*}
+with $\theta, \xi \in \mathbb{H} = H^1_0(\mathcal{D})^d$
+and $\Omega_0 = (0.3, 0.7)\times[0, 0.05)$ (which contains $\Gamma_0$).
+Thus, the material around $\Gamma_0$ is penalized in the bilinear form $B$.
 \begin{center}
 \includegraphics[width=0.48\linewidth]{heat1_0.png}
 \hfill
 \includegraphics[width=0.48\linewidth]{heat1_1.png}
 \captionof{figure}{
-	Initial guess and
-	optimized design at iteration $i=204$.
+	Initial guess and optimized design at iteration $i=204$.
+	The boundary $\Gamma_0$ is shown in red.
 }
 \label{fig:heat1}
 \end{center}
