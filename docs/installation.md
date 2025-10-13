@@ -8,6 +8,14 @@ First, download and install [Anaconda](https://www.anaconda.com/) for Windows, L
 
 Anaconda helps manage Python environments and packages easily.
 
+After installation run:
+
+```bash
+~/anaconda<version>/bin/conda init bash
+source ~/.bashrc
+conda activate
+```
+
 ## 2. Create a Conda Environment
 
 A **Conda environment** provides an isolated workspace where you can install only the packages you need.
