@@ -3,20 +3,21 @@ import distributed as dib
 # Pre-existing models
 from models import (
     Logistic,
-    Compliance, 
+    Compliance,
     CompliancePlus,
     InverseElasticity,
     Heat,
     HeatPlus,
     HeatMultiple,
-    Mechanism
+    Mechanism,
 )
 
 import numpy as np
-from pathlib import Path # To manage where results are saved
+from pathlib import Path  # To manage where results are saved
 
 # Necessary for all parallelism modes
 from mpi4py import MPI
+
 comm = MPI.COMM_WORLD
 rank = comm.rank
 size = comm.size
@@ -56,9 +57,54 @@ def test_01():
 
     Run `mpirun -np <nbr of processes> python test.py 01`.
     For instance, `mpirun -np 2 python test.py 01`.
-    
+
     To save the output, append `> ../results/t01/out.txt`.
     To delete the images, enter `rm ../results/t01/*.png`.
+
+    Execution times:
+    - 1 process (56 iterations):
+        > Assembly time = 7.155405611000106 s
+        > Resolution time = 27.33817017199999 s
+    - 2 processes (58 iterations):
+        > Assembly time = 7.186339323000084 s
+        > Resolution time = 13.547148835999906 s
+    - 3 processes (56 iterations):
+        > Assembly time = 16.091977639000106 s
+        > Resolution time = 9.593779027999972 s
+    - 4 processes (58 iterations):
+        > Assembly time = 16.073128902999997 s
+        > Resolution time = 7.400951124999665 s
+    - 5 processes (53 iterations):
+        > Assembly time = 16.22902983599988 s
+        > Resolution time = 5.773146577999796 s
+    - 6 processes (58 iterations):
+        > Assembly time = 16.401714292999714 s
+        > Resolution time = 5.587280580999959 s
+    - 7 processes (61 iterations):
+        > Assembly time = 18.191244063 s
+        > Resolution time = 9.354751103000012 s
+    - 8 processes (51 iterations):
+        > Assembly time = 21.920513003999986 s
+        > Resolution time = 6.425889066999957 s
+    - 9 processes (53 iterations):
+        > Assembly time = 20.0180276210001 s
+        > Resolution time = 6.792038920999971 s
+    - 10 processes (58 iterations):
+        > Assembly time = 12.087853934999998 s
+        > Resolution time = 7.094126409999944 s
+
+    resolution_times = [
+        27.33817017199999,
+        13.547148835999906,
+        9.593779027999972,
+        7.400951124999665,
+        5.773146577999796,
+        5.587280580999959,
+        9.354751103000012,
+        6.425889066999957,
+        6.792038920999971,
+        7.094126409999944
+    ]
     """
 
     test_name = "Symmetric Cantilever 2D - Data Parallelism"
@@ -66,72 +112,50 @@ def test_01():
     dim = 2
     rank_dim = 2
     mesh_size = 0.015
-    
-    vertices = np.array([
-        (0.0, 0.0),
-        (2.0, 0.0),
-        (2.0, 0.45),
-        (2.0, 0.55),
-        (2.0, 1.0),
-        (0.0, 1.0)
-    ])
-    
+
+    vertices = np.array(
+        [(0.0, 0.0), (2.0, 0.0), (2.0, 0.45), (2.0, 0.55), (2.0, 1.0), (0.0, 1.0)]
+    )
+
     dir_idx, dir_mkr = [6], 1
     neu_idx, neu_mkr = [3], 2
-    boundary_parts = [
-        (dir_idx, dir_mkr, "dir"),
-        (neu_idx, neu_mkr, "neu")
-    ]
+    boundary_parts = [(dir_idx, dir_mkr, "dir"), (neu_idx, neu_mkr, "neu")]
 
     # Create gmsh domain for Data Parallelism
     output = dib.create_domain_2d_DP(
-        vertices, boundary_parts, mesh_size,
-        path = test_path,
-        plot = False
+        vertices, boundary_parts, mesh_size, path=test_path, plot=False
     )
-    
+
     domain, nbr_tri, boundary_tags = output
 
     if rank == 0:
         print("\n\t" + test_name + "\n")
         print(f"> Path = {test_path}")
         print(f"> Nbr of triangles = {nbr_tri}")
-        
+
     # Space for the PDE solution
     space = dib.create_space(domain, "CG", rank_dim)
-    
+
     # Dirichlet condition
     dirichlet_bcs = dib.homogeneous_dirichlet(
-        domain, space, boundary_tags,
-        [dir_mkr], rank_dim
+        domain, space, boundary_tags, [dir_mkr], rank_dim
     )
 
-    # Boundary to force application 
-    ds_g = dib.marked_ds(
-        domain,
-        boundary_tags,
-        [neu_mkr]
-    )
-    
+    # Boundary to force application
+    ds_g = dib.marked_ds(domain, boundary_tags, [neu_mkr])
+
     area = 1.0
     g = (0.0, -2.0)
     # Create the model
-    md = Compliance(
-        dim, domain, space, g, ds_g[0],
-        dirichlet_bcs, area, test_path
-    )
+    md = Compliance(dim, domain, space, g, ds_g[0], dirichlet_bcs, area, test_path)
 
     @dib.region_of(domain)
     def sub_domain(x):
         # 0.42 < x[1] < 0.58
         # 1.95 < x[0]
-        ineqs = [
-            x[1] - 0.42,
-            0.58 - x[1],
-            x[0] - 1.90
-        ]
+        ineqs = [x[1] - 0.42, 0.58 - x[1], x[0] - 1.90]
         return ineqs
-    
+
     md.sub = [sub_domain.expression()]
 
     # Initial guess: centers and radii
@@ -147,11 +171,11 @@ def test_01():
 
     # Second set of centers:
     centers = [(0.0, 0.5), (2.0, 0.35), (2.0, 0.65)]
-    centers += [((1+i)*0.25, 0.0) for i in range(8)]
-    centers += [(i*0.5, 0.25) for i in range(5)]
-    centers += [(0.25 + i*0.5, 0.5) for i in range(4)]
-    centers += [(i*0.5, 0.75) for i in range(5)]
-    centers += [((1+i)*0.25, 1.0) for i in range(8)]
+    centers += [((1 + i) * 0.25, 0.0) for i in range(8)]
+    centers += [(i * 0.5, 0.25) for i in range(5)]
+    centers += [(0.25 + i * 0.5, 0.5) for i in range(4)]
+    centers += [(i * 0.5, 0.75) for i in range(5)]
+    centers += [((1 + i) * 0.25, 1.0) for i in range(8)]
 
     centers = np.array(centers)
     radii = np.repeat(0.1, centers.shape[0])
@@ -160,15 +184,15 @@ def test_01():
     md.create_initial_level(centers, radii)
     # Save as initial.xdmf
     md.save_initial_level(comm)
-    
+
     md.runDP(
-        ctrn_tol = 1e-3,
-        dfactor = 1e-1,
-        lv_iter = (10, 16),
-        reinit_step = 4,
-        reinit_pars = (20, 0.08),
-        smooth = True,
-        random_pars = (111, 0.05)
+        ctrn_tol=1e-3,
+        dfactor=1e-1,
+        lv_iter=(10, 16),
+        reinit_step=4,
+        reinit_pars=(20, 0.08),
+        smooth=True,
+        random_pars=(111, 0.05),
     )
 
 
@@ -183,23 +207,20 @@ def test_02():
     dim = 3
     rank_dim = 3
     mesh_size = 60
-    
+
     if rank == 0:
         print("\n\t" + test_name + "\n")
         print(f"> Path = {test_path}")
-    
+
     # Create a dolfinx domain
     from dolfinx.mesh import create_box
+
     domain = create_box(
-        comm,
-        [[0.0, 0.0, 0.0], [2.0, 1.0, 1.0]],
-        [2*mesh_size, mesh_size, mesh_size]
+        comm, [[0.0, 0.0, 0.0], [2.0, 1.0, 1.0]], [2 * mesh_size, mesh_size, mesh_size]
     )
-    
+
     dib.all_connectivities(domain)
-    dib.save_domain(
-        comm, domain, test_path / "domain.xdmf"
-    )
+    dib.save_domain(comm, domain, test_path / "domain.xdmf")
 
     # Space
     space = dib.create_space(domain, "CG", rank_dim)
@@ -207,73 +228,151 @@ def test_02():
     # marker functions
     def boundary_dirichlet(x):
         return np.isclose(x[0], 0.0)
-    
+
     def boundary_neumann(x):
         in_plane = np.isclose(x[0], 2.0)
         in_square = np.maximum(np.abs(x[1] - 0.5), np.abs(x[2] - 0.5)) <= 0.1
         return in_plane & in_square
-    
+
     # Dirichlet conditions
     dirichlet_bcs = dib.homogeneous_dirichlet_fun(
         domain, space, [boundary_dirichlet], rank_dim
     )
-    # Boundary to force application 
+    # Boundary to force application
     ds_g = dib.fun_ds(domain, [boundary_neumann])
     volume, g = 1.0, [0.0, 0.0, -4.0]
     # Create the model
-    md = Compliance(
-        dim, domain, space, g, ds_g[0],
-        dirichlet_bcs, volume, test_path
-    )
+    md = Compliance(dim, domain, space, g, ds_g[0], dirichlet_bcs, volume, test_path)
 
     @dib.region_of(domain)
     def sub_domain(x):
-        ineqs = [
-            x[1] - 0.35,
-            0.65 - x[1],
-            x[2] - 0.35,
-            0.65 - x[2],
-            x[0] - 1.90
-        ]
+        ineqs = [x[1] - 0.35, 0.65 - x[1], x[2] - 0.35, 0.65 - x[2], x[0] - 1.90]
         return ineqs
 
     md.sub = [sub_domain.expression()]
 
-    centers = np.array([
-        (2.0, 0.7, 0.3), (2.0, 0.7, 0.7), (2.0, 0.3, 0.3), (2.0, 0.3, 0.7),
-        (2., 0., 0.), (2., 0., 1.), (2., 1., 0.), (2., 1., 1.),
-        (2., .5, 0.), (2., .5, 1.), (2., 0., .5,), (2., 1., .5),
-        (1.7, 0., 0.), (1.7, 0., 1.), (1.7, 1., 0.), (1.7, 1., 1.),
-        (1.7, .5, .5), (1.7, 0, 0.5), (1.7, 1., 0.5), (1.7, 0.5, 0.), (1.7, 0.5, 1.),
-        (1.35, 0.25, 0.25), (1.35, 0.75, 0.25), (1.35, 0.25, 0.75), (1.35, 0.75, 0.75), 
-        (1., 0., 0.), (1., 0., 1.), (1., 1., 0.), (1., 1., 1.),
-        (1., .5, .5), (1.0, 0, 0.5), (1.0, 1., 0.5), (1.0, 0.5, 0.), (1.0, 0.5, 1.),
-        (0.65, 0.25, 0.25), (0.65, 0.75, 0.25), (0.65, 0.25, 0.75), (0.65, 0.75, 0.75),
-        (0.3, 0., 0.), (0.3, 0., 1.), (0.3, 1., 0.), (0.3, 1., 1.),
-        (0.3, .5, .5), (0.3, 0, 0.5), (0.3, 1., 0.5), (0.3, 0.5, 0.), (0.3, 0.5, 1.),
-        (0., .5, 0.), (0., .5, 1.), (0., 0., .5,), (0., 1., .5), (0., .5, .5),
-        (0.0, 0.25, 0.25), (0.0, 0.75, 0.25), (0.0, 0.25, 0.75), (0.0, 0.75, 0.75),
-        (2.0, 0.5, 0.3), (2.0, 0.5, 0.7), (2.0, 0.3, 0.5), (2.0, 0.7, 0.5),
-    ])
+    centers = np.array(
+        [
+            (2.0, 0.7, 0.3),
+            (2.0, 0.7, 0.7),
+            (2.0, 0.3, 0.3),
+            (2.0, 0.3, 0.7),
+            (2.0, 0.0, 0.0),
+            (2.0, 0.0, 1.0),
+            (2.0, 1.0, 0.0),
+            (2.0, 1.0, 1.0),
+            (2.0, 0.5, 0.0),
+            (2.0, 0.5, 1.0),
+            (2.0, 0.0, 0.5),
+            (2.0, 1.0, 0.5),
+            (1.7, 0.0, 0.0),
+            (1.7, 0.0, 1.0),
+            (1.7, 1.0, 0.0),
+            (1.7, 1.0, 1.0),
+            (1.7, 0.5, 0.5),
+            (1.7, 0, 0.5),
+            (1.7, 1.0, 0.5),
+            (1.7, 0.5, 0.0),
+            (1.7, 0.5, 1.0),
+            (1.35, 0.25, 0.25),
+            (1.35, 0.75, 0.25),
+            (1.35, 0.25, 0.75),
+            (1.35, 0.75, 0.75),
+            (1.0, 0.0, 0.0),
+            (1.0, 0.0, 1.0),
+            (1.0, 1.0, 0.0),
+            (1.0, 1.0, 1.0),
+            (1.0, 0.5, 0.5),
+            (1.0, 0, 0.5),
+            (1.0, 1.0, 0.5),
+            (1.0, 0.5, 0.0),
+            (1.0, 0.5, 1.0),
+            (0.65, 0.25, 0.25),
+            (0.65, 0.75, 0.25),
+            (0.65, 0.25, 0.75),
+            (0.65, 0.75, 0.75),
+            (0.3, 0.0, 0.0),
+            (0.3, 0.0, 1.0),
+            (0.3, 1.0, 0.0),
+            (0.3, 1.0, 1.0),
+            (0.3, 0.5, 0.5),
+            (0.3, 0, 0.5),
+            (0.3, 1.0, 0.5),
+            (0.3, 0.5, 0.0),
+            (0.3, 0.5, 1.0),
+            (0.0, 0.5, 0.0),
+            (0.0, 0.5, 1.0),
+            (0.0, 0.0, 0.5),
+            (0.0, 1.0, 0.5),
+            (0.0, 0.5, 0.5),
+            (0.0, 0.25, 0.25),
+            (0.0, 0.75, 0.25),
+            (0.0, 0.25, 0.75),
+            (0.0, 0.75, 0.75),
+            (2.0, 0.5, 0.3),
+            (2.0, 0.5, 0.7),
+            (2.0, 0.3, 0.5),
+            (2.0, 0.7, 0.5),
+        ]
+    )
     radii = np.repeat(0.1, centers.shape[0])
 
-    md.create_initial_level(centers, radii, ord = np.inf)
+    md.create_initial_level(centers, radii, ord=np.inf)
     md.save_initial_level(comm)
 
-    #Run data parallelism
-    md.runDP(
-        niter = 300,
-        ctrn_tol = 1e-3,
-        dfactor = 1e-1,
-        reinit_step = 4,
-        smooth = True
-    )
+    # Run data parallelism
+    md.runDP(niter=300, ctrn_tol=1e-3, dfactor=1e-1, reinit_step=4, smooth=True)
 
 
 def test_03():
     """
     Run: mpirun -np <nbr of processes> python test.py 03
     For instance: mpirun -np 2 python test.py 03
+
+    Execution times:
+    - 1 process (69 iterations):
+        > Assembly time = 5.740588151999873 s
+        > Resolution time = 35.07935065799984 s
+    - 2 process (69 iterations):
+        > Assembly time = 13.698360341000352 s
+        > Resolution time = 20.099389327000154 s
+    - 3 process (71 iterations):
+        > Assembly time = 17.14925673200014 s
+        > Resolution time = 14.756963701000132 s
+    - 4 process (71 iterations):
+        > Assembly time = 17.429617789000076 s
+        > Resolution time = 11.853981776999717 s
+    - 5 process (70 iterations):
+        > Assembly time = 17.483467802000177 s
+        > Resolution time = 10.23874729499994 s
+    - 6 process (54 iterations):
+        > Assembly time = 17.655754719000015 s
+        > Resolution time = 6.934067974999834 s
+    - 7 process (70 iterations):
+        > Assembly time = 20.666583876999994 s
+        > Resolution time = 12.757291769999938 s
+    - 8 process (69 iterations):
+        > Assembly time = 24.34390402600002 s
+        > Resolution time = 12.813011035000272 s
+    - 9 process (70 iterations):
+        > Assembly time = 23.268276027999946 s
+        > Resolution time = 12.131966675000058 s
+    - 10 process (69 iterations):
+        > Assembly time = 25.65132305399993 s
+        > Resolution time = 11.061559490000036 s
+
+    resolution_times = [
+        35.07935065799984,
+        20.099389327000154,
+        14.756963701000132,
+        11.853981776999717,
+        10.23874729499994,
+        6.934067974999834,
+        12.757291769999938,
+        12.813011035000272,
+        12.131966675000058,
+        11.061559490000036
+    ]
     """
 
     test_name = "Multiple load cases - Data Parallelism"
@@ -281,16 +380,11 @@ def test_03():
     dim = 2
     rank_dim = 2
     mesh_size = 0.012
-    
-    vertices = np.array([
-        [0.0, 0.0],
-        [1.0, 0.0],
-        [1.0, 0.1],
-        [1.0, 0.9],
-        [1.0, 1.0],
-        [0.0, 1.0]
-    ])
-    
+
+    vertices = np.array(
+        [[0.0, 0.0], [1.0, 0.0], [1.0, 0.1], [1.0, 0.9], [1.0, 1.0], [0.0, 1.0]]
+    )
+
     dir_idx, dir_mkr = [6], 1
     neu_idx_bot, neu_mkr_bot = [2], 2
     neu_idx_top, neu_mkr_top = [4], 3
@@ -298,16 +392,14 @@ def test_03():
     boundary_parts = [
         (dir_idx, dir_mkr, "dir"),
         (neu_idx_bot, neu_mkr_bot, "neu_bot"),
-        (neu_idx_top, neu_mkr_top, "neu_top")
+        (neu_idx_top, neu_mkr_top, "neu_top"),
     ]
 
     # Create gmsh domain for Data Parallelism
     output = dib.create_domain_2d_DP(
-        vertices, boundary_parts, mesh_size,
-        path = test_path,
-        plot = True
+        vertices, boundary_parts, mesh_size, path=test_path, plot=False
     )
-    
+
     domain, nbr_tri, boundary_tags = output
 
     if rank == 0:
@@ -319,27 +411,20 @@ def test_03():
     space = dib.create_space(domain, "CG", rank_dim)
     # Dirichlet conditions
     dirichlet_bcs = dib.homogeneous_dirichlet(
-        domain, space, boundary_tags,
-        [dir_mkr], rank_dim
+        domain, space, boundary_tags, [dir_mkr], rank_dim
     )
-    # Boundary to force application 
-    ds_g = dib.marked_ds(
-        domain, boundary_tags,
-        [neu_mkr_bot, neu_mkr_top]
-    )
+    # Boundary to force application
+    ds_g = dib.marked_ds(domain, boundary_tags, [neu_mkr_bot, neu_mkr_top])
     area = 0.5
     g = [(0.0, -2.0), (0.0, -2.0)]
     # Create the model
-    md = CompliancePlus(
-        dim, domain, space, g, ds_g,
-        dirichlet_bcs, area, test_path
-    )
+    md = CompliancePlus(dim, domain, space, g, ds_g, dirichlet_bcs, area, test_path)
 
     # Initial guess: centers and radii
     centers = []
-    centers += [(i*0.2, 0.25) for i in range(5)]
-    centers += [(0.1 + i*0.2, 0.5) for i in range(5)]
-    centers += [(i*0.2, 0.75) for i in range(5)]
+    centers += [(i * 0.2, 0.25) for i in range(5)]
+    centers += [(0.1 + i * 0.2, 0.5) for i in range(5)]
+    centers += [(i * 0.2, 0.75) for i in range(5)]
     centers = np.array(centers)
     radii = np.repeat(0.08, centers.shape[0])
 
@@ -348,13 +433,13 @@ def test_03():
 
     # Run Data Parallelism
     md.runDP(
-        niter = 100,
-        ctrn_tol = 1e-3,
-        dfactor = 1e-1,
-        lv_time = (0.001, 1.0),
-        reinit_step = 4,
-        reinit_pars = (16, 0.05),
-        smooth = True
+        niter=100,
+        ctrn_tol=1e-3,
+        dfactor=1e-1,
+        lv_time=(0.001, 1.0),
+        reinit_step=4,
+        reinit_pars=(16, 0.05),
+        smooth=True,
     )
 
 
@@ -368,7 +453,7 @@ def test_04():
     if size != task_nbr:
         print(f"Number of processes must be = {task_nbr}")
         return
-    
+
     comm_self = MPI.COMM_SELF
 
     test_name = "Cantilever with two loads I (Task Parallelism)"
@@ -376,16 +461,11 @@ def test_04():
     dim = 2
     rank_dim = 2
     mesh_size = 0.012
-    
-    vertices = np.array([
-        [0.0, 0.0],
-        [1.0, 0.0],
-        [1.0, 0.1],
-        [1.0, 0.9],
-        [1.0, 1.0],
-        [0.0, 1.0]
-    ])
-    
+
+    vertices = np.array(
+        [[0.0, 0.0], [1.0, 0.0], [1.0, 0.1], [1.0, 0.9], [1.0, 1.0], [0.0, 1.0]]
+    )
+
     dir_idx, dir_mkr = [6], 1
     neu_idx_bot, neu_mkr_bot = [2], 2
     neu_idx_top, neu_mkr_top = [4], 3
@@ -393,64 +473,54 @@ def test_04():
     boundary_parts = [
         (dir_idx, dir_mkr, "dir"),
         (neu_idx_bot, neu_mkr_bot, "neu_bot"),
-        (neu_idx_top, neu_mkr_top, "neu_top")
+        (neu_idx_top, neu_mkr_top, "neu_top"),
     ]
 
     # Create gmsh domain for Task Parallelism
     output = dib.create_domain_2d_TP(
-        vertices, boundary_parts, mesh_size,
-        path = test_path,
-        plot = True
+        vertices, boundary_parts, mesh_size, path=test_path, plot=True
     )
-    
+
     domain, nbr_tri, boundary_tags = output
-    
+
     if rank == 0:
         print("\n\t" + test_name + "\n")
         print(f"> Path = {test_path}")
         print(f"> Nbr of triangles = {nbr_tri}")
-    
+
     # Space
     space = dib.create_space(domain, "CG", rank_dim)
     # Dirichlet conditions
     dirichlet_bcs = dib.homogeneous_dirichlet(
-        domain, space, boundary_tags,
-        [dir_mkr], rank_dim
+        domain, space, boundary_tags, [dir_mkr], rank_dim
     )
     # Boundary to force application
-    ds_g = dib.marked_ds(
-        domain,
-        boundary_tags,
-        [neu_mkr_bot, neu_mkr_top]
-    )
+    ds_g = dib.marked_ds(domain, boundary_tags, [neu_mkr_bot, neu_mkr_top])
     area = 0.5
     g = [(0.0, -2.0), (0.0, -2.0)]
     # Create the model
-    md = CompliancePlus(
-        dim, domain, space, g, ds_g,
-        dirichlet_bcs, area, test_path
-    )
+    md = CompliancePlus(dim, domain, space, g, ds_g, dirichlet_bcs, area, test_path)
 
     # Initial guess: centers and radii
     centers = []
-    centers += [(i*0.2, 0.25) for i in range(5)]
-    centers += [(0.1 + i*0.2, 0.5) for i in range(5)]
-    centers += [(i*0.2, 0.75) for i in range(5)]
+    centers += [(i * 0.2, 0.25) for i in range(5)]
+    centers += [(0.1 + i * 0.2, 0.5) for i in range(5)]
+    centers += [(i * 0.2, 0.75) for i in range(5)]
     centers = np.array(centers)
     radii = np.repeat(0.08, centers.shape[0])
-    
+
     md.create_initial_level(centers, radii)
     if rank == 0:
         md.save_initial_level(comm_self)
-    
+
     # Run Task Parallelism
     md.runTP(
-        niter = 100,
-        ctrn_tol = 1e-3,
-        dfactor = 1e-1,
-        reinit_step = 4,
-        reinit_pars = (16, 0.05),
-        smooth = True
+        niter=100,
+        ctrn_tol=1e-3,
+        dfactor=1e-1,
+        reinit_step=4,
+        reinit_pars=(16, 0.05),
+        smooth=True,
     )
 
 
@@ -458,11 +528,36 @@ def test_05():
     """
     Run: mpirun -np <2n> python test.py 05
     For instance: mpirun -np 4 python test.py 05
+
+    Execution times:
+    - 2 processes (70 iterations):
+        > Assembly time = 5.006272704000001 s
+        > Resolution time = 25.917571647000003 s
+    - 4 processes (70 iterations):
+        > Assembly time = 7.219901673999999 s
+        > Resolution time = 14.377620046999994 s
+    - 6 processes (71 iterations):
+        > Assembly time = 7.494962302000005 s
+        > Resolution time = 10.311590593999995 s
+    - 8 processes (68 iterations):
+        > Assembly time = 10.915818561999998 s
+        > Resolution time = 14.416016135999996 s
+    - 10 processes (71 iterations):
+        > Assembly time = 11.317666292000013 s
+        > Resolution time = 13.314896329000021 s
+
+    resolution_times = [
+        25.917571647000003,
+        14.377620046999994,
+        10.311590593999995,
+        14.416016135999996,
+        13.314896329000021
+    ]
     """
-    
+
     # Verification
     nbr_groups = 2
-    if size%nbr_groups != 0:
+    if size % nbr_groups != 0:
         print(f"Nbr of processes must be divisible by {nbr_groups}")
         return
 
@@ -475,16 +570,11 @@ def test_05():
     dim = 2
     rank_dim = 2
     mesh_size = 0.012
-    
-    vertices = np.array([
-        [0.0, 0.0],
-        [1.0, 0.0],
-        [1.0, 0.1],
-        [1.0, 0.9],
-        [1.0, 1.0],
-        [0.0, 1.0]
-    ])
-    
+
+    vertices = np.array(
+        [[0.0, 0.0], [1.0, 0.0], [1.0, 0.1], [1.0, 0.9], [1.0, 1.0], [0.0, 1.0]]
+    )
+
     dir_idx, dir_mkr = [6], 1
     neu_idx_bot, neu_mkr_bot = [2], 2
     neu_idx_top, neu_mkr_top = [4], 3
@@ -492,66 +582,55 @@ def test_05():
     boundary_parts = [
         (dir_idx, dir_mkr, "dir"),
         (neu_idx_bot, neu_mkr_bot, "neu_bot"),
-        (neu_idx_top, neu_mkr_top, "neu_top")
+        (neu_idx_top, neu_mkr_top, "neu_top"),
     ]
 
     # Create gmsh domain for Mix Parallelism
     output = dib.create_domain_2d_MP(
-        sub_comm, color,
-        vertices, boundary_parts, mesh_size,
-        path = test_path,
-        plot = True
+        sub_comm, color, vertices, boundary_parts, mesh_size, path=test_path, plot=False
     )
-    
+
     domain, nbr_tri, boundary_tags = output
-        
+
     if rank == 0:
         print("\n\t" + test_name + "\n")
         print(f"> Path = {test_path}")
         print(f"> Nbr of triangles = {nbr_tri}")
-    
+
     # Space
     space = dib.create_space(domain, "CG", rank_dim)
     # Dirichlet conditions
     dirichlet_bcs = dib.homogeneous_dirichlet(
-        domain, space, boundary_tags,
-        [dir_mkr], rank_dim
+        domain, space, boundary_tags, [dir_mkr], rank_dim
     )
     # Boundary to force application
-    ds_g = dib.marked_ds(
-        domain,
-        boundary_tags,
-        [neu_mkr_bot, neu_mkr_top]
-    )
+    ds_g = dib.marked_ds(domain, boundary_tags, [neu_mkr_bot, neu_mkr_top])
     area = 0.5
     g = [(0.0, -2.0), (0.0, -2.0)]
     # Create the model
-    md = CompliancePlus(
-        dim, domain, space, g, ds_g,
-        dirichlet_bcs, area, test_path
-    )
+    md = CompliancePlus(dim, domain, space, g, ds_g, dirichlet_bcs, area, test_path)
 
     # Initial guess: centers and radii
     centers = []
-    centers += [(i*0.2, 0.25) for i in range(5)]
-    centers += [(0.1+i*0.2, 0.5) for i in range(5)]
-    centers += [(i*0.2, 0.75) for i in range(5)]
+    centers += [(i * 0.2, 0.25) for i in range(5)]
+    centers += [(0.1 + i * 0.2, 0.5) for i in range(5)]
+    centers += [(i * 0.2, 0.75) for i in range(5)]
     centers = np.array(centers)
     radii = np.repeat(0.08, centers.shape[0])
-    
+
     md.create_initial_level(centers, radii)
     if color == 0:
         md.save_initial_level(sub_comm)
-    
+
     # Run Mix Parallelism
     md.runMP(
-        sub_comm = sub_comm,
-        niter = 100,
-        ctrn_tol = 1e-3,
-        dfactor = 1e-1,
-        reinit_step = 4,
-        reinit_pars = (16, 0.05),
-        smooth = True
+        sub_comm=sub_comm,
+        niter=100,
+        ctrn_tol=1e-3,
+        dfactor=1e-1,
+        reinit_step=4,
+        reinit_pars=(16, 0.05),
+        smooth=True,
     )
 
 
@@ -571,7 +650,7 @@ def test_06():
     dim = 2
     rank_dim = 2
     mesh_size = 0.015
-    
+
     # Data generation
 
     def semi_ellipse(a, b, eps, npts):
@@ -579,26 +658,24 @@ def test_06():
         Coordinates of a ellipse
         crossing the x-axis
         """
-        t_ = np.arcsin((b - eps)/b)
+        t_ = np.arcsin((b - eps) / b)
         t = np.linspace(-t_, np.pi + t_, npts)
-        x = a*np.cos(t)
-        y = b*np.sin(t) + (b - eps)
+        x = a * np.cos(t)
+        y = b * np.sin(t) + (b - eps)
         return x, y
-    
-    npts = 80 # npts % 4 = 0
-    part = npts//4
-    
-    vertices = np.column_stack(
-        semi_ellipse(0.75, 0.5, 0.2, npts)
-    )
-    
+
+    npts = 80  # npts % 4 = 0
+    part = npts // 4
+
+    vertices = np.column_stack(semi_ellipse(0.75, 0.5, 0.2, npts))
+
     dir_idx, dir_mkr = [npts], 1
-    bR_idx, bR_mkr = np.arange(1, part//2 + 1), 2
-    neu_idxA, neu_mkrA = part//2 + np.arange(1, part + 1), 3
-    neu_idxB, neu_mkrB = part//2 + np.arange(part + 1, 2*part + 1), 4
-    neu_idxC, neu_mkrC = part//2 + np.arange(2*part + 1, 3*part + 1), 5
-    bL_idx, bL_mkr = np.arange(part//2 + 3*part + 1, npts), 6
-    
+    bR_idx, bR_mkr = np.arange(1, part // 2 + 1), 2
+    neu_idxA, neu_mkrA = part // 2 + np.arange(1, part + 1), 3
+    neu_idxB, neu_mkrB = part // 2 + np.arange(part + 1, 2 * part + 1), 4
+    neu_idxC, neu_mkrC = part // 2 + np.arange(2 * part + 1, 3 * part + 1), 5
+    bL_idx, bL_mkr = np.arange(part // 2 + 3 * part + 1, npts), 6
+
     boundary_parts = [
         (dir_idx, dir_mkr, "dir"),
         (bR_idx, bR_mkr, "bRight"),
@@ -607,7 +684,7 @@ def test_06():
         (neu_idxC, neu_mkrC, "neuC"),
         (bL_idx, bL_mkr, "bLeft"),
     ]
-    
+
     def bean_curve(n):
         """
         Coordinates of a bean to be used
@@ -616,40 +693,37 @@ def test_06():
         ampl = 0.5
         x0 = 0.0
         y0 = 0.2
-        angle = np.pi/6.0
-        t = np.linspace(0, np.pi, n, endpoint = False)
-        r = ampl*(np.cos(t)**3 + np.sin(t)**3)
-        x = r*np.cos(t) + x0
-        y = r*np.sin(t) + y0
+        angle = np.pi / 6.0
+        t = np.linspace(0, np.pi, n, endpoint=False)
+        r = ampl * (np.cos(t) ** 3 + np.sin(t) ** 3)
+        x = r * np.cos(t) + x0
+        y = r * np.sin(t) + y0
         cos_ = np.cos(angle)
         sin_ = np.sin(angle)
-        x_rot = cos_*x - sin_*y
-        y_rot = sin_*x + cos_*y
+        x_rot = cos_ * x - sin_ * y
+        y_rot = sin_ * x + cos_ * y
         return x_rot, y_rot
-    
+
     subdomain = np.column_stack(bean_curve(60))
 
     if rank == 0:
-        np.save(
-            test_path / "subdomain.npy",
-            subdomain
-        )
-    
+        np.save(test_path / "subdomain.npy", subdomain)
+
     filename = test_path / "domain0.msh"
 
     # Create the gmsh domain0.msh
     nbr_tri0 = dib.build_gmsh_model_2d(
-        vertices, boundary_parts, 0.6*mesh_size,
-        curves = [subdomain],
-        filename = filename,
-        plot = True
+        vertices,
+        boundary_parts,
+        0.6 * mesh_size,
+        curves=[subdomain],
+        filename=filename,
+        plot=True,
     )
 
     # Read the domain0
-    output = dib.read_gmsh(
-        filename, comm, dim = 2
-    )
-    
+    output = dib.read_gmsh(filename, comm, dim=2)
+
     domain0, _, boundary_tags = output
 
     # Set all connectivities on domain0
@@ -658,46 +732,38 @@ def test_06():
     # Space for data generation
     space0 = dib.create_space(domain0, "CG", rank_dim)
     # Forces
-    forces = [
-        (-1.0, -1.0),
-        (0.0, -1.0),
-        (1.0, -1.0)
-    ]
+    forces = [(-1.0, -1.0), (0.0, -1.0), (1.0, -1.0)]
 
     # Dirichlet boundary conditions
     dirbc_partial = dib.homogeneous_dirichlet(
-        domain0,
-        space0,
-        boundary_tags,
-        [dir_mkr],
-        rank_dim
+        domain0, space0, boundary_tags, [dir_mkr], rank_dim
     )
-    
-    dirbc_total = dib.homogeneus_boundary(
-        domain0,
-        space0,
-        dim,
-        rank_dim
-    )
+
+    dirbc_total = dib.homogeneus_boundary(domain0, space0, dim, rank_dim)
 
     # Create measures to apply Neumman condition
     ds_parts = dib.marked_ds(
-        domain0,
-        boundary_tags,
-        [bR_mkr, neu_mkrA, neu_mkrB, neu_mkrC, bL_mkr]
+        domain0, boundary_tags, [bR_mkr, neu_mkrA, neu_mkrB, neu_mkrC, bL_mkr]
     )
 
     # Measures for force application
-    ds_forces = [ds_parts[1], ds_parts[2], ds_parts[3]] 
-    
+    ds_forces = [ds_parts[1], ds_parts[2], ds_parts[3]]
+
     # Measure for adjoint problem
-    ds1 = sum(ds_parts[1:], start = ds_parts[0])
+    ds1 = sum(ds_parts[1:], start=ds_parts[0])
 
     # Instance for data generation
     # We need the method pde0
     md0 = InverseElasticity(
-        dim, domain0, space0, forces, ds_forces, ds1,
-        dirbc_partial, dirbc_total, test_path
+        dim,
+        domain0,
+        space0,
+        forces,
+        ds_forces,
+        ds1,
+        dirbc_partial,
+        dirbc_total,
+        test_path,
     )
 
     # Function that defines
@@ -706,43 +772,39 @@ def test_06():
     def beam_equation(x):
         """
         Implicit equation :
-        ((x-x0)^2 + (y-y0)^2)^2 = a((x-x0)^3 + (y-y0)^3) 
+        ((x-x0)^2 + (y-y0)^2)^2 = a((x-x0)^3 + (y-y0)^3)
         """
         ampl = 0.5
         x0 = 0.0
         y0 = 0.2
-        angle = np.pi/6.0
+        angle = np.pi / 6.0
         cos_ = np.cos(angle)
         sin_ = np.sin(angle)
         # inverse rotation
-        x_irot = cos_*x[0] + sin_*x[1] - x0
-        y_irot = -sin_*x[0] + cos_*x[1] - y0
-        left_part = (x_irot**2 + y_irot**2)**2
-        right_part = ampl*(x_irot**3 + y_irot**3)
+        x_irot = cos_ * x[0] + sin_ * x[1] - x0
+        y_irot = -sin_ * x[0] + cos_ * x[1] - y0
+        left_part = (x_irot**2 + y_irot**2) ** 2
+        right_part = ampl * (x_irot**3 + y_irot**3)
         values = left_part - right_part
-        return np.log(25.0*values + 1.0)
-    
+        return np.log(25.0 * values + 1.0)
+
     # Dirichlet extensions
     extensions = dib.dir_extension_from(
-        comm, domain0, space0,
-        md0.pde0, beam_equation,
-        test_path
+        comm, domain0, space0, md0.pde0, beam_equation, test_path
     )
 
-    npts = 80 # npts % 4 = 0
-    part = npts//4
-    
-    vertices = np.column_stack(
-        semi_ellipse(0.75, 0.5, 0.2, npts)
-    )
-    
+    npts = 80  # npts % 4 = 0
+    part = npts // 4
+
+    vertices = np.column_stack(semi_ellipse(0.75, 0.5, 0.2, npts))
+
     dir_idx, dir_mkr = [npts], 1
-    bR_idx, bR_mkr = np.arange(1, part//2 + 1), 2
-    neu_idxA, neu_mkrA = part//2 + np.arange(1, part + 1), 3
-    neu_idxB, neu_mkrB = part//2 + np.arange(part + 1, 2*part + 1), 4
-    neu_idxC, neu_mkrC = part//2 + np.arange(2*part + 1, 3*part + 1), 5
-    bL_idx, bL_mkr = np.arange(part//2 + 3*part + 1, npts), 6
-    
+    bR_idx, bR_mkr = np.arange(1, part // 2 + 1), 2
+    neu_idxA, neu_mkrA = part // 2 + np.arange(1, part + 1), 3
+    neu_idxB, neu_mkrB = part // 2 + np.arange(part + 1, 2 * part + 1), 4
+    neu_idxC, neu_mkrC = part // 2 + np.arange(2 * part + 1, 3 * part + 1), 5
+    bL_idx, bL_mkr = np.arange(part // 2 + 3 * part + 1, npts), 6
+
     boundary_parts = [
         (dir_idx, dir_mkr, "dir"),
         (bR_idx, bR_mkr, "bRight"),
@@ -754,11 +816,9 @@ def test_06():
 
     # Create gmsh domain for Data Parallelism
     output = dib.create_domain_2d_DP(
-        vertices, boundary_parts, mesh_size,
-        path = test_path,
-        plot = True
+        vertices, boundary_parts, mesh_size, path=test_path, plot=True
     )
-    
+
     domain, nbr_tri, boundary_tags = output
 
     if rank == 0:
@@ -771,61 +831,42 @@ def test_06():
     space = dib.create_space(domain, "CG", rank_dim)
     # Dirichlet boundary conditions
     dirbc_partial = dib.homogeneous_dirichlet(
-        domain,
-        space,
-        boundary_tags,
-        [dir_mkr],
-        rank_dim
+        domain, space, boundary_tags, [dir_mkr], rank_dim
     )
-    dirbc_total = dib.homogeneus_boundary(
-        domain,
-        space,
-        dim,
-        rank_dim
-    )
+    dirbc_total = dib.homogeneus_boundary(domain, space, dim, rank_dim)
     # Boundary to apply Neumann conditions
     ds_parts = dib.marked_ds(
-        domain,
-        boundary_tags,
-        [bR_mkr, neu_mkrA, neu_mkrB, neu_mkrC, bL_mkr]
+        domain, boundary_tags, [bR_mkr, neu_mkrA, neu_mkrB, neu_mkrC, bL_mkr]
     )
 
-    ds_forces = [ds_parts[1], ds_parts[2], ds_parts[3]] 
-    ds1 = sum(ds_parts[1:], start = ds_parts[0])
-    forces = [
-        (-1.0, -1.0),
-        (0.0, -1.0),
-        (1.0, -1.0)
-    ]
+    ds_forces = [ds_parts[1], ds_parts[2], ds_parts[3]]
+    ds1 = sum(ds_parts[1:], start=ds_parts[0])
+    forces = [(-1.0, -1.0), (0.0, -1.0), (1.0, -1.0)]
     # Create the model
     md = InverseElasticity(
-        dim, domain, space, forces, ds_forces, ds1,
-        dirbc_partial, dirbc_total, test_path
+        dim,
+        domain,
+        space,
+        forces,
+        ds_forces,
+        ds1,
+        dirbc_partial,
+        dirbc_total,
+        test_path,
     )
 
     # Space for interpolation (degree = 2)
-    g_space = dib.create_space(
-        domain, "CG", rank_dim, degree = 2
-    )
+    g_space = dib.create_space(domain, "CG", rank_dim, degree=2)
     # Interpolation between different spaces
     # from different domains
     g_funcs = dib.space_interpolation(
-        from_space = space0,
-        funcs = extensions,
-        to_space = g_space
+        from_space=space0, funcs=extensions, to_space=g_space
     )
 
     # To save as P1 functions
     g_space_1 = dib.create_space(domain, "CG", rank_dim)
-    g_funcs_1 = dib.interpolate(
-        funcs = g_funcs,
-        to_space = g_space_1,
-        name = "g"
-    )
-    dib.save_functions(
-        comm, domain,
-        g_funcs_1, test_path / "gP1.xdmf"
-    )
+    g_funcs_1 = dib.interpolate(funcs=g_funcs, to_space=g_space_1, name="g")
+    dib.save_functions(comm, domain, g_funcs_1, test_path / "gP1.xdmf")
 
     md.gs = g_funcs
 
@@ -833,16 +874,16 @@ def test_06():
     centers = np.array([(0.0, 0.4)])
     radii = np.array([0.15])
 
-    md.create_initial_level(centers, radii, factor = -1.0)
+    md.create_initial_level(centers, radii, factor=-1.0)
     md.save_initial_level(comm)
-    
+
     # Run Data Parallelism
     md.runDP(
-        niter = 200,
-        dfactor = 1e-1,
-        lv_time = (1e-3, 1.0),
-        cost_tol = 1e-1,
-        random_pars = (26, 0.05)
+        niter=200,
+        dfactor=1e-1,
+        lv_time=(1e-3, 1.0),
+        cost_tol=1e-1,
+        random_pars=(26, 0.05),
     )
 
 
@@ -861,7 +902,7 @@ def test_07():
     if size != task_nbr:
         print(f"Nbr of processes must be = {task_nbr}")
         return
-    
+
     comm_self = MPI.COMM_SELF
 
     test_name = "Elasticity Inverse Problem - Task Parallelism"
@@ -877,26 +918,24 @@ def test_07():
         Coordinates of a ellipse
         crossing the x-axis
         """
-        t_ = np.arcsin((b - eps)/b)
+        t_ = np.arcsin((b - eps) / b)
         t = np.linspace(-t_, np.pi + t_, npts)
-        x = a*np.cos(t)
-        y = b*np.sin(t) + (b - eps)
+        x = a * np.cos(t)
+        y = b * np.sin(t) + (b - eps)
         return x, y
-    
-    npts = 80 # npts % 4 = 0
-    part = npts//4
-    
-    vertices = np.column_stack(
-        semi_ellipse(0.75, 0.5, 0.2, npts)
-    )
-    
+
+    npts = 80  # npts % 4 = 0
+    part = npts // 4
+
+    vertices = np.column_stack(semi_ellipse(0.75, 0.5, 0.2, npts))
+
     dir_idx, dir_mkr = [npts], 1
-    bR_idx, bR_mkr = np.arange(1, part//2 + 1), 2
-    neu_idxA, neu_mkrA = part//2 + np.arange(1, part + 1), 3
-    neu_idxB, neu_mkrB = part//2 + np.arange(part + 1, 2*part + 1), 4
-    neu_idxC, neu_mkrC = part//2 + np.arange(2*part + 1, 3*part + 1), 5
-    bL_idx, bL_mkr = np.arange(part//2 + 3*part + 1, npts), 6
-    
+    bR_idx, bR_mkr = np.arange(1, part // 2 + 1), 2
+    neu_idxA, neu_mkrA = part // 2 + np.arange(1, part + 1), 3
+    neu_idxB, neu_mkrB = part // 2 + np.arange(part + 1, 2 * part + 1), 4
+    neu_idxC, neu_mkrC = part // 2 + np.arange(2 * part + 1, 3 * part + 1), 5
+    bL_idx, bL_mkr = np.arange(part // 2 + 3 * part + 1, npts), 6
+
     boundary_parts = [
         (dir_idx, dir_mkr, "dir"),
         (bR_idx, bR_mkr, "bRight"),
@@ -905,7 +944,7 @@ def test_07():
         (neu_idxC, neu_mkrC, "neuC"),
         (bL_idx, bL_mkr, "bLeft"),
     ]
-    
+
     def bean_curve(n):
         """
         Coordinates of a bean to be used
@@ -914,39 +953,36 @@ def test_07():
         ampl = 0.5
         x0 = 0.0
         y0 = 0.2
-        angle = np.pi/6.0
-        t = np.linspace(0, np.pi, n, endpoint = False)
-        r = ampl*(np.cos(t)**3 + np.sin(t)**3)
-        x = r*np.cos(t) + x0
-        y = r*np.sin(t) + y0
+        angle = np.pi / 6.0
+        t = np.linspace(0, np.pi, n, endpoint=False)
+        r = ampl * (np.cos(t) ** 3 + np.sin(t) ** 3)
+        x = r * np.cos(t) + x0
+        y = r * np.sin(t) + y0
         cos_ = np.cos(angle)
         sin_ = np.sin(angle)
-        x_rot = cos_*x - sin_*y
-        y_rot = sin_*x + cos_*y
+        x_rot = cos_ * x - sin_ * y
+        y_rot = sin_ * x + cos_ * y
         return x_rot, y_rot
-    
+
     subdomain = np.column_stack(bean_curve(60))
 
     if rank == 0:
-        np.save(
-            test_path / "subdomain.npy",
-            subdomain
-        )
+        np.save(test_path / "subdomain.npy", subdomain)
 
     filename = test_path / "domain0.msh"
 
     nbr_tri0 = dib.build_gmsh_model_2d(
-        vertices, boundary_parts, 0.6*mesh_size,
-        curves = [subdomain],
-        filename = filename,
-        plot = True
+        vertices,
+        boundary_parts,
+        0.6 * mesh_size,
+        curves=[subdomain],
+        filename=filename,
+        plot=True,
     )
 
     if rank == 0:
         # Read the domain0 in rank = 0
-        output = dib.read_gmsh(
-            filename, comm_self, 2
-        )
+        output = dib.read_gmsh(filename, comm_self, 2)
 
         domain0, _, boundary_tags = output
         dib.all_connectivities(domain0)
@@ -954,79 +990,68 @@ def test_07():
         # Space defined in rank = 0
         space0 = dib.create_space(domain0, "CG", rank_dim)
         # three forces
-        forces = [
-            (-1.0, -1.0),
-            (0.0, -1.0),
-            (1.0, -1.0)
-        ]
+        forces = [(-1.0, -1.0), (0.0, -1.0), (1.0, -1.0)]
 
         # Dirichlet boundary conditions
         dirbc_partial = dib.homogeneous_dirichlet(
-            domain0,
-            space0,
-            boundary_tags,
-            [dir_mkr],
-            rank_dim
+            domain0, space0, boundary_tags, [dir_mkr], rank_dim
         )
-        
-        dirbc_total = dib.homogeneus_boundary(
-            domain0,
-            space0,
-            dim,
-            rank_dim
-        )
+
+        dirbc_total = dib.homogeneus_boundary(domain0, space0, dim, rank_dim)
 
         # Measures
         ds_parts = dib.marked_ds(
-            domain0,
-            boundary_tags,
-            [bR_mkr, neu_mkrA, neu_mkrB, neu_mkrC, bL_mkr]
+            domain0, boundary_tags, [bR_mkr, neu_mkrA, neu_mkrB, neu_mkrC, bL_mkr]
         )
 
-        ds_forces = [ds_parts[1], ds_parts[2], ds_parts[3]] 
-        ds1 = sum(ds_parts[1:], start = ds_parts[0])
+        ds_forces = [ds_parts[1], ds_parts[2], ds_parts[3]]
+        ds1 = sum(ds_parts[1:], start=ds_parts[0])
 
         md0 = InverseElasticity(
-            dim, domain0, space0, forces, ds_forces, ds1,
-            dirbc_partial, dirbc_total, test_path
+            dim,
+            domain0,
+            space0,
+            forces,
+            ds_forces,
+            ds1,
+            dirbc_partial,
+            dirbc_total,
+            test_path,
         )
 
         def beam_equation(x):
             """
             Implicit equation :
-            ((x-x0)^2 + (y-y0)^2)^2 = a((x-x0)^3 + (y-y0)^3) 
+            ((x-x0)^2 + (y-y0)^2)^2 = a((x-x0)^3 + (y-y0)^3)
             """
             ampl = 0.5
             x0 = 0.0
             y0 = 0.2
-            angle = np.pi/6.0
+            angle = np.pi / 6.0
             cos_ = np.cos(angle)
             sin_ = np.sin(angle)
             # inverse rotation
-            x_irot = cos_*x[0] + sin_*x[1] - x0
-            y_irot = -sin_*x[0] + cos_*x[1] - y0
-            vals = (x_irot**2 + y_irot**2)**2 - ampl*(x_irot**3 + y_irot**3)
-            return np.log(25*vals + 1.0)
-        
+            x_irot = cos_ * x[0] + sin_ * x[1] - x0
+            y_irot = -sin_ * x[0] + cos_ * x[1] - y0
+            vals = (x_irot**2 + y_irot**2) ** 2 - ampl * (x_irot**3 + y_irot**3)
+            return np.log(25 * vals + 1.0)
+
         extensions = dib.dir_extension_from(
-            comm_self, domain0, space0, md0.pde0, beam_equation,
-            test_path
+            comm_self, domain0, space0, md0.pde0, beam_equation, test_path
         )
 
-    npts = 80 # npts % 4 = 0
-    part = npts//4
-    
-    vertices = np.column_stack(
-        semi_ellipse(0.75, 0.5, 0.2, npts)
-    )
-    
+    npts = 80  # npts % 4 = 0
+    part = npts // 4
+
+    vertices = np.column_stack(semi_ellipse(0.75, 0.5, 0.2, npts))
+
     dir_idx, dir_mkr = [npts], 1
-    bR_idx, bR_mkr = np.arange(1, part//2 + 1), 2
-    neu_idxA, neu_mkrA = part//2 + np.arange(1, part + 1), 3
-    neu_idxB, neu_mkrB = part//2 + np.arange(part + 1, 2*part + 1), 4
-    neu_idxC, neu_mkrC = part//2 + np.arange(2*part + 1, 3*part + 1), 5
-    bL_idx, bL_mkr = np.arange(part//2 + 3*part + 1, npts), 6
-    
+    bR_idx, bR_mkr = np.arange(1, part // 2 + 1), 2
+    neu_idxA, neu_mkrA = part // 2 + np.arange(1, part + 1), 3
+    neu_idxB, neu_mkrB = part // 2 + np.arange(part + 1, 2 * part + 1), 4
+    neu_idxC, neu_mkrC = part // 2 + np.arange(2 * part + 1, 3 * part + 1), 5
+    bL_idx, bL_mkr = np.arange(part // 2 + 3 * part + 1, npts), 6
+
     boundary_parts = [
         (dir_idx, dir_mkr, "dir"),
         (bR_idx, bR_mkr, "bRight"),
@@ -1038,11 +1063,9 @@ def test_07():
 
     # Create gmsh domain for Task Parallelism
     output = dib.create_domain_2d_TP(
-        vertices, boundary_parts, mesh_size,
-        path = test_path,
-        plot = True
+        vertices, boundary_parts, mesh_size, path=test_path, plot=True
     )
-    
+
     domain, nbr_tri, boundary_tags = output
 
     if rank == 0:
@@ -1055,85 +1078,62 @@ def test_07():
     space = dib.create_space(domain, "CG", rank_dim)
     # Dirichlet boundary conditions
     dirbc_partial = dib.homogeneous_dirichlet(
-        domain,
-        space,
-        boundary_tags,
-        [dir_mkr],
-        rank_dim
+        domain, space, boundary_tags, [dir_mkr], rank_dim
     )
-    dirbc_total = dib.homogeneus_boundary(
-        domain,
-        space,
-        dim,
-        rank_dim
-    )
+    dirbc_total = dib.homogeneus_boundary(domain, space, dim, rank_dim)
     # Boundary to force application
     ds_parts = dib.marked_ds(
-        domain,
-        boundary_tags,
-        [bR_mkr, neu_mkrA, neu_mkrB, neu_mkrC, bL_mkr]
+        domain, boundary_tags, [bR_mkr, neu_mkrA, neu_mkrB, neu_mkrC, bL_mkr]
     )
 
-    ds_forces = [ds_parts[1], ds_parts[2], ds_parts[3]] 
-    ds1 = sum(ds_parts[1:], start = ds_parts[0])
-    forces = [
-        (-1.0, -1.0),
-        (0.0, -1.0),
-        (1.0, -1.0)
-    ]
+    ds_forces = [ds_parts[1], ds_parts[2], ds_parts[3]]
+    ds1 = sum(ds_parts[1:], start=ds_parts[0])
+    forces = [(-1.0, -1.0), (0.0, -1.0), (1.0, -1.0)]
 
     # Create the model
     md = InverseElasticity(
-        dim, domain, space, forces, ds_forces, ds1,
-        dirbc_partial, dirbc_total, test_path
+        dim,
+        domain,
+        space,
+        forces,
+        ds_forces,
+        ds1,
+        dirbc_partial,
+        dirbc_total,
+        test_path,
     )
 
-    g_space = dib.create_space(
-        domain, "CG", rank_dim, degree = 2
-    )
+    g_space = dib.create_space(domain, "CG", rank_dim, degree=2)
     if rank == 0:
         # Interpolation
         g_funcs = dib.space_interpolation(
-            from_space = space0,
-            funcs = extensions,
-            to_space = g_space
+            from_space=space0, funcs=extensions, to_space=g_space
         )
 
         # Save
         g_space_1 = dib.create_space(domain, "CG", rank_dim)
-        g_funcs_1 = dib.interpolate(
-            funcs = g_funcs,
-            to_space = g_space_1,
-            name = "g"
-        )
-        dib.save_functions(
-            comm_self, domain,
-            g_funcs_1, test_path / "gP1.xdmf"
-        )
+        g_funcs_1 = dib.interpolate(funcs=g_funcs, to_space=g_space_1, name="g")
+        dib.save_functions(comm_self, domain, g_funcs_1, test_path / "gP1.xdmf")
 
         g_values = np.vstack([g.x.array[:] for g in g_funcs])
-    
+
     else:
         g_values = None
 
-    g_values = comm.bcast(g_values, root = 0)
+    g_values = comm.bcast(g_values, root=0)
 
     md.gs = dib.get_funcs_from(g_space, g_values)
 
     # Initial guess: centers and radii
     centers = np.array([(0.0, 0.4)])
     radii = np.array([0.15])
-    
-    md.create_initial_level(centers, radii, factor = -1.0)
+
+    md.create_initial_level(centers, radii, factor=-1.0)
     if rank == 0:
         md.save_initial_level(comm_self)
-    
+
     # Run Task Parallelism
-    md.runTP(
-        niter = 200,
-        dfactor = 1e-1,
-        cost_tol = 1e-1
-    )
+    md.runTP(niter=200, dfactor=1e-1, cost_tol=1e-1)
 
 
 def test_08():
@@ -1149,7 +1149,7 @@ def test_08():
 
     # Verification
     nbr_groups = 6
-    if size%nbr_groups != 0:
+    if size % nbr_groups != 0:
         print(f"Nbr of processes must be divisible by {nbr_groups}")
         return
 
@@ -1170,26 +1170,24 @@ def test_08():
         Coordinates of a ellipse
         crossing the x-axis
         """
-        t_ = np.arcsin((b - eps)/b)
+        t_ = np.arcsin((b - eps) / b)
         t = np.linspace(-t_, np.pi + t_, npts)
-        x = a*np.cos(t)
-        y = b*np.sin(t) + (b - eps)
+        x = a * np.cos(t)
+        y = b * np.sin(t) + (b - eps)
         return x, y
-    
-    npts = 80 # npts % 4 = 0
-    part = npts//4
-    
-    vertices = np.column_stack(
-        semi_ellipse(0.75, 0.5, 0.2, npts)
-    )
-    
+
+    npts = 80  # npts % 4 = 0
+    part = npts // 4
+
+    vertices = np.column_stack(semi_ellipse(0.75, 0.5, 0.2, npts))
+
     dir_idx, dir_mkr = [npts], 1
-    bR_idx, bR_mkr = np.arange(1, part//2 + 1), 2
-    neu_idxA, neu_mkrA = part//2 + np.arange(1, part + 1), 3
-    neu_idxB, neu_mkrB = part//2 + np.arange(part + 1, 2*part + 1), 4
-    neu_idxC, neu_mkrC = part//2 + np.arange(2*part + 1, 3*part + 1), 5
-    bL_idx, bL_mkr = np.arange(part//2 + 3*part + 1, npts), 6
-    
+    bR_idx, bR_mkr = np.arange(1, part // 2 + 1), 2
+    neu_idxA, neu_mkrA = part // 2 + np.arange(1, part + 1), 3
+    neu_idxB, neu_mkrB = part // 2 + np.arange(part + 1, 2 * part + 1), 4
+    neu_idxC, neu_mkrC = part // 2 + np.arange(2 * part + 1, 3 * part + 1), 5
+    bL_idx, bL_mkr = np.arange(part // 2 + 3 * part + 1, npts), 6
+
     boundary_parts = [
         (dir_idx, dir_mkr, "dir"),
         (bR_idx, bR_mkr, "bRight"),
@@ -1198,7 +1196,7 @@ def test_08():
         (neu_idxC, neu_mkrC, "neuC"),
         (bL_idx, bL_mkr, "bLeft"),
     ]
-    
+
     def bean_curve(n):
         """
         Coordinates of a bean to be used
@@ -1207,39 +1205,36 @@ def test_08():
         ampl = 0.5
         x0 = 0.0
         y0 = 0.2
-        angle = np.pi/6.0
-        t = np.linspace(0, np.pi, n, endpoint = False)
-        r = ampl*(np.cos(t)**3 + np.sin(t)**3)
-        x = r*np.cos(t) + x0
-        y = r*np.sin(t) + y0
+        angle = np.pi / 6.0
+        t = np.linspace(0, np.pi, n, endpoint=False)
+        r = ampl * (np.cos(t) ** 3 + np.sin(t) ** 3)
+        x = r * np.cos(t) + x0
+        y = r * np.sin(t) + y0
         cos_ = np.cos(angle)
         sin_ = np.sin(angle)
-        x_rot = cos_*x - sin_*y
-        y_rot = sin_*x + cos_*y
+        x_rot = cos_ * x - sin_ * y
+        y_rot = sin_ * x + cos_ * y
         return x_rot, y_rot
-    
+
     subdomain = np.column_stack(bean_curve(60))
 
     if rank == 0:
-        np.save(
-            test_path / "subdomain.npy",
-            subdomain
-        )
+        np.save(test_path / "subdomain.npy", subdomain)
 
     filename = test_path / "domain0.msh"
 
     nbr_tri0 = dib.build_gmsh_model_2d(
-        vertices, boundary_parts, 0.6*mesh_size,
-        curves = [subdomain],
-        filename = filename,
-        plot = True
+        vertices,
+        boundary_parts,
+        0.6 * mesh_size,
+        curves=[subdomain],
+        filename=filename,
+        plot=True,
     )
 
     if color == 0:
         # Read the domain0 in rank = 0
-        output = dib.read_gmsh(
-            filename, sub_comm, 2
-        )
+        output = dib.read_gmsh(filename, sub_comm, 2)
 
         domain0, _, boundary_tags = output
         dib.all_connectivities(domain0)
@@ -1247,81 +1242,70 @@ def test_08():
         # Space defined in rank = 0
         space0 = dib.create_space(domain0, "CG", rank_dim)
         # three forces
-        forces = [
-            (-1.0, -1.0),
-            (0.0, -1.0),
-            (1.0, -1.0)
-        ]
+        forces = [(-1.0, -1.0), (0.0, -1.0), (1.0, -1.0)]
 
         # Dirichlet boundary conditions
         dirbc_partial = dib.homogeneous_dirichlet(
-            domain0,
-            space0,
-            boundary_tags,
-            [dir_mkr],
-            rank_dim
+            domain0, space0, boundary_tags, [dir_mkr], rank_dim
         )
-        
-        dirbc_total = dib.homogeneus_boundary(
-            domain0,
-            space0,
-            dim,
-            rank_dim
-        )
+
+        dirbc_total = dib.homogeneus_boundary(domain0, space0, dim, rank_dim)
 
         # Measures
         ds_parts = dib.marked_ds(
-            domain0,
-            boundary_tags,
-            [bR_mkr, neu_mkrA, neu_mkrB, neu_mkrC, bL_mkr]
+            domain0, boundary_tags, [bR_mkr, neu_mkrA, neu_mkrB, neu_mkrC, bL_mkr]
         )
 
-        ds_forces = [ds_parts[1], ds_parts[2], ds_parts[3]] 
-        ds1 = sum(ds_parts[1:], start = ds_parts[0])
+        ds_forces = [ds_parts[1], ds_parts[2], ds_parts[3]]
+        ds1 = sum(ds_parts[1:], start=ds_parts[0])
 
         md0 = InverseElasticity(
-            dim, domain0, space0, forces, ds_forces, ds1,
-            dirbc_partial, dirbc_total, test_path
+            dim,
+            domain0,
+            space0,
+            forces,
+            ds_forces,
+            ds1,
+            dirbc_partial,
+            dirbc_total,
+            test_path,
         )
 
         def beam_equation(x):
             """
             Implicit equation :
-            ((x-x0)^2 + (y-y0)^2)^2 = a((x-x0)^3 + (y-y0)^3) 
+            ((x-x0)^2 + (y-y0)^2)^2 = a((x-x0)^3 + (y-y0)^3)
             """
             ampl = 0.5
             x0 = 0.0
             y0 = 0.2
-            angle = np.pi/6.0
+            angle = np.pi / 6.0
             cos_ = np.cos(angle)
             sin_ = np.sin(angle)
             # inverse rotation
-            x_irot = cos_*x[0] + sin_*x[1] - x0
-            y_irot = -sin_*x[0] + cos_*x[1] - y0
-            left_part = (x_irot**2 + y_irot**2)**2
-            right_part = ampl*(x_irot**3 + y_irot**3)
+            x_irot = cos_ * x[0] + sin_ * x[1] - x0
+            y_irot = -sin_ * x[0] + cos_ * x[1] - y0
+            left_part = (x_irot**2 + y_irot**2) ** 2
+            right_part = ampl * (x_irot**3 + y_irot**3)
             values = left_part - right_part
-            return np.log(25.0*values + 1.0)
-            
+            return np.log(25.0 * values + 1.0)
+
         extensions = dib.dir_extension_from(
-            sub_comm, domain0, space0, md0.pde0, beam_equation,
-            test_path
+            sub_comm, domain0, space0, md0.pde0, beam_equation, test_path
         )
 
-    npts = 80 # npts % 4 = 0
-    part = npts//4
-    
-    vertices = np.column_stack(
-        semi_ellipse(0.75, 0.5, 0.2, npts)
-    )
-    
+    npts = 80  # npts % 4 = 0
+    part = npts // 4
+
+    vertices = np.column_stack(semi_ellipse(0.75, 0.5, 0.2, npts))
+
     dir_idx, dir_mkr = [npts], 1
-    bR_idx, bR_mkr = np.arange(1, part//2 + 1), 2
-    neu_idxA, neu_mkrA = part//2 + np.arange(1, part + 1), 3
-    neu_idxB, neu_mkrB = part//2 + np.arange(part + 1, 2*part + 1), 4
-    neu_idxC, neu_mkrC = part//2 + np.arange(2*part + 1, 3*part + 1), 5
-    bL_idx, bL_mkr = np.arange(part//2 + 3*part + 1, npts), 6
-    
+    bR_idx, bR_mkr = np.arange(1, part // 2 + 1), 2
+    neu_idxA, neu_mkrA = part // 2 + np.arange(1, part + 1), 3
+    neu_idxB, neu_mkrB = part // 2 + np.arange(part + 1, 2 * part + 1), 4
+    neu_idxC, neu_mkrC = part // 2 + np.arange(2 * part + 1, 3 * part + 1), 5
+    bL_idx, bL_mkr = np.arange(part // 2 + 3 * part + 1, npts), 6
+
     boundary_parts = [
         (dir_idx, dir_mkr, "dir"),
         (bR_idx, bR_mkr, "bRight"),
@@ -1333,10 +1317,7 @@ def test_08():
 
     # Create gmsh domain for Mix Parallelism
     output = dib.create_domain_2d_MP(
-        sub_comm, color,
-        vertices, boundary_parts, mesh_size,
-        path = test_path,
-        plot = True
+        sub_comm, color, vertices, boundary_parts, mesh_size, path=test_path, plot=True
     )
     domain, nbr_tri, boundary_tags = output
 
@@ -1350,70 +1331,51 @@ def test_08():
     space = dib.create_space(domain, "CG", rank_dim)
     # Dirichlet boundary conditions
     dirbc_partial = dib.homogeneous_dirichlet(
-        domain,
-        space,
-        boundary_tags,
-        [dir_mkr],
-        rank_dim
+        domain, space, boundary_tags, [dir_mkr], rank_dim
     )
-    dirbc_total = dib.homogeneus_boundary(
-        domain,
-        space,
-        dim,
-        rank_dim
-    )
-    
+    dirbc_total = dib.homogeneus_boundary(domain, space, dim, rank_dim)
+
     # Boundary to force application
     ds_parts = dib.marked_ds(
-        domain,
-        boundary_tags,
-        [bR_mkr, neu_mkrA, neu_mkrB, neu_mkrC, bL_mkr]
+        domain, boundary_tags, [bR_mkr, neu_mkrA, neu_mkrB, neu_mkrC, bL_mkr]
     )
 
-    ds_forces = [ds_parts[1], ds_parts[2], ds_parts[3]] 
-    ds1 = sum(ds_parts[1:], start = ds_parts[0])
-    forces = [
-        (-1.0, -1.0),
-        (0.0, -1.0),
-        (1.0, -1.0)
-    ]
+    ds_forces = [ds_parts[1], ds_parts[2], ds_parts[3]]
+    ds1 = sum(ds_parts[1:], start=ds_parts[0])
+    forces = [(-1.0, -1.0), (0.0, -1.0), (1.0, -1.0)]
     # Create the model
     md = InverseElasticity(
-        dim, domain, space, forces, ds_forces, ds1,
-        dirbc_partial, dirbc_total, test_path
+        dim,
+        domain,
+        space,
+        forces,
+        ds_forces,
+        ds1,
+        dirbc_partial,
+        dirbc_total,
+        test_path,
     )
 
-    g_space = dib.create_space(
-        domain, "CG", rank_dim, degree = 2
-    )
-    
+    g_space = dib.create_space(domain, "CG", rank_dim, degree=2)
+
     if color == 0:
         # Interpolation
         g_funcs = dib.space_interpolation(
-            from_space = space0,
-            funcs = extensions,
-            to_space = g_space
+            from_space=space0, funcs=extensions, to_space=g_space
         )
 
         # Save
         g_space_1 = dib.create_space(domain, "CG", rank_dim)
-        g_funcs_1 = dib.interpolate(
-            funcs = g_funcs,
-            to_space = g_space_1,
-            name = "g"
-        )
-        dib.save_functions(
-            sub_comm, domain,
-            g_funcs_1, test_path / "gP1.xdmf"
-        )
+        g_funcs_1 = dib.interpolate(funcs=g_funcs, to_space=g_space_1, name="g")
+        dib.save_functions(sub_comm, domain, g_funcs_1, test_path / "gP1.xdmf")
 
         g_values_loc = np.vstack([g.x.array[:] for g in g_funcs])
-    
+
     else:
         g_values_loc = None
 
     g_values = comm.allgather(g_values_loc)
-    
+
     md.gs = dib.get_funcs_from(g_space, g_values[sub_comm.rank])
 
     # Initial guess: centers and radii
@@ -1423,15 +1385,9 @@ def test_08():
     md.create_initial_level(centers, radii, -1.0)
     if color == 0:
         md.save_initial_level(sub_comm)
-    
+
     # Run Mix Parallelism
-    md.runMP(
-        sub_comm,
-        niter = 200,
-        dfactor = 1e-1,
-        lv_time = (1e-3, 1.0),
-        cost_tol = 1e-1
-    )
+    md.runMP(sub_comm, niter=200, dfactor=1e-1, lv_time=(1e-3, 1.0), cost_tol=1e-1)
 
 
 def test_09():
@@ -1440,7 +1396,7 @@ def test_09():
 
     Run `mpirun -np <nbr of processes> python test.py 09`.
     For instance, `mpirun -np 2 python test.py 09`.
-    
+
     To save the output, append `> ../results/t09/out.txt`.
     To delete the images, enter `rm ../results/t09/*.png`.
     """
@@ -1451,26 +1407,17 @@ def test_09():
     rank_dim = 1
     mesh_size = 5e-3
 
-    vertices = np.array([
-        [0.0, 0.0],
-        [0.4, 0.0],
-        [0.6, 0.0],
-        [1.0, 0.0],
-        [1., 1.0],
-        [0.0, 1.0]
-    ])
+    vertices = np.array(
+        [[0.0, 0.0], [0.4, 0.0], [0.6, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]]
+    )
 
     dir_idx, dir_mkr = [2], 1
-    
-    boundary_parts = [
-        (dir_idx, dir_mkr, "dir")
-    ]
+
+    boundary_parts = [(dir_idx, dir_mkr, "dir")]
 
     # Create gmsh domain for Data Parallelism
     output = dib.create_domain_2d_DP(
-        vertices, boundary_parts, mesh_size,
-        path = test_path,
-        plot = True
+        vertices, boundary_parts, mesh_size, path=test_path, plot=True
     )
 
     domain, nbr_tri, boundary_tags = output
@@ -1484,55 +1431,37 @@ def test_09():
     space = dib.create_space(domain, "CG", rank_dim)
     # Dirichlet conditions
     dirichlet_bcs = dib.homogeneous_dirichlet(
-        domain, space, boundary_tags,
-        [dir_mkr], rank_dim
+        domain, space, boundary_tags, [dir_mkr], rank_dim
     )
     area = 0.25
     # Create the model
-    md = Heat(
-        dim, domain, space, dirichlet_bcs, area, test_path
-    )
+    md = Heat(dim, domain, space, dirichlet_bcs, area, test_path)
 
     @dib.region_of(domain)
     def sub_domain(x):
-        ineqs = [
-            x[0] - 0.3,
-            0.7 - x[0],
-            0.05 - x[1]
-        ]
+        ineqs = [x[0] - 0.3, 0.7 - x[0], 0.05 - x[1]]
         return ineqs
-    
+
     md.sub = [sub_domain.expression()]
 
-    centers = [
-        (0.1, 0.0),
-        (0.2, 0.0),
-        (0.3, 0.0),
-        (0.7, 0.0),
-        (0.8, 0.0),
-        (0.9, 0.0)
-    ]
-    
-    centers += [(0.0, i*0.1) for i in range(10)]
-    centers += [(1.0, i*0.1) for i in range(10)]
-    centers += [(i*0.1, 1.0) for i in range(11)]
+    centers = [(0.1, 0.0), (0.2, 0.0), (0.3, 0.0), (0.7, 0.0), (0.8, 0.0), (0.9, 0.0)]
 
-    centers += [(0.25, i*0.2) for i in range(1, 5)]
-    centers += [(0.5, i*0.2 + 0.1) for i in range(1, 5)]
-    centers += [(0.75, i*0.2) for i in range(1, 5)]
-    
+    centers += [(0.0, i * 0.1) for i in range(10)]
+    centers += [(1.0, i * 0.1) for i in range(10)]
+    centers += [(i * 0.1, 1.0) for i in range(11)]
+
+    centers += [(0.25, i * 0.2) for i in range(1, 5)]
+    centers += [(0.5, i * 0.2 + 0.1) for i in range(1, 5)]
+    centers += [(0.75, i * 0.2) for i in range(1, 5)]
+
     centers = np.array(centers)
     radii = np.repeat(0.08, 49)
 
     md.create_initial_level(centers, radii)
     md.save_initial_level(comm)
 
-    #Run Data Parallelism
-    md.runDP(
-        niter=250,
-        ctrn_tol=1e-3,
-        lgrn_tol=1e-2
-    )
+    # Run Data Parallelism
+    md.runDP(niter=250, ctrn_tol=1e-3, lgrn_tol=1e-2)
 
 
 def test_10():
@@ -1541,7 +1470,7 @@ def test_10():
 
     Run `mpirun -np <nbr of processes> python test.py 10`.
     For instance, `mpirun -np 2 python test.py 10`.
-    
+
     To save the output, append `> ../results/t10/out.txt`.
     To delete the images, enter `rm ../results/t10/*.png`.
     """
@@ -1552,30 +1481,23 @@ def test_10():
     rank_dim = 1
     mesh_size = 5e-3
 
-    vertices = np.array([
-        [0.0, 0.0],
-        [1.0, 0.0],
-        [1.0, 1.0],
-        [0.0, 1.0]
-    ])
+    vertices = np.array([[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]])
 
     dir1_idx, dir1_mkr = [1], 1
     dir2_idx, dir2_mkr = [2], 2
     dir3_idx, dir3_mkr = [3], 3
     dir4_idx, dir4_mkr = [4], 4
-    
+
     boundary_parts = [
         (dir1_idx, dir1_mkr, "dir1"),
         (dir2_idx, dir2_mkr, "dir2"),
         (dir3_idx, dir3_mkr, "dir3"),
-        (dir4_idx, dir4_mkr, "dir4")
+        (dir4_idx, dir4_mkr, "dir4"),
     ]
 
     # Create gmsh domain for Data Parallelism
     output = dib.create_domain_2d_DP(
-        vertices, boundary_parts, mesh_size,
-        path = test_path,
-        plot = True
+        vertices, boundary_parts, mesh_size, path=test_path, plot=True
     )
 
     domain, nbr_tri, boundary_tags = output
@@ -1588,23 +1510,19 @@ def test_10():
     # Space
     space = dib.create_space(domain, "CG", rank_dim)
     # Dirichlet conditions
-    dirichlet_bcs = dib.homogeneus_boundary(
-        domain, space, dim, rank_dim
-    )
+    dirichlet_bcs = dib.homogeneus_boundary(domain, space, dim, rank_dim)
     area = 0.5
     # Create the model
-    md = Heat(
-        dim, domain, space, dirichlet_bcs, area, test_path
-    )
+    md = Heat(dim, domain, space, dirichlet_bcs, area, test_path)
 
     @dib.region_of(domain)
     def sub_domain1(x):
         return [0.05 - x[1]]
-    
+
     @dib.region_of(domain)
     def sub_domain2(x):
         return [x[0] - 0.95]
-    
+
     @dib.region_of(domain)
     def sub_domain3(x):
         return [x[1] - 0.95]
@@ -1617,29 +1535,24 @@ def test_10():
         sub_domain1.expression(),
         sub_domain2.expression(),
         sub_domain3.expression(),
-        sub_domain4.expression()
+        sub_domain4.expression(),
     ]
     centers = []
-    centers += [(0.3, i*0.2 + 0.1) for i in range(1, 4)]
-    centers += [(0.5, i*0.2 + 0.1) for i in range(1, 4)]
-    centers += [(0.7, i*0.2 + 0.1) for i in range(1, 4)]
-    centers += [(0.2, i*0.2 + 0.2) for i in range(4)]
-    centers += [(0.4, i*0.2 + 0.2) for i in range(4)]
-    centers += [(0.6, i*0.2 + 0.2) for i in range(4)]
-    centers += [(0.8, i*0.2 + 0.2) for i in range(4)]
-    
+    centers += [(0.3, i * 0.2 + 0.1) for i in range(1, 4)]
+    centers += [(0.5, i * 0.2 + 0.1) for i in range(1, 4)]
+    centers += [(0.7, i * 0.2 + 0.1) for i in range(1, 4)]
+    centers += [(0.2, i * 0.2 + 0.2) for i in range(4)]
+    centers += [(0.4, i * 0.2 + 0.2) for i in range(4)]
+    centers += [(0.6, i * 0.2 + 0.2) for i in range(4)]
+    centers += [(0.8, i * 0.2 + 0.2) for i in range(4)]
+
     centers = np.array(centers)
     radii = np.repeat(0.05, centers.shape[0])
 
     md.create_initial_level(centers, radii)
     md.save_initial_level(comm)
-    
-    md.runDP(
-        niter=200,
-        dfactor=1e-1,
-        ctrn_tol=1e-3,
-        lgrn_tol=5e-2
-    )
+
+    md.runDP(niter=200, dfactor=1e-1, ctrn_tol=1e-3, lgrn_tol=5e-2)
 
 
 def test_11():
@@ -1648,7 +1561,7 @@ def test_11():
 
     Run `mpirun -np <nbr of processes> python test.py 11`.
     For instance, `mpirun -np 2 python test.py 11`.
-    
+
     To save the output, append `> ../results/t11/out.txt`.
     To delete the images, enter `rm ../results/t11/*.png`.
     """
@@ -1659,30 +1572,23 @@ def test_11():
     rank_dim = 1
     mesh_size = 1e-2
 
-    vertices = np.array([
-        [0.0, 0.0],
-        [1.0, 0.0],
-        [1.0, 1.0],
-        [0.0, 1.0]
-    ])
+    vertices = np.array([[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]])
 
     dir1_idx, dir1_mkr = [1], 1
     dir2_idx, dir2_mkr = [2], 2
     dir3_idx, dir3_mkr = [3], 3
     dir4_idx, dir4_mkr = [4], 4
-    
+
     boundary_parts = [
         (dir1_idx, dir1_mkr, "dir1"),
         (dir2_idx, dir2_mkr, "dir2"),
         (dir3_idx, dir3_mkr, "dir3"),
-        (dir4_idx, dir4_mkr, "dir4")
+        (dir4_idx, dir4_mkr, "dir4"),
     ]
 
     # Create gmsh domain for Data Parallelism
     output = dib.create_domain_2d_DP(
-        vertices, boundary_parts, mesh_size,
-        path = test_path,
-        plot = True
+        vertices, boundary_parts, mesh_size, path=test_path, plot=True
     )
 
     domain, nbr_tri, boundary_tags = output
@@ -1695,21 +1601,17 @@ def test_11():
     # Space
     space = dib.create_space(domain, "CG", rank_dim)
     # Dirichlet conditions
-    dirichlet_bcs = dib.homogeneus_boundary(
-        domain, space, dim, rank_dim
-    )
+    dirichlet_bcs = dib.homogeneus_boundary(domain, space, dim, rank_dim)
     area = 0.5
     # Create the model
-    md = Heat(
-        dim, domain, space, dirichlet_bcs, area, test_path, "1Load"
-    )
+    md = Heat(dim, domain, space, dirichlet_bcs, area, test_path, "1Load")
 
     centers = []
 
-    centers += [(i/3.0, 1.0) for i in range(4)]
-    centers += [(i/3.0, 2.0/3.0) for i in range(4)]
-    centers += [(i/3.0, 1.0/3.0) for i in range(4)]
-    centers += [(i/3.0, 0.0) for i in range(4)]
+    centers += [(i / 3.0, 1.0) for i in range(4)]
+    centers += [(i / 3.0, 2.0 / 3.0) for i in range(4)]
+    centers += [(i / 3.0, 1.0 / 3.0) for i in range(4)]
+    centers += [(i / 3.0, 0.0) for i in range(4)]
 
     # Uncomment to add more holes to the initial condition
     # Spoilier: the result is different
@@ -1722,7 +1624,7 @@ def test_11():
 
     md.create_initial_level(centers, radii)
     md.save_initial_level(comm)
-    
+
     md.runDP(
         niter=250,
         dfactor=1.0,
@@ -1730,7 +1632,7 @@ def test_11():
         lgrn_tol=1e-3,
         smooth=True,
         reinit_step=6,
-        reinit_pars=(8, 0.01)
+        reinit_pars=(8, 0.01),
     )
 
 
@@ -1740,7 +1642,7 @@ def test_12():
 
     Run `mpirun -np <nbr of processes> python test.py 12`.
     For instance, `mpirun -np 2 python test.py 12`.
-    
+
     To save the output, append `> ../results/t12/out.txt`.
     To delete the images, enter `rm ../results/t12/*.png`.
     """
@@ -1751,30 +1653,27 @@ def test_12():
     rank_dim = 1
     mesh_size = 5e-3
 
-    vertices = np.array([
-        [0.0, 0.0],
-        [0.4, 0.0],
-        [0.6, 0.0],
-        [1.0, 0.0],
-        [1.0, 0.4],
-        [1.0, 0.6],
-        [1.0, 1.0],
-        [0.0, 1.0]
-    ])
+    vertices = np.array(
+        [
+            [0.0, 0.0],
+            [0.4, 0.0],
+            [0.6, 0.0],
+            [1.0, 0.0],
+            [1.0, 0.4],
+            [1.0, 0.6],
+            [1.0, 1.0],
+            [0.0, 1.0],
+        ]
+    )
 
     dir1_idx, dir1_mkr = [2], 1
     dir2_idx, dir2_mkr = [5], 2
-    
-    boundary_parts = [
-        (dir1_idx, dir1_mkr, "dir1"),
-        (dir2_idx, dir2_mkr, "dir2")
-    ]
+
+    boundary_parts = [(dir1_idx, dir1_mkr, "dir1"), (dir2_idx, dir2_mkr, "dir2")]
 
     # Create gmsh domain for Data Parallelism
     output = dib.create_domain_2d_DP(
-        vertices, boundary_parts, mesh_size,
-        path = test_path,
-        plot = True
+        vertices, boundary_parts, mesh_size, path=test_path, plot=True
     )
 
     domain, nbr_tri, boundary_tags = output
@@ -1788,42 +1687,28 @@ def test_12():
     space = dib.create_space(domain, "CG", rank_dim)
     # Dirichlet conditions
     dirichlet_bcs = dib.homogeneous_dirichlet(
-        domain, space, boundary_tags,
-        [dir1_mkr, dir2_mkr], rank_dim
+        domain, space, boundary_tags, [dir1_mkr, dir2_mkr], rank_dim
     )
 
     area = 0.4
     # Create the model
-    md = Heat(
-        dim, domain, space, dirichlet_bcs, area, test_path
-    )
+    md = Heat(dim, domain, space, dirichlet_bcs, area, test_path)
 
     @dib.region_of(domain)
     def sub_domain1(x):
         # 0.3 < x < 0.7
         # y < 0.05
-        ineqs = (
-            x[0] - 0.3,
-            0.7 - x[0],
-            0.05 - x[1]
-        )
+        ineqs = (x[0] - 0.3, 0.7 - x[0], 0.05 - x[1])
         return ineqs
-    
+
     @dib.region_of(domain)
     def sub_domain2(x):
         # 0.95 < x
         # 0.3 < y < 0.7
-        ineqs = (
-            x[1] - 0.3,
-            0.7 - x[1],
-            x[0] - 0.95
-        )
+        ineqs = (x[1] - 0.3, 0.7 - x[1], x[0] - 0.95)
         return ineqs
-    
-    md.sub = [
-        sub_domain1.expression(),
-        sub_domain2.expression()
-    ]
+
+    md.sub = [sub_domain1.expression(), sub_domain2.expression()]
 
     centers_b = [
         (0.1, 0.0),
@@ -1841,32 +1726,28 @@ def test_12():
         (1.0, 0.9),
     ]
 
-    centers_b += [(0.0, i*0.1) for i in range(11)]
-    centers_b += [(i*0.1, 1.0) for i in range(1, 11)]
-    centers_b += [(i*0.1, 1.0) for i in range(1, 11)]
-    
-    centers_i = [(0.1, i*0.2 + 0.3) for i in range(4)]
-    centers_i += [(0.2, i*0.2 + 0.2) for i in range(4)]
-    centers_i += [(0.3, i*0.2 + 0.3) for i in range(4)]
-    centers_i += [(0.4, i*0.2 + 0.2) for i in range(4)]
-    centers_i += [(0.5, i*0.2 + 0.3) for i in range(4)]
-    centers_i += [(0.6, i*0.2 + 0.2) for i in range(4)]
-    centers_i += [(0.7, i*0.2 + 0.3) for i in range(4)]
-    centers_i += [(0.8, i*0.2 + 0.2) for i in range(4)]
-    
+    centers_b += [(0.0, i * 0.1) for i in range(11)]
+    centers_b += [(i * 0.1, 1.0) for i in range(1, 11)]
+    centers_b += [(i * 0.1, 1.0) for i in range(1, 11)]
+
+    centers_i = [(0.1, i * 0.2 + 0.3) for i in range(4)]
+    centers_i += [(0.2, i * 0.2 + 0.2) for i in range(4)]
+    centers_i += [(0.3, i * 0.2 + 0.3) for i in range(4)]
+    centers_i += [(0.4, i * 0.2 + 0.2) for i in range(4)]
+    centers_i += [(0.5, i * 0.2 + 0.3) for i in range(4)]
+    centers_i += [(0.6, i * 0.2 + 0.2) for i in range(4)]
+    centers_i += [(0.7, i * 0.2 + 0.3) for i in range(4)]
+    centers_i += [(0.8, i * 0.2 + 0.2) for i in range(4)]
+
     centers = np.array(centers_b + centers_i)
     radii_b = np.repeat(0.08, len(centers_b))
     radii_i = np.repeat(0.05, len(centers_i))
     radii = np.concatenate((radii_b, radii_i))
-    
+
     md.create_initial_level(centers, radii)
     md.save_initial_level(comm)
-    
-    md.runDP(
-        niter=250,
-        ctrn_tol=1e-3,
-        lgrn_tol=1e-2
-    )
+
+    md.runDP(niter=250, ctrn_tol=1e-3, lgrn_tol=1e-2)
 
 
 def test_13():
@@ -1875,7 +1756,7 @@ def test_13():
 
     Run `mpirun -np <nbr of processes> python test.py 13`.
     For instance, `mpirun -np 2 python test.py 13`.
-    
+
     To save the output, append `> ../results/t13/out.txt`.
     To delete the images, enter `rm ../results/t13/*.png`.
     """
@@ -1893,30 +1774,27 @@ def test_13():
     rank_dim = 1
     mesh_size = 5e-3
 
-    vertices = np.array([
-        [0.0, 0.0],
-        [0.4, 0.0],
-        [0.6, 0.0],
-        [1.0, 0.0],
-        [1.0, 0.4],
-        [1.0, 0.6],
-        [1.0, 1.0],
-        [0.0, 1.0]
-    ])
+    vertices = np.array(
+        [
+            [0.0, 0.0],
+            [0.4, 0.0],
+            [0.6, 0.0],
+            [1.0, 0.0],
+            [1.0, 0.4],
+            [1.0, 0.6],
+            [1.0, 1.0],
+            [0.0, 1.0],
+        ]
+    )
 
     dir1_idx, dir1_mkr = [2], 1
     dir2_idx, dir2_mkr = [5], 2
-    
-    boundary_parts = [
-        (dir1_idx, dir1_mkr, "dir1"),
-        (dir2_idx, dir2_mkr, "dir2")
-    ]
+
+    boundary_parts = [(dir1_idx, dir1_mkr, "dir1"), (dir2_idx, dir2_mkr, "dir2")]
 
     # Create gmsh domain for Data Parallelism
     output = dib.create_domain_2d_TP(
-        vertices, boundary_parts, mesh_size,
-        path = test_path,
-        plot = True
+        vertices, boundary_parts, mesh_size, path=test_path, plot=True
     )
 
     domain, nbr_tri, boundary_tags = output
@@ -1930,44 +1808,30 @@ def test_13():
     space = dib.create_space(domain, "CG", rank_dim)
     # Dirichlet conditions
     dirichlet_bcs = dib.homogeneous_dirichlet(
-        domain, space, boundary_tags,
-        [dir1_mkr, dir2_mkr], rank_dim
+        domain, space, boundary_tags, [dir1_mkr, dir2_mkr], rank_dim
     )
-    
+
     dir_bcs = [[dirichlet_bcs[0]], [dirichlet_bcs[1]]]
 
     area = 0.4
     # Create the model
-    md = HeatPlus(
-        dim, domain, space, dir_bcs, area, test_path
-    )
+    md = HeatPlus(dim, domain, space, dir_bcs, area, test_path)
 
     @dib.region_of(domain)
     def sub_domain1(x):
         # 0.3 < x < 0.7
         # y < 0.05
-        ineqs = (
-            x[0] - 0.3,
-            0.7 - x[0],
-            0.05 - x[1]
-        )
+        ineqs = (x[0] - 0.3, 0.7 - x[0], 0.05 - x[1])
         return ineqs
-    
+
     @dib.region_of(domain)
     def sub_domain2(x):
         # 0.95 < x
         # 0.3 < y < 0.7
-        ineqs = (
-            x[1] - 0.3,
-            0.7 - x[1],
-            x[0] - 0.95
-        )
+        ineqs = (x[1] - 0.3, 0.7 - x[1], x[0] - 0.95)
         return ineqs
-    
-    md.sub = [
-        sub_domain1.expression(),
-        sub_domain2.expression()
-    ]
+
+    md.sub = [sub_domain1.expression(), sub_domain2.expression()]
 
     md.wt = [0.5, 0.5]
 
@@ -1987,19 +1851,19 @@ def test_13():
         (1.0, 0.9),
     ]
 
-    centers_b += [(0.0, i*0.1) for i in range(11)]
-    centers_b += [(i*0.1, 1.0) for i in range(1, 11)]
-    centers_b += [(i*0.1, 1.0) for i in range(1, 11)]
-    
-    centers_i = [(0.1, i*0.2 + 0.3) for i in range(4)]
-    centers_i += [(0.2, i*0.2 + 0.2) for i in range(4)]
-    centers_i += [(0.3, i*0.2 + 0.3) for i in range(4)]
-    centers_i += [(0.4, i*0.2 + 0.2) for i in range(4)]
-    centers_i += [(0.5, i*0.2 + 0.3) for i in range(4)]
-    centers_i += [(0.6, i*0.2 + 0.2) for i in range(4)]
-    centers_i += [(0.7, i*0.2 + 0.3) for i in range(4)]
-    centers_i += [(0.8, i*0.2 + 0.2) for i in range(4)]
-    
+    centers_b += [(0.0, i * 0.1) for i in range(11)]
+    centers_b += [(i * 0.1, 1.0) for i in range(1, 11)]
+    centers_b += [(i * 0.1, 1.0) for i in range(1, 11)]
+
+    centers_i = [(0.1, i * 0.2 + 0.3) for i in range(4)]
+    centers_i += [(0.2, i * 0.2 + 0.2) for i in range(4)]
+    centers_i += [(0.3, i * 0.2 + 0.3) for i in range(4)]
+    centers_i += [(0.4, i * 0.2 + 0.2) for i in range(4)]
+    centers_i += [(0.5, i * 0.2 + 0.3) for i in range(4)]
+    centers_i += [(0.6, i * 0.2 + 0.2) for i in range(4)]
+    centers_i += [(0.7, i * 0.2 + 0.3) for i in range(4)]
+    centers_i += [(0.8, i * 0.2 + 0.2) for i in range(4)]
+
     centers = np.array(centers_b + centers_i)
     radii_b = np.repeat(0.08, len(centers_b))
     radii_i = np.repeat(0.05, len(centers_i))
@@ -2008,21 +1872,17 @@ def test_13():
     md.create_initial_level(centers, radii)
     if rank == 0:
         md.save_initial_level(comm_self)
-    
-    md.runTP(
-        niter=250,
-        ctrn_tol=1e-3,
-        lgrn_tol=1e-2
-    )
+
+    md.runTP(niter=250, ctrn_tol=1e-3, lgrn_tol=1e-2)
 
 
-def test_14(test_path = Path("../results/t14/"), r = 10.0):
+def test_14(test_path=Path("../results/t14/"), r=10.0):
     """
     Logistic equation (r = 10) - Data Parallelism
 
     Run `mpirun -np <nbr of processes> python test.py 14`.
     For instance, `mpirun -np 2 python test.py 14`.
-    
+
     To save the output, append `> ../results/t14/out.txt`.
     To delete the images, enter `rm ../results/t14/*.png`.
     """
@@ -2030,34 +1890,25 @@ def test_14(test_path = Path("../results/t14/"), r = 10.0):
     dim = 2
     rank_dim = 1
     mesh_size = 0.012
-    
-    vertices = np.array([
-        (0.0, 0.0),
-        (1.0, 0.0),
-        (1.0, 1.0),
-        (0.0, 1.0)
-    ])
-    
+
+    vertices = np.array([(0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)])
+
     output = dib.create_domain_2d_DP(
-        vertices, [], mesh_size,
-        path = test_path,
-        plot = False
+        vertices, [], mesh_size, path=test_path, plot=False
     )
-    
+
     domain, nbr_tri, boundary_tags = output
 
     # Space for the PDE solution
     space = dib.create_space(domain, "CG", rank_dim)
-    
+
     # Create the model
-    md = Logistic(
-        dim, domain, space, test_path
-    )
+    md = Logistic(dim, domain, space, test_path)
 
     md.ini_func = lambda x: (
         1 + 0.2 * np.sin(6 * np.pi * x[0]) * np.sin(6 * np.pi * x[1])
     )
-    
+
     md.d = 1.0
     md.vol = 0.5
     md.name = "K"
@@ -2065,17 +1916,17 @@ def test_14(test_path = Path("../results/t14/"), r = 10.0):
 
     # Initial guess: centers and radii
     centers = []
-    
-    centers += [(0, 0.25*i) for i in range(5)]
-    centers += [(0.25, 0.25*i) for i in range(5)]
-    centers += [(0.5, 0.25*i) for i in range(5)]
-    centers += [(0.75, 0.25*i) for i in range(5)]
-    centers += [(1, 0.25*i) for i in range(5)]
-    
+
+    centers += [(0, 0.25 * i) for i in range(5)]
+    centers += [(0.25, 0.25 * i) for i in range(5)]
+    centers += [(0.5, 0.25 * i) for i in range(5)]
+    centers += [(0.75, 0.25 * i) for i in range(5)]
+    centers += [(1, 0.25 * i) for i in range(5)]
+
     centers = np.array(centers)
     radii = np.repeat(0.1, centers.shape[0])
-    
-    md.create_initial_level(centers, radii, factor = -1.0)
+
+    md.create_initial_level(centers, radii, factor=-1.0)
     md.save_initial_level(comm)
 
     md.runDP(
@@ -2087,7 +1938,7 @@ def test_14(test_path = Path("../results/t14/"), r = 10.0):
         ctrn_tol=1e-3,
         lgrn_tol=1e-3,
         dfactor=1.0,
-        smooth=True
+        smooth=True,
     )
 
 
@@ -2097,7 +1948,7 @@ def test_15():
     """
 
     test_path = Path("../results/t15/")
-    test_14(test_path, r = 40)
+    test_14(test_path, r=40)
 
 
 def test_16():
@@ -2106,42 +1957,33 @@ def test_16():
     """
 
     test_path = Path("../results/t16/")
-    test_14(test_path, r = 100)
+    test_14(test_path, r=100)
 
 
-def test_17(test_path = Path("../results/t17/"), vol = 0.3):
-    
+def test_17(test_path=Path("../results/t17/"), vol=0.3):
+
     dim = 2
     rank_dim = 1
     mesh_size = 0.012
-    
-    vertices = np.array([
-        (0.0, 0.0),
-        (1.0, 0.0),
-        (1.0, 1.0),
-        (0.0, 1.0)
-    ])
-    
+
+    vertices = np.array([(0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)])
+
     output = dib.create_domain_2d_DP(
-        vertices, [], mesh_size,
-        path = test_path,
-        plot = False
+        vertices, [], mesh_size, path=test_path, plot=False
     )
-    
+
     domain, nbr_tri, boundary_tags = output
 
     # Space for the PDE solution
     space = dib.create_space(domain, "CG", rank_dim)
-    
+
     # Create the model
-    md = Logistic(
-        dim, domain, space, test_path
-    )
+    md = Logistic(dim, domain, space, test_path)
 
     md.ini_func = lambda x: (
         10 + 0.2 * np.sin(6 * np.pi * x[0]) * np.sin(6 * np.pi * x[1])
     )
-    
+
     md.d = 0.01
     md.vol = vol
     md.name = "R"
@@ -2149,17 +1991,17 @@ def test_17(test_path = Path("../results/t17/"), vol = 0.3):
 
     # Initial guess: centers and radii
     centers = []
-    
-    centers += [(0, 0.25*i) for i in range(5)]
-    #centers += [(0.25, 0.25*i+0.125) for i in range(4)]
-    #centers += [(0.5, 0.25*i) for i in range(5)]
-    #centers += [(0.75, 0.25*i+0.125) for i in range(4)]
-    centers += [(1, 0.25*i) for i in range(5)]
-    
+
+    centers += [(0, 0.25 * i) for i in range(5)]
+    # centers += [(0.25, 0.25*i+0.125) for i in range(4)]
+    # centers += [(0.5, 0.25*i) for i in range(5)]
+    # centers += [(0.75, 0.25*i+0.125) for i in range(4)]
+    centers += [(1, 0.25 * i) for i in range(5)]
+
     centers = np.array(centers)
     radii = np.repeat(0.05, centers.shape[0])
-    
-    md.create_initial_level(centers, radii, factor = -1.0)
+
+    md.create_initial_level(centers, radii, factor=-1.0)
     md.save_initial_level(comm)
 
     md.runDP(
@@ -2171,7 +2013,7 @@ def test_17(test_path = Path("../results/t17/"), vol = 0.3):
         ctrn_tol=1e-3,
         lgrn_tol=1e-3,
         dfactor=100.0,
-        smooth=True
+        smooth=True,
     )
 
 
@@ -2179,7 +2021,7 @@ def test_18():
     """
     Run: mpirun -np 2 python test.py 18
     """
-    
+
     # Verification
     task_nbr = 2
     if size != task_nbr:
@@ -2187,24 +2029,26 @@ def test_18():
         return
 
     comm_self = MPI.COMM_SELF
-    
+
     test_name = "Cantilever with two loads II (Task Parallelism)"
     test_path = Path("../results/t18/")
     dim = 2
     rank_dim = 2
     mesh_size = 0.012
-    
-    vertices = np.array([
-        [0.0, 0.0],
-        [0.95, 0.0],
-        [1.05, 0.0],
-        [2.0, 0.0],
-        [2.0, 0.45],
-        [2.0, 0.55],
-        [2.0, 1.0],
-        [0.0, 1.0],
-    ])
-    
+
+    vertices = np.array(
+        [
+            [0.0, 0.0],
+            [0.95, 0.0],
+            [1.05, 0.0],
+            [2.0, 0.0],
+            [2.0, 0.45],
+            [2.0, 0.55],
+            [2.0, 1.0],
+            [0.0, 1.0],
+        ]
+    )
+
     dir_idx, dir_mkr = [8], 1
     neu_idx_bot, neu_mkr_bot = [2], 2
     neu_idx_right, neu_mkr_right = [5], 3
@@ -2212,66 +2056,48 @@ def test_18():
     boundary_parts = [
         (dir_idx, dir_mkr, "dir"),
         (neu_idx_bot, neu_mkr_bot, "neu_bot"),
-        (neu_idx_right, neu_mkr_right, "neu_right")
+        (neu_idx_right, neu_mkr_right, "neu_right"),
     ]
 
     # Create gmsh domain for Task Parallelism
     output = dib.create_domain_2d_TP(
-        vertices, boundary_parts, mesh_size,
-        path = test_path,
-        plot = False
+        vertices, boundary_parts, mesh_size, path=test_path, plot=False
     )
-    
+
     domain, nbr_tri, boundary_tags = output
-    
+
     if rank == 0:
         print("\n\t" + test_name + "\n")
         print(f"> Path = {test_path}")
         print(f"> Nbr of triangles = {nbr_tri}")
-    
+
     # Space
     space = dib.create_space(domain, "CG", rank_dim)
     # Dirichlet conditions
     dirichlet_bcs = dib.homogeneous_dirichlet(
-        domain, space, boundary_tags,
-        [dir_mkr], rank_dim
+        domain, space, boundary_tags, [dir_mkr], rank_dim
     )
     # Boundary to force application
-    ds_g = dib.marked_ds(
-        domain,
-        boundary_tags,
-        [neu_mkr_bot, neu_mkr_right]
-    )
+    ds_g = dib.marked_ds(domain, boundary_tags, [neu_mkr_bot, neu_mkr_right])
     area = 1.1
     g = [(0.0, -2.0), (0.0, 2.0)]
     # Create the model
-    md = CompliancePlus(
-        dim, domain, space, g, ds_g,
-        dirichlet_bcs, area, test_path
-    )
-    
+    md = CompliancePlus(dim, domain, space, g, ds_g, dirichlet_bcs, area, test_path)
+
     @dib.region_of(domain)
     def sub_domain_right(x):
         # 0.42 < x[1] < 0.58
         # 1.95 < x[0]
-        ineqs = [
-            x[1] - 0.42,
-            0.58 - x[1],
-            x[0] - 1.95
-        ]
+        ineqs = [x[1] - 0.42, 0.58 - x[1], x[0] - 1.95]
         return ineqs
 
     @dib.region_of(domain)
     def sub_domain_bottom(x):
         # 0.92 < x[0] < 1.08
         # x[1] < 0.05
-        ineqs = [
-            x[0] - 0.92,
-            1.08 - x[0],
-            0.05 - x[1]
-        ]
+        ineqs = [x[0] - 0.92, 1.08 - x[0], 0.05 - x[1]]
         return ineqs
-    
+
     md.sub = [sub_domain_right.expression(), sub_domain_bottom.expression()]
 
     # Initial guess: centers and radii
@@ -2279,19 +2105,19 @@ def test_18():
 
     centers += [(2.0, 0.0), (2.0, 0.35), (2.0, 0.65), (2.0, 1.0)]
     centers += [(0.0, 0.25), (0.0, 0.5), (0.0, 0.75)]
-    centers += [(0.3 + i*0.35, 0.0) for i in range(5) if i not in (2, )]
-    centers += [(0.3 + i*0.35, 0.5) for i in range(5)]
-    centers += [(0.3 + i*0.35, 1.0) for i in range(5)]
-    centers += [(0.475 + i*0.35, 0.25) for i in range(4)]
-    centers += [(0.475 + i*0.35, 0.75) for i in range(4)]    
+    centers += [(0.3 + i * 0.35, 0.0) for i in range(5) if i not in (2,)]
+    centers += [(0.3 + i * 0.35, 0.5) for i in range(5)]
+    centers += [(0.3 + i * 0.35, 1.0) for i in range(5)]
+    centers += [(0.475 + i * 0.35, 0.25) for i in range(4)]
+    centers += [(0.475 + i * 0.35, 0.75) for i in range(4)]
     centers += [(1.15, 0.0)]
     centers = np.array(centers)
     radii = np.repeat(0.1, centers.shape[0])
-    
+
     md.create_initial_level(centers, radii)
     if rank == 0:
         md.save_initial_level(comm_self)
-    
+
     # Run Task Parallelism
     md.runTP(
         niter=100,
@@ -2300,7 +2126,7 @@ def test_18():
         dfactor=1e-1,
         reinit_step=4,
         reinit_pars=(16, 0.02),
-        smooth=True
+        smooth=True,
     )
 
 
@@ -2323,26 +2149,24 @@ def test_19():
         Coordinates of a ellipse
         crossing the x-axis
         """
-        t_ = np.arcsin((b - eps)/b)
+        t_ = np.arcsin((b - eps) / b)
         t = np.linspace(-t_, np.pi + t_, npts)
-        x = a*np.cos(t)
-        y = b*np.sin(t) + (b - eps)
+        x = a * np.cos(t)
+        y = b * np.sin(t) + (b - eps)
         return x, y
-    
-    npts = 80 # npts % 4 = 0
-    part = npts//4
-    
-    vertices = np.column_stack(
-        semi_ellipse(0.75, 0.5, 0.2, npts)
-    )
-    
+
+    npts = 80  # npts % 4 = 0
+    part = npts // 4
+
+    vertices = np.column_stack(semi_ellipse(0.75, 0.5, 0.2, npts))
+
     dir_idx, dir_mkr = [npts], 1
-    bR_idx, bR_mkr = np.arange(1, part//2 + 1), 2
-    neu_idxA, neu_mkrA = part//2 + np.arange(1, part + 1), 3
-    neu_idxB, neu_mkrB = part//2 + np.arange(part + 1, 2*part + 1), 4
-    neu_idxC, neu_mkrC = part//2 + np.arange(2*part + 1, 3*part + 1), 5
-    bL_idx, bL_mkr = np.arange(part//2 + 3*part + 1, npts), 6
-    
+    bR_idx, bR_mkr = np.arange(1, part // 2 + 1), 2
+    neu_idxA, neu_mkrA = part // 2 + np.arange(1, part + 1), 3
+    neu_idxB, neu_mkrB = part // 2 + np.arange(part + 1, 2 * part + 1), 4
+    neu_idxC, neu_mkrC = part // 2 + np.arange(2 * part + 1, 3 * part + 1), 5
+    bL_idx, bL_mkr = np.arange(part // 2 + 3 * part + 1, npts), 6
+
     boundary_parts = [
         (dir_idx, dir_mkr, "dir"),
         (bR_idx, bR_mkr, "bRight"),
@@ -2358,9 +2182,9 @@ def test_19():
         as a subdomain.
         """
         r = 0.15
-        angle = np.linspace(0, 2*np.pi, n, endpoint = False)
-        x = r*np.cos(angle) - 0.3
-        y = r*np.sin(angle) + 0.3
+        angle = np.linspace(0, 2 * np.pi, n, endpoint=False)
+        x = r * np.cos(angle) - 0.3
+        y = r * np.sin(angle) + 0.3
 
         return np.column_stack((x, y))
 
@@ -2375,33 +2199,27 @@ def test_19():
 
     subdomain1 = circle(50)
     subdomain2 = rectangle()
-    
-    if rank == 0:
-        np.save(
-            test_path / "subdomain1.npy",
-            subdomain1
-        )
 
-        np.save(
-            test_path / "subdomain2.npy",
-            subdomain2
-        )
-    
+    if rank == 0:
+        np.save(test_path / "subdomain1.npy", subdomain1)
+
+        np.save(test_path / "subdomain2.npy", subdomain2)
+
     filename = test_path / "domain0.msh"
 
     # Create the gmsh domain0.msh
     nbr_tri0 = dib.build_gmsh_model_2d(
-        vertices, boundary_parts, 0.6*mesh_size,
-        curves = [subdomain1, subdomain2],
-        filename = filename,
-        plot = True
+        vertices,
+        boundary_parts,
+        0.6 * mesh_size,
+        curves=[subdomain1, subdomain2],
+        filename=filename,
+        plot=True,
     )
 
     # Read the domain0
-    output = dib.read_gmsh(
-        filename, comm, dim = 2
-    )
-    
+    output = dib.read_gmsh(filename, comm, dim=2)
+
     domain0, _, boundary_tags = output
 
     # Set all connectivities on domain0
@@ -2410,78 +2228,66 @@ def test_19():
     # Space for data generation
     space0 = dib.create_space(domain0, "CG", rank_dim)
     # Forces
-    forces = [
-        (-1.0, -1.0),
-        (0.0, -1.0),
-        (1.0, -1.0)
-    ]
+    forces = [(-1.0, -1.0), (0.0, -1.0), (1.0, -1.0)]
 
     # Dirichlet boundary conditions
     dirbc_partial = dib.homogeneous_dirichlet(
-        domain0,
-        space0,
-        boundary_tags,
-        [dir_mkr],
-        rank_dim
+        domain0, space0, boundary_tags, [dir_mkr], rank_dim
     )
-    
-    dirbc_total = dib.homogeneus_boundary(
-        domain0,
-        space0,
-        dim,
-        rank_dim
-    )
+
+    dirbc_total = dib.homogeneus_boundary(domain0, space0, dim, rank_dim)
 
     # Create measures to apply Neumman condition
     ds_parts = dib.marked_ds(
-        domain0,
-        boundary_tags,
-        [bR_mkr, neu_mkrA, neu_mkrB, neu_mkrC, bL_mkr]
+        domain0, boundary_tags, [bR_mkr, neu_mkrA, neu_mkrB, neu_mkrC, bL_mkr]
     )
 
     # Measures for force application
-    ds_forces = [ds_parts[1], ds_parts[2], ds_parts[3]] 
-    
+    ds_forces = [ds_parts[1], ds_parts[2], ds_parts[3]]
+
     # Measure for adjoint problem
-    ds1 = sum(ds_parts[1:], start = ds_parts[0])
+    ds1 = sum(ds_parts[1:], start=ds_parts[0])
 
     # Instance for data generation
     # We need the method pde0
     md0 = InverseElasticity(
-        dim, domain0, space0, forces, ds_forces, ds1,
-        dirbc_partial, dirbc_total, test_path
+        dim,
+        domain0,
+        space0,
+        forces,
+        ds_forces,
+        ds1,
+        dirbc_partial,
+        dirbc_total,
+        test_path,
     )
 
     def subdomains(x):
-        
+
         r = 0.15
-        phi1 = np.sqrt((x[0] + 0.3)**2 + (x[1] - 0.3)**2) - r  
+        phi1 = np.sqrt((x[0] + 0.3) ** 2 + (x[1] - 0.3) ** 2) - r
 
         phi2 = np.maximum(np.abs(x[0] - 0.2), np.abs(x[1] - 0.45)) - 0.15
 
         return np.minimum(phi1, phi2)
-    
+
     # Dirichlet extensions
     extensions = dib.dir_extension_from(
-        comm, domain0, space0,
-        md0.pde0, subdomains,
-        test_path
+        comm, domain0, space0, md0.pde0, subdomains, test_path
     )
 
-    npts = 80 # npts % 4 = 0
-    part = npts//4
-    
-    vertices = np.column_stack(
-        semi_ellipse(0.75, 0.5, 0.2, npts)
-    )
-    
+    npts = 80  # npts % 4 = 0
+    part = npts // 4
+
+    vertices = np.column_stack(semi_ellipse(0.75, 0.5, 0.2, npts))
+
     dir_idx, dir_mkr = [npts], 1
-    bR_idx, bR_mkr = np.arange(1, part//2 + 1), 2
-    neu_idxA, neu_mkrA = part//2 + np.arange(1, part + 1), 3
-    neu_idxB, neu_mkrB = part//2 + np.arange(part + 1, 2*part + 1), 4
-    neu_idxC, neu_mkrC = part//2 + np.arange(2*part + 1, 3*part + 1), 5
-    bL_idx, bL_mkr = np.arange(part//2 + 3*part + 1, npts), 6
-    
+    bR_idx, bR_mkr = np.arange(1, part // 2 + 1), 2
+    neu_idxA, neu_mkrA = part // 2 + np.arange(1, part + 1), 3
+    neu_idxB, neu_mkrB = part // 2 + np.arange(part + 1, 2 * part + 1), 4
+    neu_idxC, neu_mkrC = part // 2 + np.arange(2 * part + 1, 3 * part + 1), 5
+    bL_idx, bL_mkr = np.arange(part // 2 + 3 * part + 1, npts), 6
+
     boundary_parts = [
         (dir_idx, dir_mkr, "dir"),
         (bR_idx, bR_mkr, "bRight"),
@@ -2493,11 +2299,9 @@ def test_19():
 
     # Create gmsh domain for Data Parallelism
     output = dib.create_domain_2d_DP(
-        vertices, boundary_parts, mesh_size,
-        path = test_path,
-        plot = True
+        vertices, boundary_parts, mesh_size, path=test_path, plot=True
     )
-    
+
     domain, nbr_tri, boundary_tags = output
 
     if rank == 0:
@@ -2510,61 +2314,42 @@ def test_19():
     space = dib.create_space(domain, "CG", rank_dim)
     # Dirichlet boundary conditions
     dirbc_partial = dib.homogeneous_dirichlet(
-        domain,
-        space,
-        boundary_tags,
-        [dir_mkr],
-        rank_dim
+        domain, space, boundary_tags, [dir_mkr], rank_dim
     )
-    dirbc_total = dib.homogeneus_boundary(
-        domain,
-        space,
-        dim,
-        rank_dim
-    )
+    dirbc_total = dib.homogeneus_boundary(domain, space, dim, rank_dim)
     # Boundary to apply Neumann conditions
     ds_parts = dib.marked_ds(
-        domain,
-        boundary_tags,
-        [bR_mkr, neu_mkrA, neu_mkrB, neu_mkrC, bL_mkr]
+        domain, boundary_tags, [bR_mkr, neu_mkrA, neu_mkrB, neu_mkrC, bL_mkr]
     )
 
-    ds_forces = [ds_parts[1], ds_parts[2], ds_parts[3]] 
-    ds1 = sum(ds_parts[1:], start = ds_parts[0])
-    forces = [
-        (-1.0, -1.0),
-        (0.0, -1.0),
-        (1.0, -1.0)
-    ]
+    ds_forces = [ds_parts[1], ds_parts[2], ds_parts[3]]
+    ds1 = sum(ds_parts[1:], start=ds_parts[0])
+    forces = [(-1.0, -1.0), (0.0, -1.0), (1.0, -1.0)]
     # Create the model
     md = InverseElasticity(
-        dim, domain, space, forces, ds_forces, ds1,
-        dirbc_partial, dirbc_total, test_path
+        dim,
+        domain,
+        space,
+        forces,
+        ds_forces,
+        ds1,
+        dirbc_partial,
+        dirbc_total,
+        test_path,
     )
 
     # Space for interpolation (degree = 2)
-    g_space = dib.create_space(
-        domain, "CG", rank_dim, degree = 2
-    )
+    g_space = dib.create_space(domain, "CG", rank_dim, degree=2)
     # Interpolation between different spaces
     # from different domains
     g_funcs = dib.space_interpolation(
-        from_space = space0,
-        funcs = extensions,
-        to_space = g_space
+        from_space=space0, funcs=extensions, to_space=g_space
     )
 
     # To save as P1 functions
     g_space_1 = dib.create_space(domain, "CG", rank_dim)
-    g_funcs_1 = dib.interpolate(
-        funcs = g_funcs,
-        to_space = g_space_1,
-        name = "g"
-    )
-    dib.save_functions(
-        comm, domain,
-        g_funcs_1, test_path / "gP1.xdmf"
-    )
+    g_funcs_1 = dib.interpolate(funcs=g_funcs, to_space=g_space_1, name="g")
+    dib.save_functions(comm, domain, g_funcs_1, test_path / "gP1.xdmf")
 
     md.gs = g_funcs
 
@@ -2572,16 +2357,11 @@ def test_19():
     centers = np.array([(-0.3, 0.3), (0.2, 0.4)])
     radii = np.array([0.15, 0.15])
 
-    md.create_initial_level(centers, radii, factor = -1.0, ord=1)
+    md.create_initial_level(centers, radii, factor=-1.0, ord=1)
     md.save_initial_level(comm)
-    
+
     # Run Data Parallelism
-    md.runDP(
-        niter = 200,
-        dfactor = 1e-1,
-        lv_time = (1e-3, 1.0),
-        cost_tol = 1e-3
-    )
+    md.runDP(niter=200, dfactor=1e-1, lv_time=(1e-3, 1.0), cost_tol=1e-3)
 
 
 def test_20():
@@ -2590,7 +2370,7 @@ def test_20():
 
     Run `mpirun -np <nbr of processes> python test.py 20`.
     For instance, `mpirun -np 2 python test.py 20`.
-    
+
     To save the output, append `> ../results/t20/out.txt`.
     To delete the images, enter `rm ../results/t20/*.png`.
     """
@@ -2600,85 +2380,67 @@ def test_20():
     dim = 2
     rank_dim = 2
     mesh_size = 0.015
-    
-    vertices = np.array([
-        (0.0, 0.0),
-        (1.0, 0.0),
-        (2.0, 0.45),
-        (2.0, 0.55),
-        (1.0, 1.0),
-        (0.0, 1.0)
-    ])
-    
+
+    vertices = np.array(
+        [(0.0, 0.0), (1.0, 0.0), (2.0, 0.45), (2.0, 0.55), (1.0, 1.0), (0.0, 1.0)]
+    )
+
     dir_idx, dir_mkr = [6], 1
     neu_idx, neu_mkr = [3], 2
-    boundary_parts = [
-        (dir_idx, dir_mkr, "dir"),
-        (neu_idx, neu_mkr, "neu")
-    ]
+    boundary_parts = [(dir_idx, dir_mkr, "dir"), (neu_idx, neu_mkr, "neu")]
 
     # Create gmsh domain for Data Parallelism
     output = dib.create_domain_2d_DP(
-        vertices, boundary_parts, mesh_size,
-        path = test_path,
-        plot = False
+        vertices, boundary_parts, mesh_size, path=test_path, plot=False
     )
-    
+
     domain, nbr_tri, boundary_tags = output
 
     if rank == 0:
         print("\n\t" + test_name + "\n")
         print(f"> Path = {test_path}")
         print(f"> Nbr of triangles = {nbr_tri}")
-        
+
     # Space for the PDE solution
     space = dib.create_space(domain, "CG", rank_dim)
-    
+
     # Dirichlet condition
     dirichlet_bcs = dib.homogeneous_dirichlet(
-        domain, space, boundary_tags,
-        [dir_mkr], rank_dim
+        domain, space, boundary_tags, [dir_mkr], rank_dim
     )
 
-    # Boundary to force application 
-    ds_g = dib.marked_ds(
-        domain,
-        boundary_tags,
-        [neu_mkr]
-    )
-    
+    # Boundary to force application
+    ds_g = dib.marked_ds(domain, boundary_tags, [neu_mkr])
+
     area = 1.0
     g = (0.0, -2.0)
     # Create the model
-    md = Compliance(
-        dim, domain, space, g, ds_g[0],
-        dirichlet_bcs, area, test_path
-    )
+    md = Compliance(dim, domain, space, g, ds_g[0], dirichlet_bcs, area, test_path)
 
     # Initial guess: centers and radii
     centers = [(0.0, 0.5)]
-    centers += [((1+i)*0.25, 0.0) for i in range(4)]
-    centers += [(i*0.5, 0.25) for i in range(4)]
-    centers += [(0.25 + i*0.5, 0.5) for i in range(4)]
-    centers += [(i*0.5, 0.75) for i in range(4)]
-    centers += [((1+i)*0.25, 1.0) for i in range(4)]
+    centers += [((1 + i) * 0.25, 0.0) for i in range(4)]
+    centers += [(i * 0.5, 0.25) for i in range(4)]
+    centers += [(0.25 + i * 0.5, 0.5) for i in range(4)]
+    centers += [(i * 0.5, 0.75) for i in range(4)]
+    centers += [((1 + i) * 0.25, 1.0) for i in range(4)]
 
     centers = np.array(centers)
     radii = np.repeat(0.1, centers.shape[0])
-    
+
     # Create the initial level set function
     md.create_initial_level(centers, radii)
     # Save as initial.xdmf
     md.save_initial_level(comm)
-    
+
     md.runDP(
-        ctrn_tol = 1e-3,
-        dfactor = 1e-1,
-        lv_iter = (10, 16),
-        reinit_step = 8,
-        reinit_pars = (20, 0.08),
-        smooth = True,
-        random_pars = (111, 0.05)
+        ctrn_tol=1e-3,
+        dfactor=1e-1,
+        lv_iter=(10, 16),
+        reinit_step=8,
+        reinit_pars=(20, 0.08),
+        smooth=True,
+        random_pars=(111, 0.05),
     )
 
 
@@ -2688,7 +2450,7 @@ def test_21():
 
     Run `mpirun -np <nbr of processes> python test.py 21`.
     For instance, `mpirun -np 2 python test.py 21`.
-    
+
     To save the output, append `> ../results/t21/out.txt`.
     To delete the images, enter `rm ../results/t21/*.png`.
 
@@ -2696,7 +2458,52 @@ def test_21():
     This test considers four localized heat sources,
     represented as radial functions with compact support,
     and four sinks at the domain corners, imposed through
-    homogeneous Dirichlet boundary conditions. 
+    homogeneous Dirichlet boundary conditions.
+
+    Execution times:
+    - 1 process (80 iterations):
+        > Assembly time = 5.040334394000183 s
+        > Resolution time = 26.744602871000097 s
+    - 2 processes (80 iterations):
+        > Assembly time = 7.185058718999926 s
+        > Resolution time = 14.725885109999808 s
+    - 3 processes (80 iterations):
+        > Assembly time = 15.85057142100004 s
+        > Resolution time = 10.170385355000008 s
+    - 4 processes (80 iterations):
+        > Assembly time = 7.924901005000038 s
+        > Resolution time = 8.05341802199996 s
+    - 5 processes (80 iterations):
+        > Assembly time = 7.775461058000019 s
+        > Resolution time = 6.686465177999935 s
+    - 6 processes (80 iterations):
+        > Assembly time = 16.48660050400008 s
+        > Resolution time = 5.905231507000053 s
+    - 7 processes (80 iterations):
+        > Assembly time = 19.62543761699999 s
+        > Resolution time = 10.18865386199991 s
+    - 8 processes (80 iterations):
+        > Assembly time = 20.597811266000008 s
+        > Resolution time = 9.384790290999717 s
+    - 9 processes (80 iterations):
+        > Assembly time = 11.627410267999949 s
+        > Resolution time = 8.650962873000026 s
+    - 10 processes (80 iterations):
+        > Assembly time = 11.565947376000167 s
+        > Resolution time = 7.873313986000085 s
+
+    resolution_times = [
+        26.744602871000097,
+        14.725885109999808,
+        10.170385355000008,
+        8.05341802199996,
+        6.686465177999935,
+        5.905231507000053,
+        10.18865386199991,
+        9.384790290999717,
+        8.650962873000026,
+        7.873313986000085
+    ]
     """
 
     test_name = "Heat conduction with four sources (single) - Data Parallelism"
@@ -2705,34 +2512,34 @@ def test_21():
     rank_dim = 1
     mesh_size = 1e-2
 
-    vertices = np.array([
-        [0.05, 0.0],
-        [0.95, 0.0],
-        [1.0, 0.05],
-        [1.0, 0.95],
-        [0.95, 1.0],
-        [0.05, 1.0],
-        [0.0, 0.95],
-        [0.0, 0.05]
-    ])
+    vertices = np.array(
+        [
+            [0.05, 0.0],
+            [0.95, 0.0],
+            [1.0, 0.05],
+            [1.0, 0.95],
+            [0.95, 1.0],
+            [0.05, 1.0],
+            [0.0, 0.95],
+            [0.0, 0.05],
+        ]
+    )
 
     dir1_idx, dir1_mkr = [2], 1
     dir2_idx, dir2_mkr = [4], 2
     dir3_idx, dir3_mkr = [6], 3
     dir4_idx, dir4_mkr = [8], 4
-    
+
     boundary_parts = [
         (dir1_idx, dir1_mkr, "dir1"),
         (dir2_idx, dir2_mkr, "dir2"),
         (dir3_idx, dir3_mkr, "dir3"),
-        (dir4_idx, dir4_mkr, "dir4")
+        (dir4_idx, dir4_mkr, "dir4"),
     ]
 
     # Create gmsh domain for Data Parallelism
     output = dib.create_domain_2d_DP(
-        vertices, boundary_parts, mesh_size,
-        path = test_path,
-        plot = True
+        vertices, boundary_parts, mesh_size, path=test_path, plot=False
     )
 
     domain, nbr_tri, boundary_tags = output
@@ -2751,38 +2558,32 @@ def test_21():
 
     area = 0.45
     # Create the model
-    md = Heat(
-        dim, domain, space, dirichlet_bcs, area, test_path, "4Loads"
-    )
+    md = Heat(dim, domain, space, dirichlet_bcs, area, test_path, "4Loads")
     centers = []
-    
+
     # Diagonal balls
-    centers += [(0.2+i*0.12,0.2+i*0.12) for i in range(6)]
-    centers += [(0.8-i*0.12,0.2+i*0.12) for i in range(6)]
-    
+    centers += [(0.2 + i * 0.12, 0.2 + i * 0.12) for i in range(6)]
+    centers += [(0.8 - i * 0.12, 0.2 + i * 0.12) for i in range(6)]
+
     # Boundary balls
-    centers += [(0.1+i*0.1, 0.0) for i in range(9)]
-    centers += [(0.1+i*0.1, 1.0) for i in range(9)]
-    centers += [(0.0, 0.1+i*0.1) for i in range(9)]
-    centers += [(1.0, 0.1+i*0.1) for i in range(9)]
+    centers += [(0.1 + i * 0.1, 0.0) for i in range(9)]
+    centers += [(0.1 + i * 0.1, 1.0) for i in range(9)]
+    centers += [(0.0, 0.1 + i * 0.1) for i in range(9)]
+    centers += [(1.0, 0.1 + i * 0.1) for i in range(9)]
 
     centers += [(0.2, 0.32), (0.32, 0.2)]
     centers += [(0.8, 0.32), (0.68, 0.2)]
     centers += [(0.8, 0.68), (0.68, 0.8)]
     centers += [(0.2, 0.68), (0.32, 0.8)]
-   
+
     centers = np.array(centers)
     radii = np.repeat(0.05, centers.shape[0])
 
     md.create_initial_level(centers, radii)
     md.save_initial_level(comm)
-    
+
     md.runDP(
-        dfactor=1.0,
-        ctrn_tol=1e-3,
-        smooth=True,
-        reinit_step=4,
-        reinit_pars=(12, 0.01)
+        dfactor=1.0, ctrn_tol=1e-3, smooth=True, reinit_step=4, reinit_pars=(12, 0.01)
     )
 
 
@@ -2806,7 +2607,7 @@ def test_22():
     if size != task_nbr:
         print(f"Number of processes must be = {task_nbr}")
         return
-    
+
     comm_self = MPI.COMM_SELF
 
     test_name = "Heat conduction with four sources (multiple) - Task Parallelism"
@@ -2815,34 +2616,34 @@ def test_22():
     rank_dim = 1
     mesh_size = 1e-2
 
-    vertices = np.array([
-        [0.05, 0.0],
-        [0.95, 0.0],
-        [1.0, 0.05],
-        [1.0, 0.95],
-        [0.95, 1.0],
-        [0.05, 1.0],
-        [0.0, 0.95],
-        [0.0, 0.05]
-    ])
+    vertices = np.array(
+        [
+            [0.05, 0.0],
+            [0.95, 0.0],
+            [1.0, 0.05],
+            [1.0, 0.95],
+            [0.95, 1.0],
+            [0.05, 1.0],
+            [0.0, 0.95],
+            [0.0, 0.05],
+        ]
+    )
 
     dir1_idx, dir1_mkr = [2], 1
     dir2_idx, dir2_mkr = [4], 2
     dir3_idx, dir3_mkr = [6], 3
     dir4_idx, dir4_mkr = [8], 4
-    
+
     boundary_parts = [
         (dir1_idx, dir1_mkr, "dir1"),
         (dir2_idx, dir2_mkr, "dir2"),
         (dir3_idx, dir3_mkr, "dir3"),
-        (dir4_idx, dir4_mkr, "dir4")
+        (dir4_idx, dir4_mkr, "dir4"),
     ]
 
     # Create gmsh domain for Task Parallelism
     output = dib.create_domain_2d_TP(
-        vertices, boundary_parts, mesh_size,
-        path = test_path,
-        plot = True
+        vertices, boundary_parts, mesh_size, path=test_path, plot=True
     )
 
     domain, nbr_tri, boundary_tags = output
@@ -2858,54 +2659,52 @@ def test_22():
     dirichlet_bcs = dib.homogeneous_dirichlet(
         domain, space, boundary_tags, [dir1_mkr, dir2_mkr, dir3_mkr, dir4_mkr], rank_dim
     )
-    dir_bcs = 4*[dirichlet_bcs]
+    dir_bcs = 4 * [dirichlet_bcs]
     area = 0.45
     # Create the model
-    md = HeatPlus(
-        dim, domain, space, dir_bcs, area, test_path
-    )
+    md = HeatPlus(dim, domain, space, dir_bcs, area, test_path)
 
     md.f = [
-        md.source(0.5, 0.25, max_value = 50.0, epsilon = 0.1),
-        md.source(0.75, 0.5, max_value = 50.0, epsilon = 0.1),
-        md.source(0.5, 0.75, max_value = 50.0, epsilon = 0.1),
-        md.source(0.25, 0.5, max_value = 50.0, epsilon = 0.1)
+        md.source(0.5, 0.25, max_value=50.0, epsilon=0.1),
+        md.source(0.75, 0.5, max_value=50.0, epsilon=0.1),
+        md.source(0.5, 0.75, max_value=50.0, epsilon=0.1),
+        md.source(0.25, 0.5, max_value=50.0, epsilon=0.1),
     ]
     md.wt = [0.25, 0.25, 0.25, 0.25]
     centers = []
 
     @dib.region_of(domain)
     def sub_domain1(x):
-        return [0.12**2 - (x[0] - 0.5)**2 - (x[1] - 0.25)**2]
-    
+        return [0.12**2 - (x[0] - 0.5) ** 2 - (x[1] - 0.25) ** 2]
+
     @dib.region_of(domain)
     def sub_domain2(x):
-        return [0.12**2 - (x[0] - 0.75)**2 - (x[1] - 0.5)**2]
-    
+        return [0.12**2 - (x[0] - 0.75) ** 2 - (x[1] - 0.5) ** 2]
+
     @dib.region_of(domain)
     def sub_domain3(x):
-        return [0.12**2 - (x[0] - 0.5)**2 - (x[1] - 0.75)**2]
-    
+        return [0.12**2 - (x[0] - 0.5) ** 2 - (x[1] - 0.75) ** 2]
+
     @dib.region_of(domain)
     def sub_domain4(x):
-        return [0.12**2 - (x[0] - 0.25)**2 - (x[1] - 0.5)**2]
-    
+        return [0.12**2 - (x[0] - 0.25) ** 2 - (x[1] - 0.5) ** 2]
+
     md.sub = [
         sub_domain1.expression(),
         sub_domain2.expression(),
         sub_domain3.expression(),
-        sub_domain4.expression()
+        sub_domain4.expression(),
     ]
 
     # Diagonal balls
-    centers += [(0.2+i*0.12,0.2+i*0.12) for i in range(6)]
-    centers += [(0.8-i*0.12,0.2+i*0.12) for i in range(6)]
-    
+    centers += [(0.2 + i * 0.12, 0.2 + i * 0.12) for i in range(6)]
+    centers += [(0.8 - i * 0.12, 0.2 + i * 0.12) for i in range(6)]
+
     # Boundary balls
-    centers += [(0.1+i*0.1, 0.0) for i in range(9)]
-    centers += [(0.1+i*0.1, 1.0) for i in range(9)]
-    centers += [(0.0, 0.1+i*0.1) for i in range(9)]
-    centers += [(1.0, 0.1+i*0.1) for i in range(9)]
+    centers += [(0.1 + i * 0.1, 0.0) for i in range(9)]
+    centers += [(0.1 + i * 0.1, 1.0) for i in range(9)]
+    centers += [(0.0, 0.1 + i * 0.1) for i in range(9)]
+    centers += [(1.0, 0.1 + i * 0.1) for i in range(9)]
 
     centers += [(0.2, 0.32), (0.32, 0.2)]
     centers += [(0.8, 0.32), (0.68, 0.2)]
@@ -2918,143 +2717,152 @@ def test_22():
     md.create_initial_level(centers, radii)
     if rank == 0:
         md.save_initial_level(comm_self)
-    
+
     md.runTP(
-        dfactor=0.1,
-        ctrn_tol=1e-3,
-        smooth=True,
-        reinit_step=4,
-        reinit_pars=(12, 0.01)
+        dfactor=0.1, ctrn_tol=1e-3, smooth=True, reinit_step=4, reinit_pars=(12, 0.01)
     )
 
 
-
-def test_30():
+def test_23():
     """
-    Mechanism 2D - Data Parallelism
+    Heat conduction with four sources (multiple) - Mixed Parallelism
 
-    Run `mpirun -np <nbr of processes> python test.py 30`.
-    For instance, `mpirun -np 2 python test.py 30`.
+    Run `mpirun -np <4n> python test.py 23`.
+    For instance, `mpirun -np 4 python test.py 23`.
+
+    Execution times:
+    - 4 processes (63 iterations):
+        > Assembly time = 4.883218779999993 s
+        > Resolution time = 19.407882885999996 s
+    - 8 processes (63 iterations):
     """
 
-    test_name = "Mechanism 2D - Data Parallelism"
-    test_path = Path("../results/t30/")
+    # Verification
+    nbr_groups = 4
+    if size % nbr_groups != 0:
+        print(f"Nbr of processes must be divisible by {nbr_groups}")
+        return
+
+    # Subcommunicators
+    color = rank * nbr_groups // size
+    sub_comm = comm.Split(color, rank)
+
+    test_name = "Heat conduction with four sources (multiple) - Mixed Parallelism"
+    test_path = Path("../results/t23/")
     dim = 2
-    rank_dim = 2
-    mesh_size = 0.015
-    
-    vertices = np.array([
-        (0.0, 0.0),
-        (1.0, 0.0),
-        (1.0, 0.43),
-        (1.0, 0.57),        
-        (1.0, 1.0),
-        (0.0, 1.0),
-        (0.0, 0.95),        
-        (0.0, 0.53),
-        (0.0, 0.47),
-        (0.0, 0.05),                
-    ])
-    
-    dir_idx, dir_mkr = [6], 1
-    dir_idx2, dir_mkr2 = [10], 2    
-    rob_idx, rob_mkr = [3], 3
-    neu_idx, neu_mkr = [8], 4
+    rank_dim = 1
+    mesh_size = 1e-2
+
+    vertices = np.array(
+        [
+            [0.05, 0.0],
+            [0.95, 0.0],
+            [1.0, 0.05],
+            [1.0, 0.95],
+            [0.95, 1.0],
+            [0.05, 1.0],
+            [0.0, 0.95],
+            [0.0, 0.05],
+        ]
+    )
+
+    dir1_idx, dir1_mkr = [2], 1
+    dir2_idx, dir2_mkr = [4], 2
+    dir3_idx, dir3_mkr = [6], 3
+    dir4_idx, dir4_mkr = [8], 4
 
     boundary_parts = [
-        (dir_idx, dir_mkr, "dir"),
-        (dir_idx2, dir_mkr2, "dir"),        
-        (rob_idx, rob_mkr, "rob"),
-        (neu_idx, neu_mkr, "neu"),        
+        (dir1_idx, dir1_mkr, "dir1"),
+        (dir2_idx, dir2_mkr, "dir2"),
+        (dir3_idx, dir3_mkr, "dir3"),
+        (dir4_idx, dir4_mkr, "dir4"),
     ]
 
-    # Create gmsh domain for Data Parallelism
-    output = dib.create_domain_2d_DP(
-        vertices, boundary_parts, mesh_size,
-        path = test_path,
-        plot = False
+    output = dib.create_domain_2d_MP(
+        sub_comm, color, vertices, boundary_parts, mesh_size, path=test_path, plot=False
     )
-    
+
     domain, nbr_tri, boundary_tags = output
 
     if rank == 0:
         print("\n\t" + test_name + "\n")
         print(f"> Path = {test_path}")
         print(f"> Nbr of triangles = {nbr_tri}")
-        
-    # Space for the PDE solution
-    space = dib.create_space(domain, "CG", rank_dim)
-    
-    # Dirichlet condition
-    dirichlet_bcs = dib.homogeneous_dirichlet(
-        domain, space, boundary_tags,
-        [dir_mkr,dir_mkr2], rank_dim
-    )
 
-    # Boundary to force application 
-    ds_g = dib.marked_ds(
-        domain,
-        boundary_tags,
-        [rob_mkr,neu_mkr]
+    # Space
+    space = dib.create_space(domain, "CG", rank_dim)
+    # Dirichlet conditions
+    dirichlet_bcs = dib.homogeneous_dirichlet(
+        domain, space, boundary_tags, [dir1_mkr, dir2_mkr, dir3_mkr, dir4_mkr], rank_dim
     )
-    
-    area = 0.2
-    g = (0.5, 0.0)
+    dir_bcs = 4 * [dirichlet_bcs]
+    area = 0.45
     # Create the model
-    md = Mechanism(
-        dim, domain, space, g, ds_g,
-        dirichlet_bcs, area, test_path
-    )
+    md = HeatPlus(dim, domain, space, dir_bcs, area, test_path)
+
+    md.f = [
+        md.source(0.5, 0.25, max_value=50.0, epsilon=0.1),
+        md.source(0.75, 0.5, max_value=50.0, epsilon=0.1),
+        md.source(0.5, 0.75, max_value=50.0, epsilon=0.1),
+        md.source(0.25, 0.5, max_value=50.0, epsilon=0.1),
+    ]
+    md.wt = [0.25, 0.25, 0.25, 0.25]
+    centers = []
 
     @dib.region_of(domain)
-    def sub_domain(x):
-        # 0.42 < x[1] < 0.58
-        # 1.95 < x[0]
-        ineqs = [
-            x[1] - 0.42,
-            0.58 - x[1],
-            x[0] - 1.90
-        ]
-        return ineqs
-    
-    md.sub = [sub_domain.expression()]
+    def sub_domain1(x):
+        return [0.12**2 - (x[0] - 0.5) ** 2 - (x[1] - 0.25) ** 2]
 
-    # Initial guess: centers and radii
+    @dib.region_of(domain)
+    def sub_domain2(x):
+        return [0.12**2 - (x[0] - 0.75) ** 2 - (x[1] - 0.5) ** 2]
 
-    # First set of centers:
-    # centers = [(2.0, 0.35), (2.0, 0.65), (2.0, 0.0), (2.0, 1.0)]
-    # centers += [(0.0, 0.25), (0.0, 0.5), (0.0, 0.75)]
-    # centers += [(0.3 + i*0.7, 0.0) for i in range(3)]
-    # centers += [(0.65 + i*0.7, 0.25) for i in range(2)]
-    # centers += [(0.3 + i*0.7, 0.5) for i in range(3)]
-    # centers += [(0.65 + i*0.7, 0.75) for i in range(2)]
-    # centers += [(0.3 + i*0.7, 1.0) for i in range(3)]
+    @dib.region_of(domain)
+    def sub_domain3(x):
+        return [0.12**2 - (x[0] - 0.5) ** 2 - (x[1] - 0.75) ** 2]
 
-    # Second set of centers:
-    centers = [(2.0, 0.35), (2.0, 0.65)]
-    centers += [((1+i)*0.25, 0.0) for i in range(8)]
-    centers += [(i*0.5, 0.25) for i in range(5)]
-    centers += [(0.25 + i*0.5, 0.5) for i in range(4)]
-    centers += [(i*0.5, 0.75) for i in range(5)]
-    centers += [((1+i)*0.25, 1.0) for i in range(8)]
+    @dib.region_of(domain)
+    def sub_domain4(x):
+        return [0.12**2 - (x[0] - 0.25) ** 2 - (x[1] - 0.5) ** 2]
+
+    md.sub = [
+        sub_domain1.expression(),
+        sub_domain2.expression(),
+        sub_domain3.expression(),
+        sub_domain4.expression(),
+    ]
+
+    # Diagonal balls
+    centers += [(0.2 + i * 0.12, 0.2 + i * 0.12) for i in range(6)]
+    centers += [(0.8 - i * 0.12, 0.2 + i * 0.12) for i in range(6)]
+
+    # Boundary balls
+    centers += [(0.1 + i * 0.1, 0.0) for i in range(9)]
+    centers += [(0.1 + i * 0.1, 1.0) for i in range(9)]
+    centers += [(0.0, 0.1 + i * 0.1) for i in range(9)]
+    centers += [(1.0, 0.1 + i * 0.1) for i in range(9)]
+
+    centers += [(0.2, 0.32), (0.32, 0.2)]
+    centers += [(0.8, 0.32), (0.68, 0.2)]
+    centers += [(0.8, 0.68), (0.68, 0.8)]
+    centers += [(0.2, 0.68), (0.32, 0.8)]
 
     centers = np.array(centers)
-    radii = np.repeat(0.1, centers.shape[0])
+    radii = np.repeat(0.05, centers.shape[0])
 
-    # Create the initial level set function
     md.create_initial_level(centers, radii)
-    # Save as initial.xdmf
-    md.save_initial_level(comm)
-    
-    md.runDP(
-        ctrn_tol = 1e-3,
-        dfactor = 1e-1,
-        lv_iter = (10, 16),
-        reinit_step = 4,
-        reinit_pars = (20, 0.08),
-        smooth = True,
-        random_pars = (111, 0.05)
+    if rank == 0:
+        md.save_initial_level(sub_comm)
+
+    md.runMP(
+        sub_comm=sub_comm,
+        dfactor=0.1,
+        ctrn_tol=1e-3,
+        smooth=True,
+        reinit_step=4,
+        reinit_pars=(12, 0.01),
     )
+
 
 def test_31():
     """
@@ -3069,102 +2877,89 @@ def test_31():
     dim = 2
     rank_dim = 2
     mesh_size = 0.005
-    
-    vertices = np.array([
-        (0.0, 0.0),
-        (1.0, 0.0),
-        (1.0, 0.47),
-        (1.0, 0.53),        
-        (1.0, 1.0),
-        (0.0, 1.0),
-        (0.0, 0.95),        
-        (0.0, 0.53),
-        (0.0, 0.47),
-        (0.0, 0.05),                
-    ])
-    
+
+    vertices = np.array(
+        [
+            (0.0, 0.0),
+            (1.0, 0.0),
+            (1.0, 0.47),
+            (1.0, 0.53),
+            (1.0, 1.0),
+            (0.0, 1.0),
+            (0.0, 0.95),
+            (0.0, 0.53),
+            (0.0, 0.47),
+            (0.0, 0.05),
+        ]
+    )
+
     dir_idx, dir_mkr = [6], 1
-    dir_idx2, dir_mkr2 = [10], 2    
+    dir_idx2, dir_mkr2 = [10], 2
     rob_idx, rob_mkr = [3], 3
     neu_idx, neu_mkr = [8], 4
 
     boundary_parts = [
         (dir_idx, dir_mkr, "dir"),
-        (dir_idx2, dir_mkr2, "dir"),        
+        (dir_idx2, dir_mkr2, "dir"),
         (rob_idx, rob_mkr, "rob"),
-        (neu_idx, neu_mkr, "neu"),        
+        (neu_idx, neu_mkr, "neu"),
     ]
 
     # Create gmsh domain for Data Parallelism
     output = dib.create_domain_2d_DP(
-        vertices, boundary_parts, mesh_size,
-        path = test_path,
-        plot = False
+        vertices, boundary_parts, mesh_size, path=test_path, plot=False
     )
-    
+
     domain, nbr_tri, boundary_tags = output
 
     if rank == 0:
         print("\n\t" + test_name + "\n")
         print(f"> Path = {test_path}")
         print(f"> Nbr of triangles = {nbr_tri}")
-        
+
     # Space for the PDE solution
     space = dib.create_space(domain, "CG", rank_dim)
-    
+
     # Dirichlet condition
     dirichlet_bcs = dib.homogeneous_dirichlet(
-        domain, space, boundary_tags,
-        [dir_mkr,dir_mkr2], rank_dim
+        domain, space, boundary_tags, [dir_mkr, dir_mkr2], rank_dim
     )
 
-    # Boundary to force application 
-    ds_g = dib.marked_ds(
-        domain,
-        boundary_tags,
-        [rob_mkr,neu_mkr]
-    )
-    
+    # Boundary to force application
+    ds_g = dib.marked_ds(domain, boundary_tags, [rob_mkr, neu_mkr])
+
     area = 0.2
     g = (0.5, 0.0)
     # Create the model
-    md = Mechanism(
-        dim, domain, space, g, ds_g,
-        dirichlet_bcs, area, test_path
-    )
+    md = Mechanism(dim, domain, space, g, ds_g, dirichlet_bcs, area, test_path)
 
     @dib.region_of(domain)
     def sub_domain1(x):
         # 0.42 < x[1] < 0.58
         # 0.90 < x[0]
-        ineqs = [
-            x[1] - 0.46,
-            0.54 - x[1],
-            x[0] - 0.90
-        ]
+        ineqs = [x[1] - 0.46, 0.54 - x[1], x[0] - 0.90]
         return ineqs
 
     @dib.region_of(domain)
     def sub_domain2(x):
         # 0.42 < x[1] < 0.58
         # x[0] < 0.1
-        ineqs = [
-            x[1] - 0.46,
-            0.54 - x[1],
-            0.1 - x[0]
-        ]
+        ineqs = [x[1] - 0.46, 0.54 - x[1], 0.1 - x[0]]
         return ineqs
-    
-    #md.sub = [sub_domain1.expression(), sub_domain2.expression()]
 
+    # md.sub = [sub_domain1.expression(), sub_domain2.expression()]
 
-    centers = [(1.0, 0.10), (1.0, 0.20), (1.0, 0.80), (1.0, 0.90), ]
-    centers += [(0.8 + i*0.1, 0.0) for i in range(3)]
-    centers += [(i/3.0, 0.25) for i in range(5)]
+    centers = [
+        (1.0, 0.10),
+        (1.0, 0.20),
+        (1.0, 0.80),
+        (1.0, 0.90),
+    ]
+    centers += [(0.8 + i * 0.1, 0.0) for i in range(3)]
+    centers += [(i / 3.0, 0.25) for i in range(5)]
     centers += [(0.5, 0.5), (0.75, 0.5)]
-    centers += [(i/3.0, 0.75) for i in range(5)]
-    centers += [(0.8 + i*0.1, 1.0) for i in range(3)]
-    
+    centers += [(i / 3.0, 0.75) for i in range(5)]
+    centers += [(0.8 + i * 0.1, 1.0) for i in range(3)]
 
     centers = np.array(centers)
     radii = np.repeat(0.075, centers.shape[0])
@@ -3173,7 +2968,7 @@ def test_31():
     md.create_initial_level(centers, radii)
     # Save as initial.xdmf
     md.save_initial_level(comm)
-    
+
     md.runDP(
         niter=400,
         ctrn_tol=1e-3,
@@ -3182,9 +2977,16 @@ def test_31():
         lv_iter=(12, 25),
         reinit_step=4,
         reinit_pars=(20, 0.01),
-        smooth=True
+        smooth=True,
     )
 
+
+def test_32():
+    pass
+
+
+def test_33():
+    pass
 
 
 test_functions = {
@@ -3210,12 +3012,15 @@ test_functions = {
     "20": test_20,
     "21": test_21,
     "22": test_22,
-    "30": test_30,
-    "31": test_31    
+    "23": test_23,
+    "31": test_31,
+    "32": test_32,
+    "33": test_33,
 }
 
+
 def main():
-    
+
     import sys
 
     if len(sys.argv) != 2:
@@ -3230,6 +3035,7 @@ def main():
         func()
     else:
         print(f"Test '{test_id}' not recognized.")
+
 
 if __name__ == "__main__":
     main()

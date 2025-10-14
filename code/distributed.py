@@ -11,33 +11,53 @@ from numpy.linalg import norm as Norm
 from dolfinx.cpp.mesh import MeshTags_int32
 
 from dolfinx.mesh import (
-    Mesh, locate_entities_boundary,
-    exterior_facet_indices, meshtags
+    Mesh,
+    locate_entities_boundary,
+    exterior_facet_indices,
+    meshtags,
 )
 
 from dolfinx.fem.petsc import (
-    LinearProblem, DirichletBC,
+    LinearProblem,
+    DirichletBC,
     NonlinearProblem,
-    assemble_matrix, assemble_vector,
-    create_vector, apply_lifting, set_bc
+    assemble_matrix,
+    assemble_vector,
+    create_vector,
+    apply_lifting,
+    set_bc,
 )
 
 from dolfinx.fem import (
     FunctionSpace,
-    Function, Constant, 
+    Function,
+    Constant,
     create_interpolation_data,
     locate_dofs_topological,
     locate_dofs_geometrical,
-    assemble_scalar, form,
-    functionspace, dirichletbc,
-    compile_form, create_form
+    assemble_scalar,
+    form,
+    functionspace,
+    dirichletbc,
+    compile_form,
+    create_form,
 )
 
 from ufl import (
-    Form, SpatialCoordinate, Measure, Coefficient,
-    TrialFunction, TestFunction,
-    system, conditional,
-    inner, grad, dot, sqrt, gt, lt
+    Form,
+    SpatialCoordinate,
+    Measure,
+    Coefficient,
+    TrialFunction,
+    TestFunction,
+    system,
+    conditional,
+    inner,
+    grad,
+    dot,
+    sqrt,
+    gt,
+    lt,
 )
 
 from ufl.argument import Argument
@@ -47,9 +67,7 @@ from dolfinx.nls.petsc import NewtonSolver
 from abc import ABC, abstractmethod
 
 import numpy.typing as npt
-from typing import (
-    List, Tuple, Callable, Sequence, final
-)
+from typing import List, Tuple, Callable, Sequence, final
 from ufl.core.expr import Expr
 
 from plots import plot_domain
@@ -73,7 +91,7 @@ GenericFunc = ScalarFunc | ScalarFunc
 class Model(ABC):
     """
     Base class for all user-defined models.
-    
+
     Attributes
     ----------
     dim : int
@@ -84,7 +102,7 @@ class Model(ABC):
         Space of functions for the solution and test functions.
     path : Path
         Test path to save the results.
-    
+
     Methods
     -------
     pde(level_set_func: Function) -> List[Tuple[Expr, Sequence[DirichletBC]]] | List[Tuple[Expr, Sequence[DirichletBC], Expr, Coefficient, GenericFunc]]
@@ -120,9 +138,11 @@ class Model(ABC):
 
     @abstractmethod
     def pde(
-        self,
-        level_set_func: Function
-    ) -> List[Tuple[Expr, Sequence[DirichletBC]]] | List[Tuple[Expr, Sequence[DirichletBC], Expr, Coefficient, GenericFunc]]:
+        self, level_set_func: Function
+    ) -> (
+        List[Tuple[Expr, Sequence[DirichletBC]]]
+        | List[Tuple[Expr, Sequence[DirichletBC], Expr, Coefficient, GenericFunc]]
+    ):
         """
         Weak form of the partial differential equations.
 
@@ -130,13 +150,13 @@ class Model(ABC):
         ----------
         level_set_func : Function
             Level set function.
-        
+
         Returns
         -------
         List[Tuple[Expr, List[DirichletBC]]] | List[Tuple[Expr, List[DirichletBC], Expr, Coefficient, GenericFunc]]
             List with elements of the form (`wk`, `bc`) or (`wk`, `bc`, `jac`, `unk`, `ini_func`),
             corresponding to linear or nonlinear problems, respectively, where
-            
+
             - `wk` is the weak formulation of a state equation,
             - `bc` is a list with the dirichlet boundary conditions,
             - `jac` is the jacobian of `wk`,
@@ -144,13 +164,14 @@ class Model(ABC):
             - `ini_func` is a callable function that defines the initial guess.
         """
         pass
-        
+
     @abstractmethod
     def adjoint(
-        self,
-        level_set_func: Function,
-        states: List[Function]
-    ) -> List[Tuple[Expr, Sequence[DirichletBC]]] | List[Tuple[Expr, Sequence[DirichletBC], Expr, Coefficient, GenericFunc]]:
+        self, level_set_func: Function, states: List[Function]
+    ) -> (
+        List[Tuple[Expr, Sequence[DirichletBC]]]
+        | List[Tuple[Expr, Sequence[DirichletBC], Expr, Coefficient, GenericFunc]]
+    ):
         """
         Weak form of the adjoint equations.
 
@@ -160,13 +181,13 @@ class Model(ABC):
             Level set function.
         states: List[Function]
             List of state solutions.
-        
+
         Returns
         -------
         List[Tuple[Expr, List[DirichletBC]]] | List[Tuple[Expr, List[DirichletBC], Expr, Coefficient, GenericFunc]]
             List with elements of the form (`wk`, `bc`) or (`wk`, `bc`, `jac`, `unk`, `ini_func`),
             corresponding to linear or nonlinear problems, respectively, where
-            
+
             - `wk` is the weak formulation of a adjoint equation,
             - `bc` is a list with the dirichlet boundary conditions,
             - `jac` is the jacobian of `wk`,
@@ -176,11 +197,7 @@ class Model(ABC):
         pass
 
     @abstractmethod
-    def cost(
-        self,
-        level_set_func: Function,
-        states: List[Function]
-    ) -> Expr:
+    def cost(self, level_set_func: Function, states: List[Function]) -> Expr:
         """
         Cost functional `J`.
 
@@ -190,19 +207,17 @@ class Model(ABC):
             Level set function.
         states: List[Function]
             List of state solutions.
-        
+
         Returns
         -------
         Expr
             UFL expresion of the cost functional.
         """
         pass
-    
+
     @abstractmethod
     def constraint(
-        self,
-        level_set_func: Function,
-        states: List[Function]
+        self, level_set_func: Function, states: List[Function]
     ) -> List[Expr]:
         """
         Constraint functions `C = [C0, C1, ...]`.
@@ -213,25 +228,22 @@ class Model(ABC):
             Level set function.
         states: List[Function]
             List of state solutions.
-        
+
         Returns
         -------
         List[Expr]
             List with the UFL expressions of the constraint functions.
         """
         pass
-    
+
     @abstractmethod
     def derivative(
-        self,
-        level_set_func: Function,
-        states: List[Function],
-        adjoints: List[Function]
+        self, level_set_func: Function, states: List[Function], adjoints: List[Function]
     ) -> Tuple[Tuple[Expr, List[Expr]], Tuple[Expr, List[Expr]]]:
         """
         Derivative components of the cost functional `J` and
         the constraint functions `C = [C0, C1, ...]`.
-        
+
         Parameters
         ----------
         level_set_func : Function
@@ -240,29 +252,27 @@ class Model(ABC):
             List of state solutions.
         adjoints : List[Function]
             List of adjoint solutions.
-        
+
         Returns
         -------
         Tuple[Tuple[Expr, List[Expr]], Tuple[Expr, List[Expr]]]
-            Two tuples 
-           
+            Two tuples
+
             (S0_J, [S0_C0, S0_C1, ...]), (S1_J, [S1_C0, S1_C1, ...])
-            
+
             where
-            
+
             `S0_J`, `S1_J` are the UFL expressions
             of the derivative components of `J`;
-            
+
             `S0_Ci`, `S1_Ci` are the UFL expressions
             of the derivative components of `Ci`.
         """
         pass
-    
+
     @abstractmethod
     def bilinear_form(
-        self,
-        velocity_func: Function | Argument,
-        test_func: Function | Argument
+        self, velocity_func: Function | Argument, test_func: Function | Argument
     ) -> Tuple[Expr, bool]:
         """
         Bilinear form `B` to compute the velocity field.
@@ -283,21 +293,19 @@ class Model(ABC):
             should be applied (True) or not (False).
         """
         pass
-    
+
     def __verification(self, required_attrs: List[str]) -> None:
         for attr in required_attrs:
             if not hasattr(self, attr):
-                raise NotImplementedError(
-                    f"Models must define the '{attr}' attribute."
-                )
-    
+                raise NotImplementedError(f"Models must define the '{attr}' attribute.")
+
     @final
     def create_initial_level(
         self,
         centers: npt.NDArray[np.float64],
         radii: npt.NDArray[np.float64],
         factor: float = 1.0,
-        ord: int = 2
+        ord: int = 2,
     ) -> None:
         """
         Creates a level set funtion to be used as initial guess,
@@ -331,17 +339,17 @@ class Model(ABC):
         comm : MPI.Comm
             Communicator.
         """
-        
-        self.__verification(['domain', 'path'])
+
+        self.__verification(["domain", "path"])
         self.ini_lvl.save(comm, self.domain, self.path)
 
     @final
     def _get_initial_level(self):
         """
-        Return the callable initial level set function. 
+        Return the callable initial level set function.
         """
         return self.ini_lvl.func
-    
+
     @final
     def runDP(
         self,
@@ -357,11 +365,11 @@ class Model(ABC):
         lgrn_tol: float = 1e-2,
         cost_tol: float = 1e-2,
         prev: int = 10,
-        random_pars: Tuple[int, float] = (1, 0.05)
+        random_pars: Tuple[int, float] = (1, 0.05),
     ) -> None:
         """
         This method implements Data Parallelism.
-        
+
         Parameters
         ----------
         niter : int, default=100
@@ -394,30 +402,41 @@ class Model(ABC):
             positive integer.
         start_to_check : int, default=30,
             A positive integer to verify the stopping condition
-            when current iteration > start_to_check. 
+            when current iteration > start_to_check.
         ctrn_tol : float, default=1e-2,
             Tolerance for the error constraint.
         lgrn_tol : float, default=1e-2,
             Tolerance for the relative difference
-            of the <prev>-th previous Lagrangian values. 
+            of the <prev>-th previous Lagrangian values.
         cost_tol : float, default=1e-2,
             Tolerance for the relative difference
-            of the <prev>-th previous cost values. 
+            of the <prev>-th previous cost values.
         prev : int, default=10,
             Number of previous values to verify the tolerance
             of the Lagrangian and cost functionals.
         random_pars : Tuple[int, float], default=(1, 0.05)
             Seed and noise level in the line search method.
         """
-        
-        self.__verification(['dim', 'domain', 'space', 'path'])
+
+        self.__verification(["dim", "domain", "space", "path"])
 
         runDP(
-            self, niter, reinit_step, reinit_pars, dfactor,
-            lv_time, lv_iter, smooth, start_to_check,
-            ctrn_tol, lgrn_tol, cost_tol, prev, random_pars
+            self,
+            niter,
+            reinit_step,
+            reinit_pars,
+            dfactor,
+            lv_time,
+            lv_iter,
+            smooth,
+            start_to_check,
+            ctrn_tol,
+            lgrn_tol,
+            cost_tol,
+            prev,
+            random_pars,
         )
-    
+
     @final
     def runTP(
         self,
@@ -433,11 +452,11 @@ class Model(ABC):
         lgrn_tol: float = 1e-2,
         cost_tol: float = 1e-2,
         prev: int = 10,
-        random_pars: Tuple[int, float] = (1, 0.05)
+        random_pars: Tuple[int, float] = (1, 0.05),
     ) -> None:
         """
         This method implements Data Parallelism.
-        
+
         Parameters
         ----------
         niter : int, default=100
@@ -470,30 +489,41 @@ class Model(ABC):
             positive integer.
         start_to_check : int, default=30,
             A positive integer to verify the stopping condition
-            when current iteration > start_to_check. 
+            when current iteration > start_to_check.
         ctrn_tol : float, default=1e-2,
             Tolerance for the error constraint.
         lgrn_tol : float, default=1e-2,
             Tolerance for the relative difference
-            of the <prev>-th previous Lagrangian values. 
+            of the <prev>-th previous Lagrangian values.
         cost_tol : float, default=1e-2,
             Tolerance for the relative difference
-            of the <prev>-th previous cost values. 
+            of the <prev>-th previous cost values.
         prev : int, default=10,
             Number of previous values to verify the tolerance
             of the Lagrangian and cost functionals.
         random_pars : Tuple[int, float], default=(1, 0.05)
             Seed and noise level in the line search method.
         """
-        
-        self.__verification(['dim', 'domain', 'space', 'path'])
+
+        self.__verification(["dim", "domain", "space", "path"])
 
         runTP(
-            self, niter, reinit_step, reinit_pars, dfactor,
-            lv_time, lv_iter, smooth, start_to_check,
-            ctrn_tol, lgrn_tol, cost_tol, prev, random_pars
+            self,
+            niter,
+            reinit_step,
+            reinit_pars,
+            dfactor,
+            lv_time,
+            lv_iter,
+            smooth,
+            start_to_check,
+            ctrn_tol,
+            lgrn_tol,
+            cost_tol,
+            prev,
+            random_pars,
         )
-    
+
     @final
     def runMP(
         self,
@@ -510,11 +540,11 @@ class Model(ABC):
         lgrn_tol: float = 1e-2,
         cost_tol: float = 1e-2,
         prev: int = 10,
-        random_pars: Tuple[int, float] = (1, 0.05)
+        random_pars: Tuple[int, float] = (1, 0.05),
     ) -> None:
         """
         This method implements Mixed Parallelism.
-        
+
         Parameters
         ----------
         niter : int, default=100
@@ -547,29 +577,41 @@ class Model(ABC):
             positive integer.
         start_to_check : int, default=30,
             A positive integer to verify the stopping condition
-            when current iteration > start_to_check. 
+            when current iteration > start_to_check.
         ctrn_tol : float, default=1e-2,
             Tolerance for the error constraint.
         lgrn_tol : float, default=1e-2,
             Tolerance for the relative difference
-            of the <prev>-th previous Lagrangian values. 
+            of the <prev>-th previous Lagrangian values.
         cost_tol : float, default=1e-2,
             Tolerance for the relative difference
-            of the <prev>-th previous cost values. 
+            of the <prev>-th previous cost values.
         prev : int, default=10,
             Number of previous values to verify the tolerance
             of the Lagrangian and cost functionals.
         random_pars : Tuple[int, float], default=(1, 0.05)
             Seed and noise level in the line search method.
         """
-        
-        self.__verification(['dim', 'domain', 'space', 'path'])
+
+        self.__verification(["dim", "domain", "space", "path"])
 
         runMP(
-            sub_comm, self, niter, reinit_step, reinit_pars, dfactor,
-            lv_time, lv_iter, smooth, start_to_check,
-            ctrn_tol, lgrn_tol, cost_tol, prev, random_pars
-        )        
+            sub_comm,
+            self,
+            niter,
+            reinit_step,
+            reinit_pars,
+            dfactor,
+            lv_time,
+            lv_iter,
+            smooth,
+            start_to_check,
+            ctrn_tol,
+            lgrn_tol,
+            cost_tol,
+            prev,
+            random_pars,
+        )
 
 
 class Subdomain:
@@ -577,7 +619,7 @@ class Subdomain:
     This class creates an indicator function
     from a list o inequalities that determine
     a subdomain.
-    
+
     Attributtes
     -----------
     domain : Mesh
@@ -597,7 +639,7 @@ class Subdomain:
             ]
             return ineqs
         ```
-    
+
     Methods
     -------
     expression() -> Expr
@@ -607,9 +649,7 @@ class Subdomain:
     """
 
     def __init__(
-        self,
-        domain: Mesh,
-        cond_func: Callable[[npt.NDArray[np.float64]], List[Expr]]
+        self, domain: Mesh, cond_func: Callable[[npt.NDArray[np.float64]], List[Expr]]
     ) -> None:
         self.domain = domain
         self.cond_func = cond_func
@@ -625,18 +665,21 @@ class Subdomain:
         x = SpatialCoordinate(self.domain)
         conditions = self.cond_func(x)
         chi = 1.0
-        
+
         for cond in conditions:
             chi *= conditional(gt(cond, 0.0), 1.0, 0.0)
-        
+
         return chi
-    
+
+
 def region_of(domain: Mesh):
     """
     Wrapper for the Subdomain class.
     """
+
     def wrapper(func):
         return Subdomain(domain, func)
+
     return wrapper
 
 
@@ -658,6 +701,7 @@ class PPL:
     see() -> str
         Returns a string with some variable values.
     """
+
     def __init__(self, n: int, ini_cost: float, ini_ctrs: List[float]) -> None:
         """
         Parameters
@@ -665,9 +709,9 @@ class PPL:
         n : int
             Number of constraint functions.
         ini_cost : float
-            
+
         """
-        
+
         self.n = n
         self.ones = np.ones(n)
         self.lm = np.repeat(0.0, n)
@@ -675,7 +719,7 @@ class PPL:
         self.zs = np.repeat(0.0, n)
         self.alpha = 2000.0
         self.beta = 0.5
-        self.rho = self.alpha/(1.0 + self.alpha*self.beta)
+        self.rho = self.alpha / (1.0 + self.alpha * self.beta)
         self.r = 0.999
         self.dl = 0.5
         self.Lg = ini_cost
@@ -692,13 +736,13 @@ class PPL:
         """
         Runs one iteration of the method.
         """
-        
+
         self.ct = np.array(constraints)
         self.lmu = self.lm - self.mu
-        self.mu = self.mu + self.dl*self.lmu/(np.inner(self.lmu, self.lmu) + 1)
-        self.lm = self.mu + self.rho*(self.ct - self.ones)
-        self.zs = (self.lm - self.mu)/self.alpha
-        self.dl = self.r*self.dl
+        self.mu = self.mu + self.dl * self.lmu / (np.inner(self.lmu, self.lmu) + 1)
+        self.lm = self.mu + self.rho * (self.ct - self.ones)
+        self.zs = (self.lm - self.mu) / self.alpha
+        self.dl = self.r * self.dl
 
         self.Lg = self._lagrangian(cost)
 
@@ -710,23 +754,28 @@ class PPL:
         self.list_ct.append(self.ct)
 
         return self.lm[:]
-    
+
     def _lagrangian(self, cost: float) -> float:
         """
         Returns the value of the Lagrangian functional.
         """
-        return cost + np.inner(self.lm, self.ct - self.ones - self.zs) + \
-            np.inner(self.mu, self.zs) + \
-            self.alpha*np.inner(self.zs, self.zs)/2.0 - \
-            self.beta*np.inner(self.lm - self.mu, self.lm - self.mu)/2.0
-    
+        return (
+            cost
+            + np.inner(self.lm, self.ct - self.ones - self.zs)
+            + np.inner(self.mu, self.zs)
+            + self.alpha * np.inner(self.zs, self.zs) / 2.0
+            - self.beta * np.inner(self.lm - self.mu, self.lm - self.mu) / 2.0
+        )
+
     def see(self) -> str:
         """
         Returns a string with some variable values.
         """
-        return (f"lagr = {self.Lg:.4f} | "
+        return (
+            f"lagr = {self.Lg:.4f} | "
             f"lm = {', '.join(f'{val:.4f}' for val in self.lm)} | "
-            f"mu = {', '.join(f'{val:.4f}' for val in self.mu)}",)[0]
+            f"mu = {', '.join(f'{val:.4f}' for val in self.mu)}",
+        )[0]
 
 
 class Save:
@@ -744,7 +793,7 @@ class Save:
         Instance of PPL.
     times : List[float]
         List with the assembly and resolution times.
-    
+
     Methods
     -------
     add(cost: float, nder: float) -> None
@@ -761,14 +810,14 @@ class Save:
         self.cost = []
         self.nder = []
         self.ppl_obj = None
-            
+
     def add(self, cost: float, nder: float) -> None:
         self.cost.append(cost)
         self.nder.append(nder)
-    
+
     def add_times(self, assembly: float, resolution: float) -> None:
         self.times = [assembly, resolution]
-    
+
     def add_ppl(self, ppl_obj: PPL) -> None:
         self.ppl_obj = ppl_obj
 
@@ -776,26 +825,26 @@ class Save:
         if self.ppl_obj is None:
             np.savez(
                 path / f"{dat_name}.npz",
-                cost = np.array(self.cost),
-                nder = np.array(self.nder),
-                times = self.times
+                cost=np.array(self.cost),
+                nder=np.array(self.nder),
+                times=self.times,
             )
         else:
             np.savez(
                 path / f"{dat_name}.npz",
-                cost = np.array(self.cost),
-                ctrs = np.array(self.ppl_obj.list_ct),
-                nder = np.array(self.nder),
-                Lg = np.array(self.ppl_obj.list_Lg),
-                lm = np.array(self.ppl_obj.list_lm),
-                mu = np.array(self.ppl_obj.list_mu),
-                z = np.array(self.ppl_obj.list_zs),
-                delta = np.array(self.ppl_obj.list_dl),
-                alpha = np.array(self.ppl_obj.alpha),
-                beta = np.array(self.ppl_obj.beta),
-                rho = np.array(self.ppl_obj.rho),
-                r = np.array(self.ppl_obj.r),
-                times = self.times
+                cost=np.array(self.cost),
+                ctrs=np.array(self.ppl_obj.list_ct),
+                nder=np.array(self.nder),
+                Lg=np.array(self.ppl_obj.list_Lg),
+                lm=np.array(self.ppl_obj.list_lm),
+                mu=np.array(self.ppl_obj.list_mu),
+                z=np.array(self.ppl_obj.list_zs),
+                delta=np.array(self.ppl_obj.list_dl),
+                alpha=np.array(self.ppl_obj.alpha),
+                beta=np.array(self.ppl_obj.beta),
+                rho=np.array(self.ppl_obj.rho),
+                r=np.array(self.ppl_obj.r),
+                times=self.times,
             )
 
 
@@ -804,7 +853,7 @@ class InitialLevel:
     Creates the initial level set function
     with ball shaped holes determined by
     centers and radii.
-    
+
     Attributes
     ----------
     centers : npt.NDArray[np.float64]
@@ -817,7 +866,7 @@ class InitialLevel:
         Scaling factor.
     ord : int
         Order of the norm.
-    
+
     Methods
     -------
     func(x) :
@@ -833,7 +882,7 @@ class InitialLevel:
         centers: npt.NDArray[np.float64],
         radii: npt.NDArray[np.float64],
         factor: float = 1.0,
-        ord: int = 2
+        ord: int = 2,
     ) -> None:
         """
         Parameters
@@ -854,25 +903,22 @@ class InitialLevel:
         self.dim = self.centers.shape[1]
         self.factor = factor
         self.ord = ord
-    
+
     def func(self, x):
         """
         Callable function to be interpolated
         by a dolfinx function.
         """
-        
-        xT = (x[:self.dim].T)[None, :, :]
-        #comps = (self.centers[:, None, :] - xT)**2
-        #norms = np.sqrt(np.sum(comps, axis = 2))
-        norms = Norm(
-            self.centers[:, None, :] - xT,
-            ord = self.ord, axis = 2
-        )
-        distances = self.radii[:, None] - norms
-        values = np.max(distances, axis = 0)
 
-        return self.factor*values
-    
+        xT = (x[: self.dim].T)[None, :, :]
+        # comps = (self.centers[:, None, :] - xT)**2
+        # norms = np.sqrt(np.sum(comps, axis = 2))
+        norms = Norm(self.centers[:, None, :] - xT, ord=self.ord, axis=2)
+        distances = self.radii[:, None] - norms
+        values = np.max(distances, axis=0)
+
+        return self.factor * values
+
     def save(self, comm, domain, save_path):
         """
         Interpolates func and saves it into
@@ -880,18 +926,12 @@ class InitialLevel:
         """
 
         space = functionspace(domain, ("CG", 1))
-        intp_func = interpolate(
-            [self.func], space, name = "phi0"
-        )
-        save_functions(
-            comm, domain, intp_func,
-            save_path / f"{ini_name}.xdmf"
-        )
+        intp_func = interpolate([self.func], space, name="phi0")
+        save_functions(comm, domain, intp_func, save_path / f"{ini_name}.xdmf")
 
 
 def get_funcs_from(
-    space: FunctionSpace,
-    values: npt.NDArray[np.float64]
+    space: FunctionSpace, values: npt.NDArray[np.float64]
 ) -> List[Function]:
     """
     Returns a list of functions of the given
@@ -900,22 +940,23 @@ def get_funcs_from(
     funcs = [Function(space) for _ in range(len(values))]
     for f, v in zip(funcs, values):
         f.x.array[:] = v
-    
+
     return funcs
 
+
 def space_interpolation(from_space, funcs, to_space):
-    
+
     to_domain = to_space.mesh
     new_funcs = [Function(to_space) for _ in range(len(funcs))]
     dim = to_domain.topology.dim
     fine_mesh_cell_map = to_domain.topology.index_map(dim)
     num_cells_on_proc = fine_mesh_cell_map.size_local + fine_mesh_cell_map.num_ghosts
-    cells = np.arange(num_cells_on_proc, dtype = np.int32)
+    cells = np.arange(num_cells_on_proc, dtype=np.int32)
     interp_data = create_interpolation_data(to_space, from_space, cells, padding=1e-14)
 
     for nf, f in zip(new_funcs, funcs):
-        nf.interpolate_nonmatching(f, cells, interpolation_data = interp_data)
-    
+        nf.interpolate_nonmatching(f, cells, interpolation_data=interp_data)
+
     return new_funcs
 
 
@@ -926,11 +967,7 @@ def all_connectivities(domain: Mesh) -> None:
     topology = domain.topology
     dim = topology.dim
 
-    pairs = [
-        (dim, dim),
-        (0, dim), (dim, 0),
-        (1, dim), (dim, 1)
-    ]
+    pairs = [(dim, dim), (0, dim), (dim, 0), (1, dim), (dim, 1)]
 
     if dim == 3:
         pairs += [(2, dim), (dim, 2)]
@@ -938,30 +975,31 @@ def all_connectivities(domain: Mesh) -> None:
     for d0, d1 in pairs:
         topology.create_connectivity(d0, d1)
 
+
 def dirichlet_extension_from_bcs(domain, space, list_bcs):
-    
-    dx = Measure("dx", domain = domain)
+
+    dx = Measure("dx", domain=domain)
     n = len(list_bcs)
     ext = [Function(space) for _ in range(n)]
-    for i in range(n): ext[i].name = "g" + str(i)
+    for i in range(n):
+        ext[i].name = "g" + str(i)
 
     h = Function(space)
     h.x.array[:] = 0
     eta = TrialFunction(space)
     zeta = TestFunction(space)
-    a = inner(grad(eta), grad(zeta))*dx
-    L = h*zeta*dx # Right-hand side is zero
-    
+    a = inner(grad(eta), grad(zeta)) * dx
+    L = h * zeta * dx  # Right-hand side is zero
+
     for bcs, g in zip(list_bcs, ext):
         basic_solver(form(a), form(L), bcs, g)
 
     return ext
 
+
 def dirichlet_extension(
-        domain: Mesh,
-        space: FunctionSpace,
-        funcs: List[Function]
-    ) -> List[Function]:
+    domain: Mesh, space: FunctionSpace, funcs: List[Function]
+) -> List[Function]:
     """
     Compute the Dirichlet extensions of a
     list of functions.
@@ -975,45 +1013,46 @@ def dirichlet_extension(
     funcs : List[Function]
         List of functions to be used as Dirichlet conditions.
         These functions are defined on the domain.
-        
+
     Returns
     -------
     extensions : List[Function]
         The Dirichlet extensions of the input functions.
     """
-    dx = Measure("dx", domain = domain)
+    dx = Measure("dx", domain=domain)
     nbr_fcs = len(funcs)
     extensions = [Function(space) for _ in range(nbr_fcs)]
     for i in range(nbr_fcs):
         extensions[i].name = "g" + str(i)
-    
+
     dim = domain.topology.dim
     boundary_dofs = locate_dofs_topological(
-        space, dim-1, exterior_facet_indices(domain.topology)
+        space, dim - 1, exterior_facet_indices(domain.topology)
     )
 
     h = Function(space)
     h.x.array[:] = 0
     eta = TrialFunction(space)
     zeta = TestFunction(space)
-    a = inner(grad(eta), grad(zeta))*dx
-    L = dot(zeta, h)*dx # Right-hand side is zero
-    
+    a = inner(grad(eta), grad(zeta)) * dx
+    L = dot(zeta, h) * dx  # Right-hand side is zero
+
     for f, g in zip(funcs, extensions):
-        basic_solver(
-            form(a), form(L), 
-            [dirichletbc(f, boundary_dofs)], g
-        )
+        basic_solver(form(a), form(L), [dirichletbc(f, boundary_dofs)], g)
 
     return extensions
 
 
 def build_gmsh_model_2d(
-        vertices, boundary_parts, mesh_size,
-        holes = None, curves = None,
-        filename = "domain.msh", plot = False,
-        quad = False
-    ):
+    vertices,
+    boundary_parts,
+    mesh_size,
+    holes=None,
+    curves=None,
+    filename="domain.msh",
+    plot=False,
+    quad=False,
+):
     """
     Parameters
     ---------
@@ -1031,7 +1070,7 @@ def build_gmsh_model_2d(
             ...
         plot :
             ...
-    
+
     Returns
     -------
         ...
@@ -1045,7 +1084,7 @@ def build_gmsh_model_2d(
         gmsh.initialize()
         gmsh.model.add("2D_Mesh")
         gmsh.option.setNumber("General.Terminal", 0)
-        
+
         K = len(vertices)
         line_tags = [k for k in range(1, K + 1)]
         curve_tag = 1
@@ -1053,77 +1092,53 @@ def build_gmsh_model_2d(
 
         # boundary lines
         gmsh.model.geo.addPoint(
-            x = vertices[0][0],
-            y = vertices[0][1],
-            z = 0.,
-            meshSize = 0.,
-            tag = 1
+            x=vertices[0][0], y=vertices[0][1], z=0.0, meshSize=0.0, tag=1
         )
         for k in range(1, K):
             gmsh.model.geo.addPoint(
-                x = vertices[k][0],
-                y = vertices[k][1],
-                z = 0.,
-                meshSize = 0.,
-                tag = k + 1
+                x=vertices[k][0], y=vertices[k][1], z=0.0, meshSize=0.0, tag=k + 1
             )
-            gmsh.model.geo.addLine(
-                startTag = k,
-                endTag = k + 1,
-                tag = k
-            )
-        gmsh.model.geo.addLine(
-            startTag = K,
-            endTag = 1,
-            tag = K
-        )
-        gmsh.model.geo.addCurveLoop(curveTags = line_tags, tag = curve_tag)
-        
+            gmsh.model.geo.addLine(startTag=k, endTag=k + 1, tag=k)
+        gmsh.model.geo.addLine(startTag=K, endTag=1, tag=K)
+        gmsh.model.geo.addCurveLoop(curveTags=line_tags, tag=curve_tag)
+
         last_tag = K
 
         if holes is not None:
             list_holes = []
-            curve_hole_tag = 2 # 2, 3, ...
+            curve_hole_tag = 2  # 2, 3, ...
             for hole in holes:
                 list_holes.append(curve_hole_tag)
                 J = len(hole)
                 hole_tags = [last_tag + j for j in range(1, J + 1)]
                 gmsh.model.geo.addPoint(
-                    x = hole[0][0],
-                    y = hole[0][1],
-                    z = 0.,
-                    meshSize = 0.,
-                    tag = last_tag + 1
+                    x=hole[0][0], y=hole[0][1], z=0.0, meshSize=0.0, tag=last_tag + 1
                 )
                 for j in range(1, J):
                     gmsh.model.geo.addPoint(
-                        x = hole[j][0],
-                        y = hole[j][1],
-                        z = 0.,
-                        meshSize = 0.,
-                        tag = last_tag + j + 1
+                        x=hole[j][0],
+                        y=hole[j][1],
+                        z=0.0,
+                        meshSize=0.0,
+                        tag=last_tag + j + 1,
                     )
                     gmsh.model.geo.addLine(
-                        startTag = last_tag + j,
-                        endTag = last_tag + j + 1,
-                        tag = last_tag + j
+                        startTag=last_tag + j, endTag=last_tag + j + 1, tag=last_tag + j
                     )
                 gmsh.model.geo.addLine(
-                    startTag = last_tag + J,
-                    endTag = last_tag + 1,
-                    tag = last_tag + J
+                    startTag=last_tag + J, endTag=last_tag + 1, tag=last_tag + J
                 )
-                gmsh.model.geo.addCurveLoop(curveTags = hole_tags, tag = curve_hole_tag)
-                last_tag = last_tag + J # update last tag
+                gmsh.model.geo.addCurveLoop(curveTags=hole_tags, tag=curve_hole_tag)
+                last_tag = last_tag + J  # update last tag
                 curve_hole_tag = curve_hole_tag + 1
-            
+
             # create surface
-            gmsh.model.geo.addPlaneSurface([curve_tag] + list_holes, tag = surface_tag)	
+            gmsh.model.geo.addPlaneSurface([curve_tag] + list_holes, tag=surface_tag)
         else:
             # create surface
-            gmsh.model.geo.addPlaneSurface([curve_tag], tag = surface_tag)	
+            gmsh.model.geo.addPlaneSurface([curve_tag], tag=surface_tag)
 
-        #--------------------------------------------
+        # --------------------------------------------
         # Code for add a interior curve that define
         # a subdomain. This part is used to generate
         # data for inverse problems.
@@ -1131,49 +1146,40 @@ def build_gmsh_model_2d(
             for curve in curves:
                 L = len(curve)
                 gmsh.model.geo.addPoint(
-                    x = curve[0][0],
-                    y = curve[0][1], 
-                    z = 0.0, 
-                    meshSize = 0.1,
-                    tag = last_tag + 1
+                    x=curve[0][0], y=curve[0][1], z=0.0, meshSize=0.1, tag=last_tag + 1
                 )
                 for l in range(1, L):
                     gmsh.model.geo.addPoint(
-                        x = curve[l][0],
-                        y = curve[l][1],
-                        z = 0.0,
-                        meshSize = 0.1,
-                        tag = last_tag + l + 1
+                        x=curve[l][0],
+                        y=curve[l][1],
+                        z=0.0,
+                        meshSize=0.1,
+                        tag=last_tag + l + 1,
                     )
                     gmsh.model.geo.addLine(
-                        startTag = last_tag + l,
-                        endTag = last_tag + l + 1, 
-                        tag = last_tag + l
+                        startTag=last_tag + l, endTag=last_tag + l + 1, tag=last_tag + l
                     )
                 gmsh.model.geo.addLine(
-                    startTag = last_tag + L,
-                    endTag = last_tag + 1,
-                    tag = last_tag + L
+                    startTag=last_tag + L, endTag=last_tag + 1, tag=last_tag + L
                 )
 
                 # We have to synchronize before embedding the lines
                 gmsh.model.geo.synchronize()
-            
+
                 gmsh.model.mesh.embed(
-                    dim = 1, 
-                    tags = [last_tag + l for l in range(1, L + 1)],
-                    inDim = 2,
-                    inTag = surface_tag
+                    dim=1,
+                    tags=[last_tag + l for l in range(1, L + 1)],
+                    inDim=2,
+                    inTag=surface_tag,
                 )
                 last_tag = last_tag + L
-
 
         # if curve is not None:
         #     L = len(curve)
         #     gmsh.model.geo.addPoint(
         #         x = curve[0][0],
-        #         y = curve[0][1], 
-        #         z = 0., 
+        #         y = curve[0][1],
+        #         z = 0.,
         #         meshSize = 0.1,
         #         tag = last_tag + 1
         #     )
@@ -1187,7 +1193,7 @@ def build_gmsh_model_2d(
         #         )
         #         gmsh.model.geo.addLine(
         #             startTag = last_tag + l,
-        #             endTag = last_tag + l + 1, 
+        #             endTag = last_tag + l + 1,
         #             tag = last_tag + l
         #         )
         #     gmsh.model.geo.addLine(
@@ -1198,61 +1204,46 @@ def build_gmsh_model_2d(
 
         #     # We have to synchronize before embedding the lines
         #     gmsh.model.geo.synchronize()
-        
+
         #     gmsh.model.mesh.embed(
-        #         dim = 1, 
+        #         dim = 1,
         #         tags = [last_tag + l for l in range(1, L + 1)],
         #         inDim = 2,
         #         inTag = surface_tag
         #     )
-        
+
         gmsh.model.geo.synchronize()
 
         # physical groups
         # domain
-        gmsh.model.addPhysicalGroup(
-            dim = 2,
-            tags = [surface_tag],
-            tag = 1,
-            name = "domain"
-        )
+        gmsh.model.addPhysicalGroup(dim=2, tags=[surface_tag], tag=1, name="domain")
         # boundary
         if boundary_parts:
             # add mark to subsets of the boundary
             for facets, marker, name in boundary_parts:
-                gmsh.model.addPhysicalGroup(
-                    dim = 1,
-                    tags = facets,
-                    tag = marker,
-                    name = name
-                )
-        else :
+                gmsh.model.addPhysicalGroup(dim=1, tags=facets, tag=marker, name=name)
+        else:
             # add mark to the whole boundary
-            gmsh.model.addPhysicalGroup(
-                dim = 1,
-                tags = line_tags,
-                tag = 1,
-                name = "boundary"
-            )
+            gmsh.model.addPhysicalGroup(dim=1, tags=line_tags, tag=1, name="boundary")
 
         # size mesh
         gmsh.option.setNumber("Mesh.CharacteristicLengthMin", mesh_size)
         gmsh.option.setNumber("Mesh.CharacteristicLengthMax", mesh_size)
-        
+
         if quad:
             gmsh.model.mesh.setRecombine(2, surface_tag)
-        
-        gmsh.model.mesh.generate(dim = 2)
+
+        gmsh.model.mesh.generate(dim=2)
 
         if quad:
             nbr_triangles = len(gmsh.model.mesh.getElementsByType(3)[0])
         else:
             nbr_triangles = len(gmsh.model.mesh.getElementsByType(2)[0])
-        
+
         # Plot the mesh
-        if plot :
+        if plot:
             gmsh.fltk.run()
-        
+
         # Write the mesh in a *.msh file
         gmsh.write(str(filename))
         gmsh.clear()
@@ -1261,18 +1252,17 @@ def build_gmsh_model_2d(
     else:
 
         nbr_triangles = None
-    
-    nbr_triangles = comm.bcast(
-        nbr_triangles, root = rank_to_build
-    )
+
+    nbr_triangles = comm.bcast(nbr_triangles, root=rank_to_build)
 
     return nbr_triangles
 
-def interpolate(funcs, to_space, name = "f"):
-    
+
+def interpolate(funcs, to_space, name="f"):
+
     n = len(funcs)
     new_funcs = [Function(to_space) for _ in range(n)]
-    
+
     if n == 1:
         new_funcs[0].name = name
         new_funcs[0].interpolate(funcs[0])
@@ -1283,43 +1273,47 @@ def interpolate(funcs, to_space, name = "f"):
 
     return new_funcs
 
-def save_domain(comm, domain, filename, facet_tags = None):
-    
+
+def save_domain(comm, domain, filename, facet_tags=None):
+
     with XDMFFile(comm, filename, "w") as xdmf:
         xdmf.write_mesh(domain)
         if facet_tags:
             xdmf.write_meshtags(facet_tags, domain.geometry)
 
+
 def save_initial(comm, initial_guess, domain, filename):
-    
+
     initial_level = Function(functionspace(domain, ("CG", 1)))
     initial_level.name = "phi"
     initial_level.interpolate(InitialLevel(*initial_guess).func)
-    
+
     with XDMFFile(comm, filename, "w") as xdmf:
         xdmf.write_mesh(domain)
         xdmf.write_function(initial_level, 0)
 
+
 def save_functions(comm, domain, funcs, filename):
     with XDMFFile(comm, filename, "w") as xdmf:
         xdmf.write_mesh(domain)
-        for f in funcs: xdmf.write_function(f, 0)
+        for f in funcs:
+            xdmf.write_function(f, 0)
+
 
 def save_initial_level(comm, domain, func, filename):
-    
+
     space = functionspace(domain, ("CG", 1))
-    intp_func = interpolate([func], space, name = "phi")
+    intp_func = interpolate([func], space, name="phi")
     save_functions(comm, domain, intp_func, filename)
 
+
 def read_gmsh(
-    filename: Path,
-    comm: MPI.Comm,
-    dim: int
+    filename: Path, comm: MPI.Comm, dim: int
 ) -> Tuple[Mesh, MeshTags_int32, MeshTags_int32]:
     """
     This is a simple wrapper around `dolfinx.io.gmshio.read_from_msh`
     to read a mesh from a Gmsh `.msh` file.
-    
+
     Parameters
     ----------
     filename : Path
@@ -1338,7 +1332,8 @@ def read_gmsh(
     facet_tags : MeshTags_int32
         Integer tags associated with mesh facets (co-dimension 1 entities).
     """
-    return gmshio.read_from_msh(filename, comm = comm, gdim = dim)
+    return gmshio.read_from_msh(filename, comm=comm, gdim=dim)
+
 
 def create_domain_2d_DP(
     vertices: npt.NDArray[np.float64],
@@ -1347,7 +1342,7 @@ def create_domain_2d_DP(
     holes: List[npt.NDArray[np.float64]] = None,
     curve: List[npt.NDArray[np.float64]] = None,
     path: Path = Path(""),
-    plot: bool = False
+    plot: bool = False,
 ) -> Tuple[Mesh, int, MeshTags_int32]:
     """
     This function creates a polygonal domain with holes
@@ -1366,7 +1361,7 @@ def create_domain_2d_DP(
         boundary faces.
         `Mark` is a representative integer grater then 0
         to identify the subset.
-        `Name` is just a tag name for the subset. 
+        `Name` is just a tag name for the subset.
     mesh_size : float
         Representative mesh size for Gmsh.
     holes : List[npt.NDArray[np.float64]]
@@ -1385,33 +1380,31 @@ def create_domain_2d_DP(
     nbr_triangles : int
         Number of finite elements (triangles).
     facet_tags : MeshTags_int32
-        Integer tags associated with mesh facets (co-dimension 1 entities).    
+        Integer tags associated with mesh facets (co-dimension 1 entities).
     """
 
     filename = path / f"{dom_name}.msh"
     nbr_triangles = build_gmsh_model_2d(
-        vertices, boundary_parts, mesh_size,
-        holes, curve, filename, plot
+        vertices, boundary_parts, mesh_size, holes, curve, filename, plot
     )
-    
+
     # To read and save the mesh (.xmdf format) =====================
     comm.barrier()
     domain, _, facet_tags = read_gmsh(filename, comm, 2)
     all_connectivities(domain)
     save_domain(comm, domain, path / f"{dom_name}.xdmf", facet_tags)
     # ==============================================================
-    
+
     # Plot the distributed mesh
     if plot:
         plot_domain(domain, f"rank = {rank}")
 
     return domain, nbr_triangles, facet_tags
 
+
 def create_domain_2d_TP(
-        vertices, boundary_parts, mesh_size,
-        holes = None, curve = None, path = "",
-        plot = False
-    ):
+    vertices, boundary_parts, mesh_size, holes=None, curve=None, path="", plot=False
+):
     """
     Create a polygonal domain with holes
     and an interior closed curve for
@@ -1419,8 +1412,7 @@ def create_domain_2d_TP(
     """
     filename = Path(path) / f"{dom_name}.msh"
     nbr_triangles = build_gmsh_model_2d(
-        vertices, boundary_parts, mesh_size,
-        holes, curve, filename, plot
+        vertices, boundary_parts, mesh_size, holes, curve, filename, plot
     )
 
     # Read and save (.xmdf format) the mesh ===============================
@@ -1433,17 +1425,22 @@ def create_domain_2d_TP(
 
     # Plot the identical meshes
     if plot:
-        plot_domain(domain, f"rank = {rank}") 
-    
+        plot_domain(domain, f"rank = {rank}")
+
     return domain, nbr_triangles, facet_tags
 
+
 def create_domain_2d_MP(
-        sub_comm: MPI.Comm,
-        color: int,
-        vertices, boundary_parts, mesh_size,
-        holes = None, curve = None, path = "",
-        plot = False
-    ):
+    sub_comm: MPI.Comm,
+    color: int,
+    vertices,
+    boundary_parts,
+    mesh_size,
+    holes=None,
+    curve=None,
+    path="",
+    plot=False,
+):
     """
     Create a polygonal domain with holes
     and an interior closed curve for
@@ -1452,8 +1449,7 @@ def create_domain_2d_MP(
 
     filename = Path(path) / f"{dom_name}.msh"
     nbr_triangles = build_gmsh_model_2d(
-        vertices, boundary_parts, mesh_size,
-        holes, curve, filename, plot
+        vertices, boundary_parts, mesh_size, holes, curve, filename, plot
     )
 
     # Read and save (.xmdf format) the mesh ================================
@@ -1470,59 +1466,68 @@ def create_domain_2d_MP(
 
     return domain, nbr_triangles, facet_tags
 
-def print0(i, cost, const_vals, der_norm, steps, extra = ""):
-    print(f"i = {i:3.0f} | "
+
+def print0(i, cost, const_vals, der_norm, steps, extra=""):
+    print(
+        f"i = {i:3.0f} | "
         f"cost = {cost:.4f} | "
         f"cstr = {', '.join(f'{abs(v):.4f}' for v in const_vals)} | "
         f"nder = {der_norm:.4f} | "
-        f"steps = {steps:2.0f} | " + extra)
+        f"steps = {steps:2.0f} | " + extra
+    )
 
-def print1(i, cost, der_norm, steps, extra = ""):
-    print(f"i = {i:3.0f} | "
+
+def print1(i, cost, der_norm, steps, extra=""):
+    print(
+        f"i = {i:3.0f} | "
         f"cost = {cost:.6f} | "
         f"nder = {der_norm:.4f} | "
-        f"steps = {steps:2.0f} | " + extra)
+        f"steps = {steps:2.0f} | " + extra
+    )
 
-def assemble_mtx(ufl_form, bcs = []):
+
+def assemble_mtx(ufl_form, bcs=[]):
     return assemble_matrix(form(ufl_form), bcs)
 
 
 def eval(formula):
     return assemble_scalar(form(formula))
 
+
 def const(domain, value):
     return Constant(domain, PETSc.ScalarType(value))
+
 
 def volume(domain, comm):
     """
     Return the area (2D) or volume (3D).
     """
-    dx = Measure("dx", domain = domain)
-    local = eval(const(domain, 1)*dx)
-    total = comm.allreduce(local, op = MPI.SUM)
+    dx = Measure("dx", domain=domain)
+    local = eval(const(domain, 1) * dx)
+    total = comm.allreduce(local, op=MPI.SUM)
     return total
+
 
 def nbr_fems(domain, dim, comm):
     """
     Return the number of finite elements.
     """
     local = domain.topology.index_map(dim).size_local
-    total = comm.allreduce(local, op = MPI.SUM)
+    total = comm.allreduce(local, op=MPI.SUM)
     return total
+
 
 def get_diam2(dim, vol, nfems):
     if dim == 2:
-        return 4.0*vol/nfems/np.sqrt(3.0)
+        return 4.0 * vol / nfems / np.sqrt(3.0)
     elif dim == 3:
-        return (6.0*np.sqrt(2.0)*vol/nfems)**(2.0/3.0)
+        return (6.0 * np.sqrt(2.0) * vol / nfems) ** (2.0 / 3.0)
     else:
         raise ValueError(f"> Unsupported dimension: {dim}.")
-    
+
+
 def create_space(
-    domain: Mesh,
-    family: str,
-    rank: int | tuple,
-    degree: int = 1
+    domain: Mesh, family: str, rank: int | tuple, degree: int = 1
 ) -> FunctionSpace:
     """
     Wrapper to create a function space.
@@ -1539,7 +1544,7 @@ def create_space(
         - A tuple `(m, n, ...)` for tensor-valued functions.
     degree : int
         The polynomial degree.
-    
+
     Returns
     -------
         A function space in the given domain.
@@ -1547,10 +1552,10 @@ def create_space(
 
     if rank == 1:  # Scalar function space
         element = (family, degree)
-    elif isinstance(rank, int): 
+    elif isinstance(rank, int):
         # Vector-valued function space of dimension `rank`
-        element = (family, degree, (rank, ))
-    elif isinstance(rank, tuple): 
+        element = (family, degree, (rank,))
+    elif isinstance(rank, tuple):
         # Tensor-valued function space of arbitrary shape
         element = (family, degree, rank)
     else:
@@ -1560,9 +1565,7 @@ def create_space(
 
 
 def build_solver(
-    domain: Mesh,
-    bilinear_form: Form,
-    dirichlet_bcs: Sequence[DirichletBC]
+    domain: Mesh, bilinear_form: Form, dirichlet_bcs: Sequence[DirichletBC]
 ) -> PETSc.KSP:
     """
     Build and configure a PETSc Krylov Subspace Solver
@@ -1582,20 +1585,17 @@ def build_solver(
     KSP
         A configured PETSc Krylov Subspace Solver.
     """
-    
+
     A = assemble_matrix(bilinear_form, dirichlet_bcs)
     A.assemble()
     solver = PETSc.KSP().create(domain.comm)
     solver.setOperators(A)
-    solver.setType(PETSc.KSP.Type.GMRES) # or PREONLY
-    solver.getPC().setType(PETSc.PC.Type.HYPRE) # or LU
-    solver.setTolerances(
-        rtol = 1e-6,
-        atol = 1e-10,
-        max_it = 1000
-    )
-    
+    solver.setType(PETSc.KSP.Type.GMRES)  # or PREONLY
+    solver.getPC().setType(PETSc.PC.Type.HYPRE)  # or LU
+    solver.setTolerances(rtol=1e-6, atol=1e-10, max_it=1000)
+
     return solver
+
 
 def create_solver(a, L, bcs, uh):
     """
@@ -1607,25 +1607,23 @@ def create_solver(a, L, bcs, uh):
     """
 
     petsc_options = {
-        "ksp_type": "gmres",      # Krylov method: GMRES (good for non-symmetric matrices)
-        "pc_type": "hypre",       # Uses Hypre multigrid preconditioner (efficient for parallel computing)
-        "ksp_rtol": 1e-6,         # Relative tolerance for convergence
-        "ksp_atol": 1e-10,        # Absolute tolerance for convergence
-        "ksp_max_it": 1000,       # Maximum number of iterations
-        #"ksp_monitor": None
+        "ksp_type": "gmres",  # Krylov method: GMRES (good for non-symmetric matrices)
+        "pc_type": "hypre",  # Uses Hypre multigrid preconditioner (efficient for parallel computing)
+        "ksp_rtol": 1e-6,  # Relative tolerance for convergence
+        "ksp_atol": 1e-10,  # Absolute tolerance for convergence
+        "ksp_max_it": 1000,  # Maximum number of iterations
+        # "ksp_monitor": None
     }
 
-    problem = LinearProblem(
-        a, L, u = uh, bcs = bcs,
-        petsc_options = petsc_options
-    )
+    problem = LinearProblem(a, L, u=uh, bcs=bcs, petsc_options=petsc_options)
 
     return problem
+
 
 def basic_solver(a, L, bcs, uh):
     """
     This configuration provides a good balance
-    between performance and parallel scalability,  
+    between performance and parallel scalability,
     without requiring an expensive LU factorization.
 
     See for instance:
@@ -1637,13 +1635,10 @@ def basic_solver(a, L, bcs, uh):
         "ksp_rtol": 1e-6,
         "ksp_atol": 1e-10,
         "ksp_max_it": 1000,
-        #"ksp_monitor": None
+        # "ksp_monitor": None
     }
-    
-    problem = LinearProblem(
-        a, L, u = uh, bcs = bcs,
-        petsc_options = petsc_options
-    )
+
+    problem = LinearProblem(a, L, u=uh, bcs=bcs, petsc_options=petsc_options)
     problem.solve()
 
 
@@ -1661,21 +1656,21 @@ class Velocity:
         List with the homogeneous Dirichlet condition.
     solver : PETSc.KSP
         Krylov Subspace Solver
-    
+
     Methods
     -------
     run(theta: Function) -> None
         Solves the velocity equation.
     """
-    
+
     def __init__(
         self,
         dim: int,
-        domain: Mesh, 
-        space: FunctionSpace, 
+        domain: Mesh,
+        space: FunctionSpace,
         biform: Callable[[Argument, Argument], Tuple[Expr, bool]],
         S0: Expr,
-        S1: Expr
+        S1: Expr,
     ) -> None:
         """
         Sets up the linear system for the velocity.
@@ -1697,40 +1692,37 @@ class Velocity:
         S1 : Expr
             S1 component of the shape derivative.
         """
-        
+
         th = TrialFunction(space)
         xi = TestFunction(space)
-        dx = Measure("dx", domain = domain)
+        dx = Measure("dx", domain=domain)
 
         b, dirbc = biform(th, xi)
 
         self.biform = form(b)
-        self.liform = form(-(dot(S0, xi) + inner(S1, grad(xi)))*dx)
+        self.liform = form(-(dot(S0, xi) + inner(S1, grad(xi))) * dx)
         self.bc = []
 
         if dirbc:
             # domain dimension = velocity rank
-            self.bc = homogeneus_boundary(domain, space, dim, dim)           
-        
+            self.bc = homogeneus_boundary(domain, space, dim, dim)
+
         self.solver = build_solver(domain, self.biform, self.bc)
-    
+
     def run(self, theta: Function) -> None:
         """
         Solves the velocity equation.
         Only the linear part must be updated.
         """
-        
+
         L = assemble_vector(self.liform)
         apply_lifting(L, [self.biform], [self.bc])
-        L.ghostUpdate(
-            addv = PETSc.InsertMode.ADD_VALUES,
-            mode = PETSc.ScatterMode.REVERSE
-        )
+        L.ghostUpdate(addv=PETSc.InsertMode.ADD_VALUES, mode=PETSc.ScatterMode.REVERSE)
         set_bc(L, self.bc)
-        
+
         self.solver.solve(L, theta.x.petsc_vec)
         theta.x.scatter_forward()
-    
+
 
 class Level:
     """
@@ -1749,7 +1741,7 @@ class Level:
         Bilinear part of the iterative scheme.
     L : Form
         Linear part of the iterative scheme.
-    
+
     Methods
     -------
     run(phi: Function, steps: int, tend: float) -> None
@@ -1763,7 +1755,7 @@ class Level:
         phi: Function,
         tht: Function,
         diam2: float,
-        smooth: bool
+        smooth: bool,
     ) -> None:
         """
         Set up the iterative method to solve the level set equation.
@@ -1787,27 +1779,24 @@ class Level:
 
         self.domain = domain
         self.dt = const(domain, 0.0)
-        dx = Measure("dx", domain = domain)
-                
+        dx = Measure("dx", domain=domain)
+
         u = TrialFunction(space)
         v = TestFunction(space)
 
         # Petrov-Galerkin test function
-        tau = 2.0*sqrt(
-            1.0/self.dt**2 +
-            dot(tht, tht)/diam2
-        )
-        new_v = v + dot(grad(v), tht)/tau
+        tau = 2.0 * sqrt(1.0 / self.dt**2 + dot(tht, tht) / diam2)
+        new_v = v + dot(grad(v), tht) / tau
 
         # Crank-Nicolson weak formulation
-        a = (u + (self.dt/2.0)*dot(tht, grad(u)))*new_v*dx
-        L = (phi - (self.dt/2.0)*dot(tht, grad(phi)))*new_v*dx
+        a = (u + (self.dt / 2.0) * dot(tht, grad(u))) * new_v * dx
+        L = (phi - (self.dt / 2.0) * dot(tht, grad(phi))) * new_v * dx
 
         # Add diffusion
         if smooth:
-            a += (self.dt/2.0)*diam2*dot(grad(u), grad(v))*dx
-            L -= (self.dt/2.0)*diam2*dot(grad(phi), grad(v))*dx
-        
+            a += (self.dt / 2.0) * diam2 * dot(grad(u), grad(v)) * dx
+            L -= (self.dt / 2.0) * diam2 * dot(grad(phi), grad(v)) * dx
+
         # Pre-compilation
         self.a = form(a)
         self.L = form(L)
@@ -1828,23 +1817,18 @@ class Level:
         tend : float
             Final time.
         """
-        
-        self.dt.value = tend/steps
-        
-        solver = build_solver(
-            self.domain,
-            self.a,
-            []
-        )
+
+        self.dt.value = tend / steps
+
+        solver = build_solver(self.domain, self.a, [])
         b = create_vector(self.L)
-        
+
         for _ in range(steps):
             with b.localForm() as loc_b:
                 loc_b.set(0)
             assemble_vector(b, self.L)
             b.ghostUpdate(
-                addv = PETSc.InsertMode.ADD_VALUES,
-                mode = PETSc.ScatterMode.REVERSE
+                addv=PETSc.InsertMode.ADD_VALUES, mode=PETSc.ScatterMode.REVERSE
             )
             solver.solve(b, phi.x.petsc_vec)
             phi.x.scatter_forward()
@@ -1856,7 +1840,7 @@ class Reinit:
     two-step Adams-Bashforth methods to solve
     the diffusive Eikonal equation with
     fictitious time derivative.
-    
+
     Attributes
     ----------
     dt : Constant
@@ -1873,7 +1857,7 @@ class Reinit:
         Solver used in the first iteration.
     problem : LinearProblem
         Solver used in subsequent iterations.
-    
+
     Methods
     -------
     run(phi: Function, steps: int, tend: float) -> None
@@ -1881,11 +1865,7 @@ class Reinit:
     """
 
     def __init__(
-        self,
-        domain: Mesh,
-        space: FunctionSpace,
-        phi: Function,
-        diam2: float
+        self, domain: Mesh, space: FunctionSpace, phi: Function, diam2: float
     ) -> None:
         """
         Set up the reinitialization method.
@@ -1907,59 +1887,56 @@ class Reinit:
         """
 
         self.dt = const(domain, 0.0)
-        dx = Measure("dx", domain = domain)
+        dx = Measure("dx", domain=domain)
 
         self.phi_ini = Function(space)
         self.phi_prev = Function(space)
-        
+
         self.uh = Function(space)
         self.w = Function(space)
 
         # Sign function
-        sign_phi_ini = self.phi_ini/sqrt(self.phi_ini**2 + diam2)
+        sign_phi_ini = self.phi_ini / sqrt(self.phi_ini**2 + diam2)
         # Hamiltonian
-        H = lambda p: sign_phi_ini*sqrt(dot(p, p))
+        H = lambda p: sign_phi_ini * sqrt(dot(p, p))
         # Gradient of H
-        GradH = lambda p: sign_phi_ini*p/sqrt(dot(p, p))
+        GradH = lambda p: sign_phi_ini * p / sqrt(dot(p, p))
 
         u = TrialFunction(space)
         v = TestFunction(space)
 
         # Petrov-Galerkin test function
-        tau = 2.0*sqrt(
-            1.0/self.dt**2 +
-            sign_phi_ini**2/diam2
-        )        
-        new_v = v + dot(grad(v), GradH(grad(phi)))/tau        
+        tau = 2.0 * sqrt(1.0 / self.dt**2 + sign_phi_ini**2 / diam2)
+        new_v = v + dot(grad(v), GradH(grad(phi))) / tau
 
-        # Adams-Bashforth weak formulation     
-        a = u*new_v*dx
-        L = phi*new_v*dx
-        L += self.dt*sign_phi_ini*new_v*dx 
-        L += (self.dt/2.0)*(H(grad(self.phi_prev)) - 3.0*H(grad(phi)))*new_v*dx
-        # Add diffusion
-        L += (self.dt/2.0)*diam2*dot(grad(self.phi_prev - 3.0*phi), grad(v))*dx
-
-        self.problem = create_solver(
-            form(a), form(L), [], self.uh
+        # Adams-Bashforth weak formulation
+        a = u * new_v * dx
+        L = phi * new_v * dx
+        L += self.dt * sign_phi_ini * new_v * dx
+        L += (
+            (self.dt / 2.0) * (H(grad(self.phi_prev)) - 3.0 * H(grad(phi))) * new_v * dx
         )
+        # Add diffusion
+        L += (
+            (self.dt / 2.0) * diam2 * dot(grad(self.phi_prev - 3.0 * phi), grad(v)) * dx
+        )
+
+        self.problem = create_solver(form(a), form(L), [], self.uh)
 
         # Explicit Euler weak formulation
-        a0 = u*new_v*dx
-        L0 = self.dt*sign_phi_ini*new_v*dx 
-        L0 += (self.phi_ini - self.dt*H(grad(self.phi_ini)))*new_v*dx
+        a0 = u * new_v * dx
+        L0 = self.dt * sign_phi_ini * new_v * dx
+        L0 += (self.phi_ini - self.dt * H(grad(self.phi_ini))) * new_v * dx
         # Add diffusion
-        L0 -= self.dt*diam2*dot(grad(self.phi_ini), grad(v))*dx
+        L0 -= self.dt * diam2 * dot(grad(self.phi_ini), grad(v)) * dx
 
-        self.problem0 = create_solver(
-            form(a0), form(L0), [], self.uh
-        )
+        self.problem0 = create_solver(form(a0), form(L0), [], self.uh)
 
     def run(self, phi: Function, steps: int, tend: float) -> None:
         """
         Run the iterative method over a fixed number of time steps.
         The solver for the first iteration is called only once,
-        and then the main solver is called at each time step. 
+        and then the main solver is called at each time step.
 
         Parameters
         ----------
@@ -1970,8 +1947,8 @@ class Reinit:
         tend : float
             Final time.
         """
-        
-        self.dt.value = tend/steps
+
+        self.dt.value = tend / steps
         self.phi_ini.interpolate(phi)
 
         self.problem0.solve()
@@ -1992,18 +1969,17 @@ def homogeneus_boundary(domain, space, dim, rank_dimension):
     boundary_facets = exterior_facet_indices(domain.topology)
     if rank_dimension == 1:
         u_zero = PETSc.ScalarType(0)
-    else: 		
-        u_zero = np.zeros(
-            rank_dimension,
-            dtype = PETSc.ScalarType
-        )
-    bc = dirichletbc(u_zero, \
-            locate_dofs_topological(space, dim-1, boundary_facets), space)
+    else:
+        u_zero = np.zeros(rank_dimension, dtype=PETSc.ScalarType)
+    bc = dirichletbc(
+        u_zero, locate_dofs_topological(space, dim - 1, boundary_facets), space
+    )
     return [bc]
 
-def homogeneous_dirichlet_point(domain, space, points, rank_dimension, values = None):
+
+def homogeneous_dirichlet_point(domain, space, points, rank_dimension, values=None):
     """
-    Create homogeneous Dirichlet boundary conditions at specific points 
+    Create homogeneous Dirichlet boundary conditions at specific points
     for scalar or vector functions in 2D or 3D.
     It works for Lagrange P1!
 
@@ -2022,34 +1998,36 @@ def homogeneous_dirichlet_point(domain, space, points, rank_dimension, values = 
         bcs = []
         for p, v in zip(points, values):
             dofs = locate_dofs_geometrical(
-                space, 
-                lambda x: np.logical_and.reduce([np.isclose(x[i], p[i]) for i in range(dim)])
+                space,
+                lambda x: np.logical_and.reduce(
+                    [np.isclose(x[i], p[i]) for i in range(dim)]
+                ),
             )
             bcs.append(dirichletbc(PETSc.ScalarType(v), dofs, space))
-        
+
         return bcs
 
     if rank_dimension == 1:
         u_zero = PETSc.ScalarType(0)
-    else: 		
-        u_zero = np.zeros(
-            rank_dimension,
-            dtype = PETSc.ScalarType
-        )
-    
+    else:
+        u_zero = np.zeros(rank_dimension, dtype=PETSc.ScalarType)
+
     bcs = []
     for p in points:
         dofs = locate_dofs_geometrical(
             space,
-            lambda x: np.logical_and.reduce([np.isclose(x[i], p[i]) for i in range(dim)])
+            lambda x: np.logical_and.reduce(
+                [np.isclose(x[i], p[i]) for i in range(dim)]
+            ),
         )
         bcs.append(dirichletbc(u_zero, dofs, space))
-        
+
     return bcs
+
 
 def homogeneous_dirichlet_point_coordinate(domain, space, points, coordinates):
     """
-    Create homogeneous Dirichlet boundary conditions at specific points 
+    Create homogeneous Dirichlet boundary conditions at specific points
     and specific coordinate (either x, y, or z)
     It works for Lagrange P1!
 
@@ -2066,35 +2044,39 @@ def homogeneous_dirichlet_point_coordinate(domain, space, points, coordinates):
     dim = domain.geometry.dim
     bcs = []
     for p, c in zip(points, coordinates):
-        vertex = locate_entities_boundary(domain, 0, lambda x: np.logical_and.reduce([np.isclose(x[i], p[i]) for i in range(dim)]))
+        vertex = locate_entities_boundary(
+            domain,
+            0,
+            lambda x: np.logical_and.reduce(
+                [np.isclose(x[i], p[i]) for i in range(dim)]
+            ),
+        )
         dofs = locate_dofs_topological(space.sub(c), 0, vertex)
         bcs.append(dirichletbc(PETSc.ScalarType(0.0), dofs, space.sub(c)))
     return bcs
 
+
 def dirichlet_with_values(domain, space, boundary_tags, mrks_dirichlet, values):
-    
+
     bcs = []
     for mk, v in zip(mrks_dirichlet, values):
         dofs = locate_dofs_topological(
             space,
             domain.geometry.dim - 1,
-            boundary_tags.indices[boundary_tags.values == mk]
+            boundary_tags.indices[boundary_tags.values == mk],
         )
         bcs.append(dirichletbc(PETSc.ScalarType(v), dofs, space))
-    
+
     return bcs
 
+
 def homogeneous_dirichlet(
-    domain: Mesh,
-    space: FunctionSpace,
-    boundary_tags,
-    mrks_dirichlet,
-    rank_dimension
+    domain: Mesh, space: FunctionSpace, boundary_tags, mrks_dirichlet, rank_dimension
 ) -> List[DirichletBC]:
     """
-    Creates homogeneous Dirichlet boundary conditions 
-    over faces of dimension domain.geometry.dim - 1. 
-    
+    Creates homogeneous Dirichlet boundary conditions
+    over faces of dimension domain.geometry.dim - 1.
+
     Parameters
     ----------
     domain:
@@ -2116,74 +2098,62 @@ def homogeneous_dirichlet(
     """
     if rank_dimension == 1:
         u_zero = PETSc.ScalarType(0)
-    else: 		
-        u_zero = np.zeros(
-            rank_dimension,
-            dtype = PETSc.ScalarType
-        )
-    
+    else:
+        u_zero = np.zeros(rank_dimension, dtype=PETSc.ScalarType)
+
     bcs = []
     for mk in mrks_dirichlet:
         dofs = locate_dofs_topological(
             space,
             domain.geometry.dim - 1,
-            boundary_tags.indices[boundary_tags.values == mk]
+            boundary_tags.indices[boundary_tags.values == mk],
         )
         bcs.append(dirichletbc(u_zero, dofs, space))
     return bcs
 
+
 def homogeneous_dirichlet_fun(domain, space, funcs, rank_dimension):
     if rank_dimension == 1:
         u_zero = PETSc.ScalarType(0)
-    else: 		
-        u_zero = np.zeros(
-            rank_dimension,
-            dtype = PETSc.ScalarType
-        )
+    else:
+        u_zero = np.zeros(rank_dimension, dtype=PETSc.ScalarType)
     bcs = []
     for f in funcs:
         dofs = locate_dofs_geometrical(space, f)
         bcs.append(dirichletbc(u_zero, dofs, space))
     return bcs
 
+
 def fun_ds(domain, funcs):
-    dim_faces = domain.geometry.dim-1
+    dim_faces = domain.geometry.dim - 1
     facet_indices_list = []
     facet_values_list = []
     for i, f in enumerate(funcs, start=1):
-        indices = locate_entities_boundary(
-            domain, 
-            dim = dim_faces,
-            marker = f
-        )
+        indices = locate_entities_boundary(domain, dim=dim_faces, marker=f)
         facet_indices_list.append(indices)
-        facet_values_list.append(np.full(len(indices), i, dtype = np.int32))
-    
+        facet_values_list.append(np.full(len(indices), i, dtype=np.int32))
+
     facet_indices = np.concatenate(facet_indices_list)
     facet_values = np.concatenate(facet_values_list)
 
-    facet_tag = meshtags(
-        domain,
-        dim_faces,
-        facet_indices,
-        facet_values
-    )
-    
+    facet_tag = meshtags(domain, dim_faces, facet_indices, facet_values)
+
     indexed_ds = Measure("ds", domain=domain, subdomain_data=facet_tag)
-    
+
     return [indexed_ds(i) for i in range(1, len(funcs) + 1)]
 
+
 def marked_ds(domain, boundary_tags, marks):
-    indexed_ds = Measure('ds', domain = domain, subdomain_data = boundary_tags)
+    indexed_ds = Measure("ds", domain=domain, subdomain_data=boundary_tags)
     return [indexed_ds(i) for i in marks]
 
 
 class LineSearch:
     """
     Line search utility to estimate (with randomness)
-    the number of steps and final time 
+    the number of steps and final time
     based on the norm of the velocity field.
-    
+
     Attributes
     ----------
     t_min: float
@@ -2198,7 +2168,7 @@ class LineSearch:
         Scaling factor used to estimate final time.
     noise: float
         Random variation factor, e.g., 0.05 for 5% variation.
-    
+
     Methods
     -------
     _nbr_steps_func(t: float):
@@ -2208,12 +2178,12 @@ class LineSearch:
     """
 
     def __init__(
-            self,
-            time_bounds: Tuple[float, float],
-            step_bounds: Tuple[int, int], 
-            factor: float,
-            noise: float = 0.05
-        ):
+        self,
+        time_bounds: Tuple[float, float],
+        step_bounds: Tuple[int, int],
+        factor: float,
+        noise: float = 0.05,
+    ):
         """
         Parameters
         ---------
@@ -2239,15 +2209,15 @@ class LineSearch:
         ---------
         t: float
             Final time.
-        
+
         Returns
         -------
         float: estimated number of steps
         """
-        
-        scaled_t = (t - self.t_min)/(self.t_max - self.t_min)
-        nbr_steps = (self.s_max - self.s_min)*scaled_t**(1.0/6.0) + self.s_min
-        
+
+        scaled_t = (t - self.t_min) / (self.t_max - self.t_min)
+        nbr_steps = (self.s_max - self.s_min) * scaled_t ** (1.0 / 6.0) + self.s_min
+
         return nbr_steps
 
     def get(self, derivative_norm: float):
@@ -2264,29 +2234,28 @@ class LineSearch:
         Returns
         -------
         Tuple[int, float]:
-            Number of steps and final time. 
+            Number of steps and final time.
         """
 
         # To prevent division by zero
-        safe_norm = max(derivative_norm, 1e-8) 
+        safe_norm = max(derivative_norm, 1e-8)
         # Final time
-        tend = self.factor/safe_norm
+        tend = self.factor / safe_norm
         # Randomness
-        tend = tend*np.random.uniform(
-            1.0 - self.noise, 1.0 + self.noise
-        )
-        # To guarantee tend in [t_min, t_max] 
+        tend = tend * np.random.uniform(1.0 - self.noise, 1.0 + self.noise)
+        # To guarantee tend in [t_min, t_max]
         tend = max(self.t_min, min(tend, self.t_max))
-        
+
         steps = self._estimate_steps_from_time(tend)
         # Randomness
-        steps = np.random.normal(steps, self.noise*steps)
+        steps = np.random.normal(steps, self.noise * steps)
         # Conversion to integer
         steps = round(steps)
         # To guarantee steps in [s_min, s_max]
         steps = max(self.s_min, min(steps, self.s_max))
 
         return steps, tend
+
 
 def get_rank_dimension(shape):
     if len(shape) == 0:
@@ -2296,7 +2265,7 @@ def get_rank_dimension(shape):
     else:
         print("Tensor rank!")
         return shape
-    
+
 
 def solve_pde(space, pde, phi):
 
@@ -2305,21 +2274,22 @@ def solve_pde(space, pde, phi):
     solutions = [Function(space) for _ in range(nbr_eqs)]
     for i in range(nbr_eqs):
         solutions[i].name = "u" + str(i)
-    
+
     for (weak_form, bcs), u in zip(eqs, solutions):
         bi, li = system(weak_form)
         basic_solver(form(bi), form(li), bcs, u)
-    
+
     return solutions
 
+
 def dir_extension_from(
-        comm: MPI.Comm,
-        domain: Mesh,
-        space: FunctionSpace,
-        pde: Callable[[Function], List[Tuple[Expr, List[DirichletBC]]]],
-        func: Callable[[npt.NDArray[np.float64]], float],
-        path: Path
-    ):
+    comm: MPI.Comm,
+    domain: Mesh,
+    space: FunctionSpace,
+    pde: Callable[[Function], List[Tuple[Expr, List[DirichletBC]]]],
+    func: Callable[[npt.NDArray[np.float64]], float],
+    path: Path,
+):
     """
     It computes the Dirichlet extension of the solutions
     to a set of linear partial differential equations.
@@ -2344,44 +2314,42 @@ def dir_extension_from(
     extensions : List[Function]
         Dirichlet extension functions.
     """
-    
-    phi = interpolate(
-        funcs = [func],
-        to_space = create_space(domain, "CG", 1),
-        name = "phi"
-    )[0]
+
+    phi = interpolate(funcs=[func], to_space=create_space(domain, "CG", 1), name="phi")[
+        0
+    ]
 
     solutions = solve_pde(space, pde, phi)
     extensions = dirichlet_extension(domain, space, solutions)
-    
+
     save_functions(
-        comm, domain, 
-        [phi] + solutions + extensions,
-        path / f"{ext_name}.xdmf"
+        comm, domain, [phi] + solutions + extensions, path / f"{ext_name}.xdmf"
     )
-    
+
     return extensions
 
-def global_scalar(value, comm, postprocess = None):
-    
+
+def global_scalar(value, comm, postprocess=None):
+
     local_val = assemble_scalar(value)
-    global_val = comm.allreduce(local_val, op = MPI.SUM)
-    
+    global_val = comm.allreduce(local_val, op=MPI.SUM)
+
     return postprocess(global_val) if postprocess else global_val
 
+
 def global_scalar_list(values, comm):
-    
+
     local_vals = [assemble_scalar(v) for v in values]
-    
-    return [comm.allreduce(v, op = MPI.SUM) for v in local_vals]
+
+    return [comm.allreduce(v, op=MPI.SUM) for v in local_vals]
 
 
-class NonlinearSolverWrapper():
+class NonlinearSolverWrapper:
     """
     Wrapper for solving nonlinear problems.
     """
-    
-    def __init__(self, solver, u, initial):
+
+    def __init__(self, solver, u, initial, bcs):
         """
         Parameters
         ---------
@@ -2391,16 +2359,26 @@ class NonlinearSolverWrapper():
             Function to save the solution.
         initial : callable
             Initial guess. A function that can be
-            evaluated at mesh points. For instance, 
+            evaluated at mesh points. For instance,
             a lambda function.
+        bcs : List[DirichletBC]
+            List of Dirichlet boundary conditions.
         """
         self.solver = solver
         self.u = u
         self.initial = initial
-    
+        self.bcs = bcs
+
     def solve(self):
-        
-        self.u.interpolate(self.initial)
+
+        if callable(self.initial):
+            # If initial is a function, interpolate it
+            self.u.interpolate(self.initial)
+        else:
+            # If initial is a form, solve the corresponding linear problem
+            bi, li = system(self.initial)
+            basic_solver(form(bi), form(li), self.bcs, self.u)
+
         n, converged = self.solver.solve(self.u)
         if not converged:
             print(f"> Newton solver did not converge!")
@@ -2410,8 +2388,8 @@ def create_non_lin_solver(comm, F, bcs, J, u, initial):
     """
     Creates a Newton solver for non-linear problems.
     """
-    
-    problem = NonlinearProblem(F, u, bcs = bcs, J = J)
+
+    problem = NonlinearProblem(F, u, bcs=bcs, J=J)
     solver = NewtonSolver(comm, problem)
     solver.convergence_criterion = "incremental"
     solver.rtol = 1e-6
@@ -2428,8 +2406,9 @@ def create_non_lin_solver(comm, F, bcs, J, u, initial):
     opts[f"{option_prefix}pc_hypre_boomeramg_max_iter"] = 1
     opts[f"{option_prefix}pc_hypre_boomeramg_cycle_type"] = "v"
     ksp.setFromOptions()
-    
-    return NonlinearSolverWrapper(solver, u, initial)
+
+    return NonlinearSolverWrapper(solver, u, initial, bcs)
+
 
 def runDP(
     model: Model,
@@ -2445,9 +2424,8 @@ def runDP(
     lgrn_tol: float,
     cost_tol: float,
     prev: int,
-    random_pars: Tuple[int, float]
+    random_pars: Tuple[int, float],
 ) -> None:
-    
     """
     Implements Data Parallelism.
     """
@@ -2462,27 +2440,23 @@ def runDP(
     # Constants ===========================
     filename = model.path / f"{res_name}.xdmf"
     stop_flag = False
-    
+
     dim = model.dim
     domain = model.domain
-    
+
     vol = volume(domain, comm)
     nfems = nbr_fems(domain, dim, comm)
 
     if rank == 0:
         diam2 = get_diam2(dim, vol, nfems)
         np.random.seed(seed)
-        lsearch = LineSearch(
-            (min_time, max_time),
-            (min_iter, max_iter),
-            dfactor, noise
-        )
+        lsearch = LineSearch((min_time, max_time), (min_iter, max_iter), dfactor, noise)
         tosave = Save()
     else:
         diam2 = None
-    
-    diam2 = comm.bcast(diam2, root = 0)
-    
+
+    diam2 = comm.bcast(diam2, root=0)
+
     # List of variables
     # -----------------
     # sp_lset : space of level set functions
@@ -2496,13 +2470,13 @@ def runDP(
     # ste_pbs : list of state problems
     # adj_pbs : list of adjoint problems
     # eq_ctrs : list of equality constraints
-    # nbr_ste : number of states 
+    # nbr_ste : number of states
     # nbr_adj : number of adjoints
     # nbr_ctr : number of constraints
     # J : cost functional
     # C : list of constraints
     # L : list of lagrange multipliers
-    # S0, S1 : derivative components 
+    # S0, S1 : derivative components
 
     # Level set function
     sp_lset = create_space(domain, "CG", 1)
@@ -2519,7 +2493,7 @@ def runDP(
     ste_fcs = [Function(model.space) for _ in range(nbr_ste)]
     for i in range(nbr_ste):
         ste_fcs[i].name = "u" + str(i)
-    
+
     # Solvers creation
     ste_pbs = []
     for i in range(nbr_ste):
@@ -2527,29 +2501,32 @@ def runDP(
         if len(ste_problem) == 2:
             weak_form, bcs = ste_problem
             bi, li = system(weak_form)
-            ste_pbs.append(
-                create_solver(form(bi), form(li), bcs, ste_fcs[i])
-            )
+            ste_pbs.append(create_solver(form(bi), form(li), bcs, ste_fcs[i]))
         else:
             weak_form, bcs, jacobian, seudo_state, ini_func = ste_problem
             compiled_weak_form = compile_form(comm, weak_form)
             compiled_jacobian = compile_form(comm, jacobian)
             form_weak_form = create_form(
                 compiled_weak_form,
-                [model.space], domain, {},
-                {seudo_state: ste_fcs[i], phi: phi}, {}
+                [model.space],
+                domain,
+                {},
+                {seudo_state: ste_fcs[i], phi: phi},
+                {},
             )
             form_jacobian = create_form(
                 compiled_jacobian,
-                [model.space, model.space], domain, {},
-                {seudo_state: ste_fcs[i], phi: phi}, {}
+                [model.space, model.space],
+                domain,
+                {},
+                {seudo_state: ste_fcs[i], phi: phi},
+                {},
             )
             ste_pbs.append(
                 create_non_lin_solver(
-                    comm, form_weak_form, bcs,
-                    form_jacobian, ste_fcs[i], ini_func
+                    comm, form_weak_form, bcs, form_jacobian, ste_fcs[i], ini_func
                 )
-            )    
+            )
 
     # Adjoint equations/functions
     adj_eqs = model.adjoint(phi, ste_fcs)
@@ -2558,7 +2535,7 @@ def runDP(
         adj_fcs = [Function(model.space) for _ in range(nbr_adj)]
         for i in range(nbr_adj):
             adj_fcs[i].name = "p" + str(i)
-        
+
         # Solvers creation
         adj_pbs = []
         for i in range(nbr_adj):
@@ -2566,29 +2543,32 @@ def runDP(
             if len(adj_problem) == 2:
                 weak_form, bcs = adj_problem
                 bi, li = system(weak_form)
-                adj_pbs.append(
-                    create_solver(form(bi), form(li), bcs, adj_fcs[i])
-                )
+                adj_pbs.append(create_solver(form(bi), form(li), bcs, adj_fcs[i]))
             else:
                 weak_form, bcs, jacobian, seudo_adjoint, ini_func = adj_problem
                 compiled_weak_form = compile_form(comm, weak_form)
                 compiled_jacobian = compile_form(comm, jacobian)
                 form_weak_form = create_form(
                     compiled_weak_form,
-                    [model.space], domain, {},
-                    {seudo_adjoint: adj_fcs[i], phi: phi}, {}
+                    [model.space],
+                    domain,
+                    {},
+                    {seudo_adjoint: adj_fcs[i], phi: phi},
+                    {},
                 )
                 form_jacobian = create_form(
                     compiled_jacobian,
-                    [model.space, model.space], domain, {},
-                    {seudo_adjoint: adj_fcs[i], phi: phi}, {}
+                    [model.space, model.space],
+                    domain,
+                    {},
+                    {seudo_adjoint: adj_fcs[i], phi: phi},
+                    {},
                 )
                 adj_pbs.append(
                     create_non_lin_solver(
-                        comm, form_weak_form, bcs,
-                        form_jacobian, adj_fcs[i], ini_func
+                        comm, form_weak_form, bcs, form_jacobian, adj_fcs[i], ini_func
                     )
-                )    
+                )
     else:
         adj_fcs = []
 
@@ -2608,43 +2588,36 @@ def runDP(
         L = [const(domain, 0) for _ in range(nbr_ctr)]
         # Creation of the derivatives components
         for i in range(nbr_ctr):
-            S0 += L[i]*S0_cts[1][i]
-            S1 += L[i]*S1_cts[1][i]
+            S0 += L[i] * S0_cts[1][i]
+            S1 += L[i] * S1_cts[1][i]
     # Derivative norm
     nDJ = form((model.bilinear_form(tht, tht))[0])
     # To calculate the velocity field
-    cls_vlty = Velocity(
-        dim, domain, sp_vlty,
-        model.bilinear_form, S0, S1
-    )
+    cls_vlty = Velocity(dim, domain, sp_vlty, model.bilinear_form, S0, S1)
     # To calculate the level set function
-    cls_lset = Level(
-        domain, sp_lset, phi, tht, diam2, smooth
-    )
+    cls_lset = Level(domain, sp_lset, phi, tht, diam2, smooth)
     # Reinicialization
     if reinit_step:
-        cls_rein = Reinit(
-            domain, sp_lset, phi, diam2
-        )
-        
+        cls_rein = Reinit(domain, sp_lset, phi, diam2)
+
     local_assembly = MPI.Wtime() - start_assembly
-    max_assembly = comm.allreduce(local_assembly, op = MPI.MAX)
+    max_assembly = comm.allreduce(local_assembly, op=MPI.MAX)
 
     # Iteration i = 0 =======
     start_solve = MPI.Wtime()
 
     phi.interpolate(model._get_initial_level())
-    
+
     [p.solve() for p in ste_pbs]
     comm.Barrier()
 
     cost = global_scalar(J, comm)
-    
+
     if nbr_ctr > 0:
         ctrs = global_scalar_list(C, comm)
         if rank == 0:
             cls_meth = PPL(nbr_ctr, cost, ctrs)
-    
+
     if nbr_adj > 0:
         [p.solve() for p in adj_pbs]
         comm.barrier()
@@ -2656,8 +2629,8 @@ def runDP(
         lset_steps, lset_end = lsearch.get(nder)
     else:
         lset_steps, lset_end = None, None
-    lset_steps = comm.bcast(lset_steps, root = 0)
-    lset_end = comm.bcast(lset_end, root = 0)
+    lset_steps = comm.bcast(lset_steps, root=0)
+    lset_end = comm.bcast(lset_end, root=0)
 
     # print ==============================================
     if rank == 0:
@@ -2672,52 +2645,56 @@ def runDP(
     with XDMFFile(comm, filename, "w") as xdmf:
         xdmf.write_mesh(domain)
         xdmf.write_function(phi, 0)
-        for f in ste_fcs: xdmf.write_function(f, 0)
-        for f in adj_fcs: xdmf.write_function(f, 0)
+        for f in ste_fcs:
+            xdmf.write_function(f, 0)
+        for f in adj_fcs:
+            xdmf.write_function(f, 0)
         xdmf.write_function(tht, 0)
 
         for iter in range(1, niter + 1):
-            
+
             cls_lset.run(phi, lset_steps, lset_end)
             # Reinitialization
             if reinit_step and iter > start_to_check:
-                if iter%reinit_step == 0:
-                    cls_rein.run(phi, rein_steps, rein_end)			
-            
+                if iter % reinit_step == 0:
+                    cls_rein.run(phi, rein_steps, rein_end)
+
             [p.solve() for p in ste_pbs]
             comm.barrier()
 
             cost = global_scalar(J, comm)
-            
+
             if nbr_ctr > 0:
                 ctrs = global_scalar_list(C, comm)
                 if rank == 0:
                     lm = cls_meth.run(cost, ctrs)
                 else:
                     lm = None
-                lm = comm.bcast(lm, root = 0)
+                lm = comm.bcast(lm, root=0)
                 for i in range(nbr_ctr):
                     L[i].value = lm[i]
-            
+
             if nbr_adj > 0:
                 [p.solve() for p in adj_pbs]
                 comm.barrier()
-            
+
             cls_vlty.run(tht)
             nder = global_scalar(nDJ, comm, np.sqrt)
-            
+
             if rank == 0:
                 lset_steps, lset_end = lsearch.get(nder)
             else:
                 lset_steps, lset_end = None, None
-            lset_steps = comm.bcast(lset_steps, root = 0)
-            lset_end = comm.bcast(lset_end, root = 0)
+            lset_steps = comm.bcast(lset_steps, root=0)
+            lset_end = comm.bcast(lset_end, root=0)
 
             xdmf.write_function(phi, iter)
-            for f in ste_fcs: xdmf.write_function(f, iter)
-            for f in adj_fcs: xdmf.write_function(f, iter)
+            for f in ste_fcs:
+                xdmf.write_function(f, iter)
+            for f in adj_fcs:
+                xdmf.write_function(f, iter)
             xdmf.write_function(tht, iter)
-            
+
             if rank == 0:
                 if nbr_ctr > 0:
                     print0(iter, cost, ctrs, nder, lset_steps, cls_meth.see())
@@ -2731,21 +2708,22 @@ def runDP(
                         lgrn_last = cls_meth.list_Lg[-1]
                         lgrn_errs = [l - lgrn_last for l in cls_meth.list_Lg[-prev:-1]]
                         cond1 = Norm(ctrn_errs, np.inf) < ctrn_tol
-                        cond2 = Norm(lgrn_errs, np.inf) < lgrn_tol*abs(lgrn_last)
+                        cond2 = Norm(lgrn_errs, np.inf) < lgrn_tol * abs(lgrn_last)
                         stop_flag = cond1 and cond2
                     else:
                         cost_last = tosave.cost[-1]
                         cost_diff = [j - cost_last for j in tosave.cost[-prev:-1]]
-                        stop_flag = Norm(cost_diff, np.inf) < cost_tol*abs(cost_last)
+                        stop_flag = Norm(cost_diff, np.inf) < cost_tol * abs(cost_last)
 
-            stop_flag = comm.bcast(stop_flag, root = 0)
+            stop_flag = comm.bcast(stop_flag, root=0)
 
             if stop_flag:
-                if rank == 0: print("> Stopping condition reached!")
+                if rank == 0:
+                    print("> Stopping condition reached!")
                 break
 
     local_solve = MPI.Wtime() - start_solve
-    max_solve = comm.allreduce(local_solve, op = MPI.MAX)
+    max_solve = comm.allreduce(local_solve, op=MPI.MAX)
 
     if rank == 0:
         if nbr_ctr > 0:
@@ -2757,22 +2735,21 @@ def runDP(
 
 
 def runTP(
-        model: Model,
-        niter: int,
-        reinit_step: int | bool,
-        reinit_pars: Tuple[int, float],
-        dfactor: float,
-        lv_time: Tuple[float, float],
-        lv_iter: Tuple[int, int],
-        smooth: bool,
-        start_to_check: int,
-        ctrn_tol: float,
-        lgrn_tol: float,
-        cost_tol: float,
-        prev: int,
-        random_pars: Tuple[int, float]
-    ) -> None:
-    
+    model: Model,
+    niter: int,
+    reinit_step: int | bool,
+    reinit_pars: Tuple[int, float],
+    dfactor: float,
+    lv_time: Tuple[float, float],
+    lv_iter: Tuple[int, int],
+    smooth: bool,
+    start_to_check: int,
+    ctrn_tol: float,
+    lgrn_tol: float,
+    cost_tol: float,
+    prev: int,
+    random_pars: Tuple[int, float],
+) -> None:
     """
     Implements Task Parallelism.
     """
@@ -2787,30 +2764,26 @@ def runTP(
     # Constants ===========================
     filename = model.path / f"{res_name}.xdmf"
     stop_flag = False
-    
+
     dim = model.dim
     domain = model.domain
-    
+
     if rank == 0:
         vol = volume(domain, MPI.COMM_SELF)
         nfems = nbr_fems(domain, dim, MPI.COMM_SELF)
         diam2 = get_diam2(dim, vol, nfems)
         np.random.seed(seed)
-        lsearch = LineSearch(
-            (min_time, max_time),
-            (min_iter, max_iter),
-            dfactor, noise
-        )
+        lsearch = LineSearch((min_time, max_time), (min_iter, max_iter), dfactor, noise)
         tosave = Save()
     else:
         vol = None
         nfems = None
         diam2 = None
 
-    vol = comm.bcast(vol, root = 0)
-    nfems = comm.bcast(nfems, root = 0)
-    diam2 = comm.bcast(diam2, root = 0)
-    
+    vol = comm.bcast(vol, root=0)
+    nfems = comm.bcast(nfems, root=0)
+    diam2 = comm.bcast(diam2, root=0)
+
     # Level set function
     sp_lset = create_space(domain, "CG", 1)
     phi = Function(sp_lset)
@@ -2827,11 +2800,34 @@ def runTP(
     for i in range(nbr_ste):
         ste_fcs[i].name = "u" + str(i)
 
-    weak_form, bcs = ste_eqs[rank]
-    bi, li = system(weak_form)
-    ste_pb = create_solver(
-        form(bi), form(li), bcs, ste_fcs[rank]
-    )
+    ste_problem = ste_eqs[rank]
+    if len(ste_problem) == 2:
+        weak_form, bcs = ste_problem
+        bi, li = system(weak_form)
+        ste_pb = create_solver(form(bi), form(li), bcs, ste_fcs[rank])
+    else:
+        weak_form, bcs, jacobian, seudo_state, ini_func = ste_problem
+        compiled_weak_form = compile_form(comm_self, weak_form)
+        compiled_jacobian = compile_form(comm_self, jacobian)
+        form_weak_form = create_form(
+            compiled_weak_form,
+            [model.space],
+            domain,
+            {},
+            {seudo_state: ste_fcs[rank], phi: phi},
+            {},
+        )
+        form_jacobian = create_form(
+            compiled_jacobian,
+            [model.space, model.space],
+            domain,
+            {},
+            {seudo_state: ste_fcs[rank], phi: phi},
+            {},
+        )
+        ste_pb = create_non_lin_solver(
+            comm_self, form_weak_form, bcs, form_jacobian, ste_fcs[rank], ini_func
+        )
 
     # Adjoint equations/functions/problems
     adj_eqs = model.adjoint(phi, ste_fcs)
@@ -2840,12 +2836,35 @@ def runTP(
         adj_fcs = [Function(model.space) for _ in range(nbr_adj)]
         for i in range(nbr_adj):
             adj_fcs[i].name = "p" + str(i)
-        
-        weak_form, bcs = adj_eqs[rank]
-        bi, li = system(weak_form)
-        adj_pb = create_solver(
-            form(bi), form(li), bcs, adj_fcs[rank]
-        )
+
+        adj_problem = adj_eqs[rank]
+        if len(adj_problem) == 2:
+            weak_form, bcs = adj_problem
+            bi, li = system(weak_form)
+            adj_pb = create_solver(form(bi), form(li), bcs, adj_fcs[rank])
+        else:
+            weak_form, bcs, jacobian, seudo_adjoint, ini_func = adj_problem
+            compiled_weak_form = compile_form(comm_self, weak_form)
+            compiled_jacobian = compile_form(comm_self, jacobian)
+            form_weak_form = create_form(
+                compiled_weak_form,
+                [model.space],
+                domain,
+                {},
+                {seudo_adjoint: adj_fcs[rank], phi: phi},
+                {},
+            )
+            form_jacobian = create_form(
+                compiled_jacobian,
+                [model.space, model.space],
+                domain,
+                {},
+                {seudo_adjoint: adj_fcs[rank], phi: phi},
+                {},
+            )
+            adj_pb = create_non_lin_solver(
+                comm_self, form_weak_form, bcs, form_jacobian, adj_fcs[rank], ini_func
+            )
     else:
         adj_fcs = []
 
@@ -2866,27 +2885,20 @@ def runTP(
             L = [const(domain, 0) for _ in range(nbr_ctr)]
             # Creation of the derivatives components
             for i in range(nbr_ctr):
-                S0 += L[i]*S0_cts[1][i]
-                S1 += L[i]*S1_cts[1][i]
+                S0 += L[i] * S0_cts[1][i]
+                S1 += L[i] * S1_cts[1][i]
         # Derivative norm
         nDJ = form((model.bilinear_form(tht, tht))[0])
         # To calculate the velocity field
-        cls_vlty = Velocity(
-            dim, domain, sp_vlty,
-            model.bilinear_form, S0, S1
-        )
+        cls_vlty = Velocity(dim, domain, sp_vlty, model.bilinear_form, S0, S1)
         # To calculate the level set function
-        cls_lset = Level(
-            domain, sp_lset, phi, tht, diam2, smooth
-        )
+        cls_lset = Level(domain, sp_lset, phi, tht, diam2, smooth)
         # Reinitialization
         if reinit_step:
-            cls_rein = Reinit(
-                domain, sp_lset, phi, diam2
-            )
-    
+            cls_rein = Reinit(domain, sp_lset, phi, diam2)
+
     local_assembly = MPI.Wtime() - start_assembly
-    max_assembly = comm.allreduce(local_assembly, op = MPI.MAX)
+    max_assembly = comm.allreduce(local_assembly, op=MPI.MAX)
 
     # Iteration i = 0 =======
     start_solve = MPI.Wtime()
@@ -2897,9 +2909,9 @@ def runTP(
         phi_vls = phi.x.array[:]
     else:
         phi_vls = None
-    phi.x.array[:] = comm.bcast(phi_vls, root = 0)
-    #---------------------------------------------
-    
+    phi.x.array[:] = comm.bcast(phi_vls, root=0)
+    # ---------------------------------------------
+
     ste_pb.solve()
     comm.barrier()
 
@@ -2910,14 +2922,15 @@ def runTP(
     # 	if rank == i:
     # 		u_i = ste_fcs[i].x.array[:]
     # 	else:
-    # 		u_i = None	
+    # 		u_i = None
     # 	ste_fcs[i].x.array[:] = comm.bcast(u_i, root = i)
     # ---------------------------------------------------
 
     # ------------------------------------------------
     ste_vls = comm.allgather(ste_fcs[rank].x.array[:])
     for i in range(size):
-        if i == rank: continue
+        if i == rank:
+            continue
         ste_fcs[i].x.array[:] = ste_vls[i]
     # ------------------------------------------------
 
@@ -2947,7 +2960,8 @@ def runTP(
         # ------------------------------------------------
         adj_vls = comm.allgather(adj_fcs[rank].x.array[:])
         for i in range(size):
-            if i == rank: continue
+            if i == rank:
+                continue
             adj_fcs[i].x.array[:] = adj_vls[i]
         # ------------------------------------------------
         comm.barrier()
@@ -2956,7 +2970,7 @@ def runTP(
         cls_vlty.run(tht)
         nder = global_scalar(nDJ, MPI.COMM_SELF, np.sqrt)
         lset_steps, lset_end = lsearch.get(nder)
-    
+
     # print ==============================================
     if rank == 0:
         print("> Iterations:")
@@ -2971,8 +2985,10 @@ def runTP(
         xdmf = XDMFFile(MPI.COMM_SELF, filename, "w")
         xdmf.write_mesh(domain)
         xdmf.write_function(phi, 0)
-        for f in ste_fcs: xdmf.write_function(f, 0)
-        for f in adj_fcs: xdmf.write_function(f, 0)
+        for f in ste_fcs:
+            xdmf.write_function(f, 0)
+        for f in adj_fcs:
+            xdmf.write_function(f, 0)
         xdmf.write_function(tht, 0)
 
     for iter in range(1, niter + 1):
@@ -2981,21 +2997,22 @@ def runTP(
             cls_lset.run(phi, lset_steps, lset_end)
             # Reinitialization
             if reinit_step and iter > start_to_check:
-                if iter%reinit_step == 0:
+                if iter % reinit_step == 0:
                     cls_rein.run(phi, rein_steps, rein_end)
             phi_vls = phi.x.array[:]
         else:
             phi_vls = None
-        phi.x.array[:] = comm.bcast(phi_vls, root = 0)
+        phi.x.array[:] = comm.bcast(phi_vls, root=0)
         # -------------------------------------------------
-            
+
         ste_pb.solve()
         comm.barrier()
 
         # ------------------------------------------------
         ste_vls = comm.allgather(ste_fcs[rank].x.array[:])
         for i in range(size):
-            if i == rank: continue
+            if i == rank:
+                continue
             ste_fcs[i].x.array[:] = ste_vls[i]
         # ------------------------------------------------
 
@@ -3016,11 +3033,12 @@ def runTP(
             # ------------------------------------------------
             adj_vls = comm.allgather(adj_fcs[rank].x.array[:])
             for i in range(size):
-                if i == rank: continue
+                if i == rank:
+                    continue
                 adj_fcs[i].x.array[:] = adj_vls[i]
             # ------------------------------------------------
             comm.barrier()
-        
+
         if rank == 0:
             cls_vlty.run(tht)
             nder = global_scalar(nDJ, MPI.COMM_SELF, np.sqrt)
@@ -3028,8 +3046,10 @@ def runTP(
 
         if rank == 0:
             xdmf.write_function(phi, iter)
-            for f in ste_fcs: xdmf.write_function(f, iter)
-            for f in adj_fcs: xdmf.write_function(f, iter)
+            for f in ste_fcs:
+                xdmf.write_function(f, iter)
+            for f in adj_fcs:
+                xdmf.write_function(f, iter)
             xdmf.write_function(tht, iter)
 
         if rank == 0:
@@ -3045,24 +3065,25 @@ def runTP(
                     lgrn_last = cls_meth.list_Lg[-1]
                     lgrn_errs = [l - lgrn_last for l in cls_meth.list_Lg[-prev:-1]]
                     cond1 = Norm(ctrn_errs, np.inf) < ctrn_tol
-                    cond2 = Norm(lgrn_errs, np.inf) < lgrn_tol*abs(lgrn_last)
+                    cond2 = Norm(lgrn_errs, np.inf) < lgrn_tol * abs(lgrn_last)
                     stop_flag = cond1 and cond2
                 else:
                     cost_last = tosave.cost[-1]
                     cost_diff = [j - cost_last for j in tosave.cost[-prev:-1]]
-                    stop_flag = Norm(cost_diff, np.inf) < cost_tol*abs(cost_last)
+                    stop_flag = Norm(cost_diff, np.inf) < cost_tol * abs(cost_last)
 
-        stop_flag = comm.bcast(stop_flag, root = 0)
+        stop_flag = comm.bcast(stop_flag, root=0)
 
         if stop_flag:
-            if rank == 0: print("> Stopping condition reached!")
+            if rank == 0:
+                print("> Stopping condition reached!")
             break
-    
+
     if rank == 0:
         xdmf.close()
 
     local_solve = MPI.Wtime() - start_solve
-    max_solve = comm.allreduce(local_solve, op = MPI.MAX)
+    max_solve = comm.allreduce(local_solve, op=MPI.MAX)
 
     if rank == 0:
         if nbr_ctr > 0:
@@ -3074,28 +3095,28 @@ def runTP(
 
 
 def runMP(
-        sub_comm: MPI.Comm,
-        model: Model,
-        niter: int,
-        reinit_step: int | bool,
-        reinit_pars: Tuple[int, float],
-        dfactor: float,
-        lv_time: Tuple[float, float],
-        lv_iter: Tuple[int, int],
-        smooth: bool,
-        start_to_check: int,
-        ctrn_tol: float,
-        lgrn_tol: float,
-        cost_tol: float,
-        prev: int,
-        random_pars: Tuple[int, float]
-    ) -> None:
+    sub_comm: MPI.Comm,
+    model: Model,
+    niter: int,
+    reinit_step: int | bool,
+    reinit_pars: Tuple[int, float],
+    dfactor: float,
+    lv_time: Tuple[float, float],
+    lv_iter: Tuple[int, int],
+    smooth: bool,
+    start_to_check: int,
+    ctrn_tol: float,
+    lgrn_tol: float,
+    cost_tol: float,
+    prev: int,
+    random_pars: Tuple[int, float],
+) -> None:
     """
     Implements Mix Parallelism.
     """
-    
+
     start_assembly = MPI.Wtime()
-    
+
     rein_steps, rein_end = reinit_pars
     min_time, max_time = lv_time
     min_iter, max_iter = lv_iter
@@ -3105,32 +3126,28 @@ def runMP(
     nbr_groups = size // group_size
     color = rank * nbr_groups // size
     sub_rank = sub_comm.rank
-    
+
     # Constants ===========================
     filename = model.path / f"{res_name}.xdmf"
     stop_flag = False
-    
+
     dim = model.dim
     domain = model.domain
-    
+
     if color == 0:
         vol = volume(domain, sub_comm)
         nfems = nbr_fems(domain, dim, sub_comm)
-    
+
     if rank == 0:
         diam2 = get_diam2(dim, vol, nfems)
         np.random.seed(seed)
-        lsearch = LineSearch(
-            (min_time, max_time),
-            (min_iter, max_iter),
-            dfactor, noise
-        )
+        lsearch = LineSearch((min_time, max_time), (min_iter, max_iter), dfactor, noise)
         tosave = Save()
     else:
         diam2 = None
 
-    diam2 = comm.bcast(diam2, root = 0)
-    
+    diam2 = comm.bcast(diam2, root=0)
+
     # Level set function
     sp_lset = create_space(domain, "CG", 1)
     phi = Function(sp_lset)
@@ -3146,11 +3163,35 @@ def runMP(
     ste_fcs = [Function(model.space) for _ in range(nbr_ste)]
     for i in range(nbr_ste):
         ste_fcs[i].name = "u" + str(i)
-    weak_form, bcs = ste_eqs[color]
-    bi, li = system(weak_form)
-    ste_pb = create_solver(
-        form(bi), form(li), bcs, ste_fcs[color]
-    )
+
+    ste_problem = ste_eqs[color]
+    if len(ste_problem) == 2:
+        weak_form, bcs = ste_problem
+        bi, li = system(weak_form)
+        ste_pb = create_solver(form(bi), form(li), bcs, ste_fcs[color])
+    else:
+        weak_form, bcs, jacobian, seudo_state, ini_func = ste_problem
+        compiled_weak_form = compile_form(sub_comm, weak_form)
+        compiled_jacobian = compile_form(sub_comm, jacobian)
+        form_weak_form = create_form(
+            compiled_weak_form,
+            [model.space],
+            domain,
+            {},
+            {seudo_state: ste_fcs[color], phi: phi},
+            {},
+        )
+        form_jacobian = create_form(
+            compiled_jacobian,
+            [model.space, model.space],
+            domain,
+            {},
+            {seudo_state: ste_fcs[color], phi: phi},
+            {},
+        )
+        ste_pb = create_non_lin_solver(
+            sub_comm, form_weak_form, bcs, form_jacobian, ste_fcs[color], ini_func
+        )
 
     # Adjoint equations/functions/problems
     adj_eqs = model.adjoint(phi, ste_fcs)
@@ -3159,11 +3200,40 @@ def runMP(
         adj_fcs = [Function(model.space) for _ in range(nbr_adj)]
         for i in range(nbr_adj):
             adj_fcs[i].name = "p" + str(i)
-        weak_form, bcs = adj_eqs[color]
-        bi, li = system(weak_form)
-        adj_pb = create_solver(
-            form(bi), form(li), bcs, adj_fcs[color]
-        )
+
+        adj_problem = adj_eqs[color]
+        if len(adj_problem) == 2:
+            weak_form, bcs = adj_problem
+            bi, li = system(weak_form)
+            adj_pb = create_solver(form(bi), form(li), bcs, adj_fcs[color])
+        else:
+            weak_form, bcs, jacobian, seudo_adjoint, ini_func = adj_problem
+            compiled_weak_form = compile_form(sub_comm, weak_form)
+            compiled_jacobian = compile_form(sub_comm, jacobian)
+            form_weak_form = create_form(
+                compiled_weak_form,
+                [model.space],
+                domain,
+                {},
+                {seudo_adjoint: adj_fcs[color], phi: phi},
+                {},
+            )
+            form_jacobian = create_form(
+                compiled_jacobian,
+                [model.space, model.space],
+                domain,
+                {},
+                {seudo_adjoint: adj_fcs[color], phi: phi},
+                {},
+            )
+            adj_pb = create_non_lin_solver(
+                sub_comm,
+                form_weak_form,
+                bcs,
+                form_jacobian,
+                adj_fcs[color],
+                ini_func,
+            )
     else:
         adj_fcs = []
 
@@ -3184,27 +3254,20 @@ def runMP(
             L = [const(domain, 0) for _ in range(nbr_ctr)]
             # Creation of the derivatives components
             for i in range(nbr_ctr):
-                S0 += L[i]*S0_cts[1][i]
-                S1 += L[i]*S1_cts[1][i]
+                S0 += L[i] * S0_cts[1][i]
+                S1 += L[i] * S1_cts[1][i]
         # Derivative norm
         nDJ = form((model.bilinear_form(tht, tht))[0])
         # To calculate the velocity field
-        cls_vlty = Velocity(
-            dim, domain, sp_vlty,
-            model.bilinear_form, S0, S1
-        )
+        cls_vlty = Velocity(dim, domain, sp_vlty, model.bilinear_form, S0, S1)
         # To calculate the level set function
-        cls_lset = Level(
-            domain, sp_lset, phi, tht, diam2, smooth
-        )
+        cls_lset = Level(domain, sp_lset, phi, tht, diam2, smooth)
         # Reinicialization
         if reinit_step:
-            cls_rein = Reinit(
-                domain, sp_lset, phi, diam2
-            )
-    
+            cls_rein = Reinit(domain, sp_lset, phi, diam2)
+
     local_assembly = MPI.Wtime() - start_assembly
-    max_assembly = comm.allreduce(local_assembly, op = MPI.MAX)
+    max_assembly = comm.allreduce(local_assembly, op=MPI.MAX)
 
     # Iteration i = 0 =======
     start_solve = MPI.Wtime()
@@ -3224,12 +3287,13 @@ def runMP(
     comm.barrier()
     ste_pb.solve()
     comm.barrier()
-    
+
     # ----------------------------------------------------------
     ste_vls = comm.allgather(ste_fcs[color].x.array[:])
     for i in range(nbr_groups):
-        if i == color: continue
-        ste_fcs[i].x.array[:] = ste_vls[i*group_size + sub_rank]
+        if i == color:
+            continue
+        ste_fcs[i].x.array[:] = ste_vls[i * group_size + sub_rank]
     # ----------------------------------------------------------
 
     comm.barrier()
@@ -3248,21 +3312,22 @@ def runMP(
         # ----------------------------------------------------------
         adj_vls = comm.allgather(adj_fcs[color].x.array[:])
         for i in range(nbr_groups):
-            if i == color: continue
-            adj_fcs[i].x.array[:] = adj_vls[i*group_size + sub_rank]
+            if i == color:
+                continue
+            adj_fcs[i].x.array[:] = adj_vls[i * group_size + sub_rank]
         # ----------------------------------------------------------
         comm.barrier()
-    
+
     if color == 0:
         cls_vlty.run(tht)
         nder = global_scalar(nDJ, sub_comm, np.sqrt)
-    
+
         if rank == 0:
             lset_steps, lset_end = lsearch.get(nder)
         else:
             lset_steps, lset_end = None, None
-        lset_steps = sub_comm.bcast(lset_steps, root = 0)
-        lset_end = sub_comm.bcast(lset_end, root = 0)
+        lset_steps = sub_comm.bcast(lset_steps, root=0)
+        lset_end = sub_comm.bcast(lset_end, root=0)
 
     # print ==============================================
     if rank == 0:
@@ -3273,22 +3338,24 @@ def runMP(
             print1(0, cost, nder, 0)
         tosave.add(cost, nder)
     # ====================================================
-    
+
     if color == 0:
         xdmf = XDMFFile(sub_comm, filename, "w")
         xdmf.write_mesh(domain)
         xdmf.write_function(phi, 0)
-        for f in ste_fcs: xdmf.write_function(f, 0)
-        for f in adj_fcs: xdmf.write_function(f, 0)
+        for f in ste_fcs:
+            xdmf.write_function(f, 0)
+        for f in adj_fcs:
+            xdmf.write_function(f, 0)
         xdmf.write_function(tht, 0)
-    
+
     for iter in range(1, niter + 1):
         # -------------------------------------------------
         if color == 0:
             cls_lset.run(phi, lset_steps, lset_end)
             # Reinitialization
             if reinit_step and iter > start_to_check:
-                if iter%reinit_step == 0:
+                if iter % reinit_step == 0:
                     cls_rein.run(phi, rein_steps, rein_end)
             phi_vls_loc = phi.x.array[:]
         else:
@@ -3297,7 +3364,7 @@ def runMP(
         if color > 0:
             phi.x.array[:] = phi_vls[sub_rank]
         # -------------------------------------------------
-        
+
         comm.barrier()
         ste_pb.solve()
         comm.barrier()
@@ -3305,8 +3372,9 @@ def runMP(
         # ----------------------------------------------------------
         ste_vls = comm.allgather(ste_fcs[color].x.array[:])
         for i in range(nbr_groups):
-            if i == color: continue
-            ste_fcs[i].x.array[:] = ste_vls[i*group_size + sub_rank]
+            if i == color:
+                continue
+            ste_fcs[i].x.array[:] = ste_vls[i * group_size + sub_rank]
         # ----------------------------------------------------------
 
         comm.barrier()
@@ -3319,7 +3387,7 @@ def runMP(
                     lm = cls_meth.run(cost, ctrs)
                 else:
                     lm = None
-                lm = sub_comm.bcast(lm, root = 0)
+                lm = sub_comm.bcast(lm, root=0)
                 for i in range(nbr_ctr):
                     L[i].value = lm[i]
 
@@ -3330,26 +3398,29 @@ def runMP(
             # ----------------------------------------------------------
             adj_vls = comm.allgather(adj_fcs[color].x.array[:])
             for i in range(nbr_groups):
-                if i == color: continue
-                adj_fcs[i].x.array[:] = adj_vls[i*group_size + sub_rank]
+                if i == color:
+                    continue
+                adj_fcs[i].x.array[:] = adj_vls[i * group_size + sub_rank]
             # ----------------------------------------------------------
             comm.barrier()
 
         if color == 0:
             cls_vlty.run(tht)
             nder = global_scalar(nDJ, sub_comm, np.sqrt)
-        
+
             if rank == 0:
                 lset_steps, lset_end = lsearch.get(nder)
             else:
                 lset_steps, lset_end = None, None
-            lset_steps = sub_comm.bcast(lset_steps, root = 0)
-            lset_end = sub_comm.bcast(lset_end, root = 0)
+            lset_steps = sub_comm.bcast(lset_steps, root=0)
+            lset_end = sub_comm.bcast(lset_end, root=0)
 
         if color == 0:
             xdmf.write_function(phi, iter)
-            for f in ste_fcs: xdmf.write_function(f, iter)
-            for f in adj_fcs: xdmf.write_function(f, iter)
+            for f in ste_fcs:
+                xdmf.write_function(f, iter)
+            for f in adj_fcs:
+                xdmf.write_function(f, iter)
             xdmf.write_function(tht, iter)
 
         if rank == 0:
@@ -3365,24 +3436,25 @@ def runMP(
                     lgrn_last = cls_meth.list_Lg[-1]
                     lgrn_errs = [l - lgrn_last for l in cls_meth.list_Lg[-prev:-1]]
                     cond1 = Norm(ctrn_errs, np.inf) < ctrn_tol
-                    cond2 = Norm(lgrn_errs, np.inf) < lgrn_tol*abs(lgrn_last)
+                    cond2 = Norm(lgrn_errs, np.inf) < lgrn_tol * abs(lgrn_last)
                     stop_flag = cond1 and cond2
                 else:
                     cost_last = tosave.cost[-1]
                     cost_diff = [j - cost_last for j in tosave.cost[-prev:-1]]
-                    stop_flag = Norm(cost_diff, np.inf) < cost_tol*abs(cost_last)
-        
-        stop_flag = comm.bcast(stop_flag, root = 0)
-    
+                    stop_flag = Norm(cost_diff, np.inf) < cost_tol * abs(cost_last)
+
+        stop_flag = comm.bcast(stop_flag, root=0)
+
         if stop_flag:
-            if rank == 0: print("> Stopping condition reached!")
+            if rank == 0:
+                print("> Stopping condition reached!")
             break
 
     if color == 0:
         xdmf.close()
-    
+
     local_solve = MPI.Wtime() - start_solve
-    max_solve = comm.allreduce(local_solve, op = MPI.MAX)
+    max_solve = comm.allreduce(local_solve, op=MPI.MAX)
 
     if rank == 0:
         if nbr_ctr > 0:
