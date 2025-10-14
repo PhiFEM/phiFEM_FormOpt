@@ -23,6 +23,28 @@ from mpi4py import MPI
 rank = MPI.COMM_WORLD.rank
 
 
+def plot_bars(num_procs, times, filename):
+    #  "DarkGray" or "CornflowerBlue"
+    color_bar = "CornflowerBlue"
+
+    fig, ax = plt.subplots()
+
+    ax.bar(num_procs, times, color=color_bar, edgecolor="black", linewidth=0.8)
+
+    ax.set_xlabel("Number of processors")
+    ax.set_ylabel("Execution time (s)")
+    # ax.set_title("Execution time vs. number of processors", fontsize=13, pad=10)
+
+    # Labels over each bar (optional)
+    for i, t in enumerate(times):
+        ax.text(num_procs[i], t + 0.1, f"{t:.1f}", ha='center', va='bottom', fontsize=10)
+
+    ax.grid(axis="y", linestyle="--", linewidth=0.5, alpha=0.7)
+
+    plt.tight_layout()
+    plt.savefig(filename, dpi=300, bbox_inches="tight") 
+
+
 def plot_tutorial(h5file, size, limits = None, filenames = [None, None]):
     
     with h5py.File(h5file, "r") as f:
