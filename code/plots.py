@@ -3,7 +3,8 @@ import matplotlib.tri as mtri
 from matplotlib.colors import ListedColormap, Normalize
 
 import pathlib as Path
-#import matplotlib
+
+# import matplotlib
 # matplotlib.rcParams.update({
 # 	"text.usetex": False,
 # 	"font.family": "serif",
@@ -20,6 +21,7 @@ from dolfinx.fem import functionspace, Function
 from dolfinx.io import XDMFFile
 
 from mpi4py import MPI
+
 rank = MPI.COMM_WORLD.rank
 
 
@@ -32,53 +34,71 @@ def plot_bars(num_procs, times, filename):
     ax.bar(num_procs, times, color=color_bar, edgecolor="black", linewidth=0.8)
 
     ax.set_xlabel("Number of processes")
-    ax.set_ylabel("Execution time (s)")
+    ax.set_ylabel("Execution time (seconds)")
     # ax.set_title("Execution time vs. number of processors", fontsize=13, pad=10)
     ax.set_xticks(num_procs)
     # Labels over each bar (optional)
     for i, t in enumerate(times):
-        ax.text(num_procs[i], t + 0.1, f"{t:.1f}", ha='center', va='bottom', fontsize=10)
+        ax.text(
+            num_procs[i], t + 0.1, f"{t:.1f}", ha="center", va="bottom", fontsize=10
+        )
 
     ax.grid(axis="y", linestyle="--", linewidth=0.5, alpha=0.7)
 
     plt.tight_layout()
-    plt.savefig(filename, dpi=300, bbox_inches="tight") 
+    plt.savefig(filename, dpi=300, bbox_inches="tight")
 
 
-def plot_tutorial(h5file, size, limits = None, filenames = [None, None]):
-    
+def plot_tutorial(h5file, size, limits=None, filenames=[None, None]):
+
     with h5py.File(h5file, "r") as f:
-        
+
         points = f["/Mesh/mesh/geometry"][:]
         cells = f["/Mesh/mesh/topology"][:]
-        
+
         phi_group = f["/Function/phi"]
         niter = len(list(phi_group.keys())) - 1
-        
+
         plot_level(
-            2, points, cells, phi_group["0"][:, 0], figsize = size, lims=limits, filename=filenames[0]
+            2,
+            points,
+            cells,
+            phi_group["0"][:, 0],
+            figsize=size,
+            lims=limits,
+            filename=filenames[0],
         )
 
         plot_level(
-            2, points, cells, phi_group[str(niter)][:, 0], figsize = size, lims=limits, filename=filenames[1]
+            2,
+            points,
+            cells,
+            phi_group[str(niter)][:, 0],
+            figsize=size,
+            lims=limits,
+            filename=filenames[1],
         )
         print("> iterations:", niter)
 
-def InitialLevel(centers, radii, ftr = 1.0):
+
+def InitialLevel(centers, radii, ftr=1.0):
     dim = centers.shape[1]
 
     def func(x):
-        
+
         xT = (x[:dim].T)[None, :, :]
-        comps = (centers[:, None, :] - xT)**2
-        norms = np.sqrt(np.sum(comps, axis = 2))
+        comps = (centers[:, None, :] - xT) ** 2
+        norms = np.sqrt(np.sum(comps, axis=2))
         dists = radii[:, None] - norms
 
-        return ftr*np.max(dists, axis = 0)
+        return ftr * np.max(dists, axis=0)
 
     return func
 
-def see_initial_guess(initial_guess, filename, boundaries = None, save_filename = None, figsize = None):
+
+def see_initial_guess(
+    initial_guess, filename, boundaries=None, save_filename=None, figsize=None
+):
     """
     Read a domain and plot the initial guess.
     Only for triangular meshes.
@@ -91,24 +111,31 @@ def see_initial_guess(initial_guess, filename, boundaries = None, save_filename 
     """
     if rank == 0:
         with XDMFFile(MPI.COMM_SELF, filename, "r") as xdmf:
-            domain = xdmf.read_mesh(name = "mesh")
-        initial_level = Function(functionspace(domain, ("CG", 1)))	
+            domain = xdmf.read_mesh(name="mesh")
+        initial_level = Function(functionspace(domain, ("CG", 1)))
         initial_level.interpolate(InitialLevel(*initial_guess))
         dim = domain.topology.dim
         cells = domain.topology.connectivity(dim, 0).array.reshape((-1, dim + 1))
         plot_level(
-            dim, domain.geometry.x, cells, initial_level.x.array,
-            boundaries, figsize, "Initial guess", save_filename
+            dim,
+            domain.geometry.x,
+            cells,
+            initial_level.x.array,
+            boundaries,
+            figsize,
+            "Initial guess",
+            save_filename,
         )
 
-def see_domain_T(filename, boundaries = None, figsize = None):
+
+def see_domain_T(filename, boundaries=None, figsize=None):
     """
     Read a mesh of Triangular elements (2D) or
     Tetrahedral elements (3D), and plot it with
     matplotlib (2D) or pyvista (3D). Coordinates
     (2D) or marker functions (3D) are allowed for
     coloring parts of the boundary.
-    
+
     Usage:
         Collect the boundary points
         vertices = vertices + [vertices[0]]
@@ -118,7 +145,7 @@ def see_domain_T(filename, boundaries = None, figsize = None):
         neu = np.array(
             vertices[(neu_index[0]-1):(neu_index[-1]+1)]
         )
-        boundaries = [(dir, "red"), (neu, "blue")]	
+        boundaries = [(dir, "red"), (neu, "blue")]
         sp.see_domain_T(
             Path(test_path)/"domain.xdmf", boundaries
         )
@@ -133,13 +160,19 @@ def see_domain_T(filename, boundaries = None, figsize = None):
     """
     if rank == 0:
         with XDMFFile(MPI.COMM_SELF, filename, "r") as xdmf:
-            domain = xdmf.read_mesh(name = "mesh")
+            domain = xdmf.read_mesh(name="mesh")
         dim = domain.topology.dim
         cells = domain.topology.connectivity(dim, 0).array.reshape((-1, dim + 1))
         plot_domain_T(
-            dim, domain.topology, domain.geometry.x,
-            cells, boundaries, figsize, "Domain"
+            dim,
+            domain.topology,
+            domain.geometry.x,
+            cells,
+            boundaries,
+            figsize,
+            "Domain",
         )
+
 
 def see_domain(filename):
     """
@@ -147,10 +180,11 @@ def see_domain(filename):
     """
     if rank == 0:
         with XDMFFile(MPI.COMM_SELF, filename, "r") as xdmf:
-            domain = xdmf.read_mesh(name = "mesh")
+            domain = xdmf.read_mesh(name="mesh")
         plot_domain(domain, "Domain")
 
-def plot_basic(test_path, boundaries = None):
+
+def plot_basic(test_path, boundaries=None):
     """
     This function plots:
     (1) the level set function at several iterations;
@@ -159,42 +193,34 @@ def plot_basic(test_path, boundaries = None):
 
     Note: (1) works for triangular meshes (2D case).
     """
-    
+
     plot_results(
-        test_path / "results.h5",
-        lambda i: test_path / f"iter{i:05d}.png",
-        boundaries
+        test_path / "results.h5", lambda i: test_path / f"iter{i:05d}.png", boundaries
     )
 
     data = np.load(test_path / "data.npz")
-    
-    print("> Data fields:", data.files)
-    
-    plot_cost(
-        data["cost"],
-        filename = test_path / "cost.png"
-    )
 
-    plot_derivative(
-        data["nder"],
-        filename = test_path / "derivative.png"
-    )
+    print("> Data fields:", data.files)
+
+    plot_cost(data["cost"], filename=test_path / "cost.png")
+
+    plot_derivative(data["nder"], filename=test_path / "derivative.png")
 
     if "Lg" in data:
-        plot_lagrangian(
-            data["Lg"],
-            filename = test_path / "lagrangian.png"
-        )
+        plot_lagrangian(data["Lg"], filename=test_path / "lagrangian.png")
 
     if "ctrs" in data:
         plot_constraint(
-            np.linalg.norm(data["ctrs"] - 1.0, axis = 1),
-            filename = test_path / "constr_error.png"
+            np.linalg.norm(data["ctrs"] - 1.0, axis=1),
+            filename=test_path / "constr_error.png",
         )
 
     print("> See", test_path)
 
-def see_magnitude(domain, state, rank_dimension, boundaries = None, figsize = None, save_path = None):
+
+def see_magnitude(
+    domain, state, rank_dimension, boundaries=None, figsize=None, save_path=None
+):
     """
     Plot the magnitude of a vector-valued function.
     """
@@ -205,117 +231,136 @@ def see_magnitude(domain, state, rank_dimension, boundaries = None, figsize = No
         domain.topology.connectivity(dim, 0).array.reshape((-1, dim + 1)),
         state.x.array,
         rank_dimension,
-        boundaries = boundaries,
-        figsize = figsize,
-        save_path = save_path
+        boundaries=boundaries,
+        figsize=figsize,
+        save_path=save_path,
     )
+
 
 def see_2D_spacial(domain, u):
     """
     Plot a scalar-valued function
     on a 2-dimensional domain.
-    Only for CG-1 functions.  
+    Only for CG-1 functions.
     """
     plot_2D_spacial(
         domain.geometry.x[:, 0],
         domain.geometry.x[:, 1],
         domain.topology.connectivity(2, 0).array.reshape((-1, 3)),
-        u.x.array
+        u.x.array,
     )
 
-def plot_domain(domain, title = None):
+
+def plot_domain(domain, title=None):
     plotter = pvt.Plotter()
     domain_parts = vtk_mesh(functionspace(domain, ("CG", 1)))
     grid = pvt.UnstructuredGrid(*domain_parts)
-    plotter.add_mesh(grid, color = "gray", show_edges = True)
-    if title: plotter.add_title(title)
+    plotter.add_mesh(grid, color="gray", show_edges=True)
+    if title:
+        plotter.add_title(title)
     plotter.show()
 
-def plot_results_for_doc(h5file, niter, lims, lw, path_name, boundaries = None):
-    
+
+def plot_results_for_doc(h5file, niter, lims, lw, path_name, boundaries=None):
+
     with h5py.File(h5file / "results.h5", "r") as f:
-        
+
         points = f["/Mesh/mesh/geometry"][:]
         cells = f["/Mesh/mesh/topology"][:]
-        
+
         phi_group = f["/Function/phi"]
 
         plot_level_for_doc(
-            points, cells, phi_group[str(niter)][:, 0],
-            lims = lims, lw = lw,
-            filename = path_name, boundaries = boundaries
+            points,
+            cells,
+            phi_group[str(niter)][:, 0],
+            lims=lims,
+            lw=lw,
+            filename=path_name,
+            boundaries=boundaries,
         )
 
-def plot_results(h5file, p, boundaries = None):
+
+def plot_results(h5file, p, boundaries=None):
 
     with h5py.File(h5file, "r") as f:
-        
+
         points = f["/Mesh/mesh/geometry"][:]
         cells = f["/Mesh/mesh/topology"][:]
-        
+
         phi_group = f["/Function/phi"]
         niter = len(list(phi_group.keys())) - 1
         plot_level(
-            2, points, cells, phi_group["0"][:, 0],
-            filename = p(0), boundaries = boundaries
+            2, points, cells, phi_group["0"][:, 0], filename=p(0), boundaries=boundaries
         )
         for iter in range(1, niter):
-            if iter%10 == 0:
+            if iter % 10 == 0:
                 plot_level(
-                    2, points, cells, phi_group[str(iter)][:, 0],
-                    filename = p(iter), boundaries = boundaries
+                    2,
+                    points,
+                    cells,
+                    phi_group[str(iter)][:, 0],
+                    filename=p(iter),
+                    boundaries=boundaries,
                 )
-        values = (phi_group[str(niter)][:, 0])[:]		
+        values = (phi_group[str(niter)][:, 0])[:]
         plot_level(
-            2, points, cells, phi_group[str(niter)][:, 0],
-            filename = p(niter), boundaries = boundaries
+            2,
+            points,
+            cells,
+            phi_group[str(niter)][:, 0],
+            filename=p(niter),
+            boundaries=boundaries,
         )
-    
+
     x_coords, y_coords = points[:, 0], points[:, 1]
     plot_2D_spacial(x_coords, y_coords, cells, values)
 
 
-def plot_2D_spacial(x_coords, y_coords, cells, values, figsize = None, save_path = None):
-    
+def plot_2D_spacial(x_coords, y_coords, cells, values, figsize=None, save_path=None):
+
     x_range = x_coords.max() - x_coords.min()
     y_range = y_coords.max() - y_coords.min()
     z_range = values.max() - values.min()
-    eps = min(5.*x_range/100., 5.*y_range/100., 5.*z_range/100.)
+    eps = min(5.0 * x_range / 100.0, 5.0 * y_range / 100.0, 5.0 * z_range / 100.0)
 
-    fig = plt.figure(figsize = figsize)
-    ax = fig.add_subplot(111, projection = "3d")
-    
-    surf = ax.plot_trisurf(x_coords, y_coords, values, triangles = cells, cmap = "bone")
+    fig = plt.figure(figsize=figsize)
+    ax = fig.add_subplot(111, projection="3d")
+
+    surf = ax.plot_trisurf(x_coords, y_coords, values, triangles=cells, cmap="bone")
     surf.set_facecolor((0, 0, 1, 0.2))
-    
+
     triang = mtri.Triangulation(x_coords, y_coords, cells)
 
-    ax.tricontour(triang, values, levels=[0], colors='red', linewidths=2)
+    ax.tricontour(triang, values, levels=[0], colors="red", linewidths=2)
 
     ax.set_aspect("equal")
-    
+
     fig.tight_layout()
 
     if save_path:
-        plt.savefig(save_path, format = save_path.split('.')[-1], dpi=300)
+        plt.savefig(save_path, format=save_path.split(".")[-1], dpi=300)
     else:
         plt.show()
 
-def plot_level_for_doc(points, cells, values, lims, lw, boundaries = None, figsize = None, filename = None):
+
+def plot_level_for_doc(
+    points, cells, values, lims, lw, boundaries=None, figsize=None, filename=None
+):
 
     x_coords, y_coords = points[:, 0], points[:, 1]
 
     triang = mtri.Triangulation(x_coords, y_coords, cells)
 
-    fig, ax = plt.subplots(figsize = figsize)
+    fig, ax = plt.subplots(figsize=figsize)
     ax.tricontourf(
         triang,
         values,
-        levels = [min(values), 0., max(values)],
-        colors = ["black", (0.9, 0.9, 0.9)] 
+        levels=[min(values), 0.0, max(values)],
+        colors=["black", (0.9, 0.9, 0.9)],
     )
-    ax.set_aspect('equal')
-    
+    ax.set_aspect("equal")
+
     ax.set_xlim(lims[0])
     ax.set_ylim(lims[1])
     ax.set_xticks([])
@@ -323,35 +368,46 @@ def plot_level_for_doc(points, cells, values, lims, lw, boundaries = None, figsi
     ax.tick_params(bottom=False, left=False)
     for spine in ax.spines.values():
         spine.set_visible(False)
-    #ax.set_position([0, 0, 1, 1])
+    # ax.set_position([0, 0, 1, 1])
 
     fig.tight_layout()
 
     if boundaries:
         for xy, cl in boundaries:
-            ax.plot(xy[:, 0], xy[:, 1], color = cl, linewidth=lw)
+            ax.plot(xy[:, 0], xy[:, 1], color=cl, linewidth=lw)
 
     if filename:
         # format = filename.suffix[1:]
-        plt.savefig(filename, dpi = 300, pad_inches=0, bbox_inches='tight')
+        plt.savefig(filename, dpi=300, pad_inches=0, bbox_inches="tight")
 
-def plot_level(dim, points, cells, values, lims = None, boundaries = None, figsize = None, title = None, filename = None):
+
+def plot_level(
+    dim,
+    points,
+    cells,
+    values,
+    lims=None,
+    boundaries=None,
+    figsize=None,
+    title=None,
+    filename=None,
+):
     if dim == 2:
         x_coords, y_coords = points[:, 0], points[:, 1]
         x_range = x_coords.max() - x_coords.min()
         y_range = y_coords.max() - y_coords.min()
-        eps = min(5.*x_range/100., 5.*y_range/100.)
+        eps = min(5.0 * x_range / 100.0, 5.0 * y_range / 100.0)
 
         triang = mtri.Triangulation(x_coords, y_coords, cells)
 
-        fig, ax = plt.subplots(figsize = figsize)
+        fig, ax = plt.subplots(figsize=figsize)
         ax.tricontourf(
             triang,
             values,
-            levels = [min(values), 0., max(values)],
-            colors = ["black", (0.9, 0.9, 0.9)] 
+            levels=[min(values), 0.0, max(values)],
+            colors=["black", (0.9, 0.9, 0.9)],
         )
-        ax.set_aspect('equal')
+        ax.set_aspect("equal")
         if lims:
             ax.set_xlim(lims[0])
             ax.set_ylim(lims[1])
@@ -360,24 +416,23 @@ def plot_level(dim, points, cells, values, lims = None, boundaries = None, figsi
             ax.tick_params(bottom=False, left=False)
             for spine in ax.spines.values():
                 spine.set_visible(False)
-            #ax.set_position([0, 0, 1, 1])
+            # ax.set_position([0, 0, 1, 1])
         else:
             ax.set_xlim(x_coords.min() - eps, x_coords.max() + eps)
             ax.set_ylim(y_coords.min() - eps, y_coords.max() + eps)
-        
+
         fig.tight_layout()
-        
+
         if title:
             ax.set_title(title)
 
         if boundaries:
             for xy, cl in boundaries:
-                ax.plot(xy[:, 0], xy[:, 1], color = cl)
-
+                ax.plot(xy[:, 0], xy[:, 1], color=cl)
 
         if filename:
             # format = filename.suffix[1:]
-            plt.savefig(filename, dpi = 300, pad_inches=0, bbox_inches='tight')
+            plt.savefig(filename, dpi=300, pad_inches=0, bbox_inches="tight")
             plt.close()
         else:
             plt.show()
@@ -385,53 +440,62 @@ def plot_level(dim, points, cells, values, lims = None, boundaries = None, figsi
     if dim == 3:
         N = cells.shape[0]
         grid = pvt.UnstructuredGrid(
-            np.column_stack((np.full(N, 4), cells)).flatten(), 
+            np.column_stack((np.full(N, 4), cells)).flatten(),
             np.full(N, pvt.CellType.TETRA),
-            points
+            points,
         )
         cell_connectivity = grid.cells.reshape(-1, 5)[:, 1:]
-        neg_elements = [i for i, cell in enumerate(cell_connectivity) if np.all(values[cell] < 0)]
+        neg_elements = [
+            i for i, cell in enumerate(cell_connectivity) if np.all(values[cell] < 0)
+        ]
         neg_cells = grid.extract_cells(neg_elements)
         if filename:
             plotter = pvt.Plotter(off_screen=True)
-            plotter.add_mesh(neg_cells, color = "gray", show_edges = False, opacity = 0.5)
+            plotter.add_mesh(neg_cells, color="gray", show_edges=False, opacity=0.5)
             plotter.show_axes()
             plotter.screenshot(filename)
         else:
             plotter = pvt.Plotter()
-            plotter.add_mesh(neg_cells, color = "gray", show_edges = False, opacity = 1.)
+            plotter.add_mesh(neg_cells, color="gray", show_edges=False, opacity=1.0)
             plotter.show_axes()
             plotter.show()
-        
-def plot_domain_T(dim, topology, points, cells, boundaries = None, figsize = None, title = None, filename = None):
-    
+
+
+def plot_domain_T(
+    dim,
+    topology,
+    points,
+    cells,
+    boundaries=None,
+    figsize=None,
+    title=None,
+    filename=None,
+):
+
     if dim == 2:
-        x_coords, y_coords = points[:, 0], points[:, 1] 
+        x_coords, y_coords = points[:, 0], points[:, 1]
         x_range = x_coords.max() - x_coords.min()
         y_range = y_coords.max() - y_coords.min()
-        eps = min(5.*x_range/100., 5.*y_range/100.)
+        eps = min(5.0 * x_range / 100.0, 5.0 * y_range / 100.0)
 
-        fig, ax = plt.subplots(figsize = figsize)
-        
-        ax.triplot(
-            x_coords, y_coords, cells,
-            color = "lightgray", linewidth = 0.5
-        )
+        fig, ax = plt.subplots(figsize=figsize)
+
+        ax.triplot(x_coords, y_coords, cells, color="lightgray", linewidth=0.5)
         if title:
             ax.set_title(title)
-        
+
         if boundaries:
             for xy, cl in boundaries:
-                ax.plot(xy[:, 0], xy[:, 1], color = cl)
-            
-        ax.set_aspect('equal')
+                ax.plot(xy[:, 0], xy[:, 1], color=cl)
+
+        ax.set_aspect("equal")
         ax.set_xlim(x_coords.min() - eps, x_coords.max() + eps)
         ax.set_ylim(y_coords.min() - eps, y_coords.max() + eps)
 
         fig.tight_layout()
-            
+
         if filename:
-            plt.savefig(filename, format = filename.suffix[1:], dpi = 300)
+            plt.savefig(filename, format=filename.suffix[1:], dpi=300)
             plt.close()
         else:
             plt.show()
@@ -441,7 +505,7 @@ def plot_domain_T(dim, topology, points, cells, boundaries = None, figsize = Non
         # Old code for plot 3D domain
         N = cells.shape[0]
         grid = pvt.UnstructuredGrid(
-            np.column_stack((np.full(N, 4), cells)).flatten(), 
+            np.column_stack((np.full(N, 4), cells)).flatten(),
             np.full(N, pvt.CellType.TETRA),
             points
         )
@@ -463,18 +527,22 @@ def plot_domain_T(dim, topology, points, cells, boundaries = None, figsize = Non
             if len(face_cells.links(face_id)) == 1
         ]
 
-        surface_faces = np.array([[3, *nodes] for nodes in nodes_in_surface], dtype=np.int32).flatten()
-        
+        surface_faces = np.array(
+            [[3, *nodes] for nodes in nodes_in_surface], dtype=np.int32
+        ).flatten()
+
         N = len(boundaries)
         booundary_without_condition = [128, 128, 128]
-        points_T = points.T 
-        conditions = np.array([np.all(f(points_T)[nodes_in_surface], axis=1) for f, _ in boundaries])
+        points_T = points.T
+        conditions = np.array(
+            [np.all(f(points_T)[nodes_in_surface], axis=1) for f, _ in boundaries]
+        )
         scalar_values = np.argmax(conditions, axis=0)
         scalar_values[np.all(conditions == 0, axis=0)] = N
 
         color_array = np.array(
             [color for _, color in boundaries] + [booundary_without_condition],
-            dtype=np.uint8
+            dtype=np.uint8,
         )
         rgb_colors = np.take(color_array, scalar_values, axis=0)
 
@@ -482,14 +550,15 @@ def plot_domain_T(dim, topology, points, cells, boundaries = None, figsize = Non
         surface_mesh["colors"] = rgb_colors
 
         plotter = pvt.Plotter()
-        plotter.add_mesh(surface_mesh, scalars="colors", show_edges = True, rgb = True)
+        plotter.add_mesh(surface_mesh, scalars="colors", show_edges=True, rgb=True)
 
         if filename:
             plotter.screenshot(filename)
         else:
             plotter.show()
 
-def plot_lagrangian(lag_values, figsize = None, filename = None):
+
+def plot_lagrangian(lag_values, figsize=None, filename=None):
     """
     Plots the cost function values for each iteration.
 
@@ -500,38 +569,40 @@ def plot_lagrangian(lag_values, figsize = None, filename = None):
     """
     iterations = np.arange(0, len(lag_values))
 
-    fig, ax = plt.subplots(figsize = figsize)
-    ax.plot(iterations, lag_values, color = "black", linewidth = 2)
+    fig, ax = plt.subplots(figsize=figsize)
+    ax.plot(iterations, lag_values, color="black", linewidth=2)
 
     ax.set_xlabel("Iterations")
     ax.set_ylabel("Lagrangian")
-    ax.grid(True, linestyle = "--", alpha = 0.7)
+    ax.grid(True, linestyle="--", alpha=0.7)
     fig.tight_layout()
 
     if filename:
-        plt.savefig(filename, format = filename.suffix[1:], dpi = 300)
+        plt.savefig(filename, format=filename.suffix[1:], dpi=300)
         plt.close()
     else:
         plt.show()
 
-def plot_derivative(der_norm, figsize = None, filename = None):
+
+def plot_derivative(der_norm, figsize=None, filename=None):
     iterations = np.arange(0, len(der_norm))
 
-    fig, ax = plt.subplots(figsize = figsize)
-    ax.plot(iterations, der_norm, color = "black", linewidth = 2)
+    fig, ax = plt.subplots(figsize=figsize)
+    ax.plot(iterations, der_norm, color="black", linewidth=2)
 
     ax.set_xlabel("Iterations")
     ax.set_ylabel("Derivative norm")
-    ax.grid(True, linestyle = "--", alpha = 0.7)
+    ax.grid(True, linestyle="--", alpha=0.7)
     fig.tight_layout()
 
     if filename:
-        plt.savefig(filename, format = filename.suffix[1:], dpi = 300)
+        plt.savefig(filename, format=filename.suffix[1:], dpi=300)
         plt.close()
     else:
         plt.show()
 
-def plot_cost(cost_values, figsize = None, filename = None):
+
+def plot_cost(cost_values, figsize=None, filename=None):
     """
     Plots the cost function values for each iteration.
 
@@ -542,21 +613,24 @@ def plot_cost(cost_values, figsize = None, filename = None):
     """
     iterations = np.arange(0, len(cost_values))
 
-    fig, ax = plt.subplots(figsize = figsize)
-    ax.plot(iterations, cost_values, color = "black", linewidth = 2)
+    fig, ax = plt.subplots(figsize=figsize)
+    ax.plot(iterations, cost_values, color="black", linewidth=2)
 
     ax.set_xlabel("Iterations")
     ax.set_ylabel("Cost")
-    ax.grid(True, linestyle = "--", alpha = 0.7)
+    ax.grid(True, linestyle="--", alpha=0.7)
     fig.tight_layout()
 
     if filename:
-        plt.savefig(filename, format = filename.suffix[1:], dpi = 300)
+        plt.savefig(filename, format=filename.suffix[1:], dpi=300)
         plt.close()
     else:
         plt.show()
 
-def plot_lag2(values, label, extra_values, extra_label, ylimits=None, figsize=None, filename=None):
+
+def plot_lag2(
+    values, label, extra_values, extra_label, ylimits=None, figsize=None, filename=None
+):
     """
     Plots the cost function values for each iteration and optionally another array.
 
@@ -573,10 +647,17 @@ def plot_lag2(values, label, extra_values, extra_label, ylimits=None, figsize=No
     ax.plot(iterations, values, color="black", linewidth=2, label=label)
 
     extra_iterations = np.arange(len(extra_values))
-    ax.plot(extra_iterations, extra_values, color="black", linestyle="--", linewidth=2, label=extra_label)
+    ax.plot(
+        extra_iterations,
+        extra_values,
+        color="black",
+        linestyle="--",
+        linewidth=2,
+        label=extra_label,
+    )
 
-    #ax.set_xlabel("Iterations")
-    #ax.set_ylabel("Lagragangian values")
+    # ax.set_xlabel("Iterations")
+    # ax.set_ylabel("Lagragangian values")
     if ylimits:
         ax.set_ylim(ylimits)
     ax.grid(True, linestyle="--", alpha=0.7)
@@ -589,7 +670,8 @@ def plot_lag2(values, label, extra_values, extra_label, ylimits=None, figsize=No
     else:
         plt.show()
 
-def plot_constraint(cost_values, figsize = None, filename = None):
+
+def plot_constraint(cost_values, figsize=None, filename=None):
     """
     Plots the cost function values for each iteration.
 
@@ -600,20 +682,21 @@ def plot_constraint(cost_values, figsize = None, filename = None):
     """
     iterations = np.arange(0, len(cost_values))
 
-    fig, ax = plt.subplots(figsize = figsize)
-    ax.plot(iterations, cost_values, color = "black", linewidth = 2)
+    fig, ax = plt.subplots(figsize=figsize)
+    ax.plot(iterations, cost_values, color="black", linewidth=2)
 
     ax.set_xlabel("Iterations")
     ax.set_ylabel("Constraint error")
     ax.set_yscale("log")
-    ax.grid(True, linestyle = "--", alpha = 0.7)
+    ax.grid(True, linestyle="--", alpha=0.7)
     fig.tight_layout()
 
     if filename:
-        plt.savefig(filename, format = filename.suffix[1:], dpi = 300)
+        plt.savefig(filename, format=filename.suffix[1:], dpi=300)
         plt.close()
     else:
         plt.show()
+
 
 """
 def plot_trisurf(x, y, cells, uxy):
@@ -625,24 +708,16 @@ def plot_trisurf(x, y, cells, uxy):
     fig.show()
 """
 
-def plot_velocity_2D(coords, cells, velocity_values, figsize=(6, 6), fontsize=12, filename=None, dpi=300):
+
+def plot_velocity_2D(
+    coords, cells, velocity_values, figsize=(6, 6), fontsize=12, filename=None, dpi=300
+):
     x_coords, y_coords = coords
     u, v = velocity_values
     fig, ax = plt.subplots(figsize=figsize)
-    ax.triplot(
-        x_coords, y_coords,
-        cells,
-        color="lightgray",
-        linewidth=0.5
-    )
-    ax.quiver(
-        x_coords, y_coords,
-        u, v,
-        units='xy',
-        color="darkblue",
-        alpha=0.8
-    )
-    ax.set_aspect('equal')
+    ax.triplot(x_coords, y_coords, cells, color="lightgray", linewidth=0.5)
+    ax.quiver(x_coords, y_coords, u, v, units="xy", color="darkblue", alpha=0.8)
+    ax.set_aspect("equal")
     ax.set_xlim(x_coords.min() - 0.1, x_coords.max() + 0.1)
     ax.set_ylim(y_coords.min() - 0.1, y_coords.max() + 0.1)
     ax.set_xlabel("x", fontsize=fontsize)
@@ -650,62 +725,68 @@ def plot_velocity_2D(coords, cells, velocity_values, figsize=(6, 6), fontsize=12
     ax.set_title("Velocity Field $\theta$", fontsize=fontsize + 2)
     fig.tight_layout()
     if filename:
-        fig.savefig(filename, dpi=dpi, bbox_inches='tight')
+        fig.savefig(filename, dpi=dpi, bbox_inches="tight")
     plt.show()
 
-def plot_velocities_2D(data, indices, xlim, ylim, orientation='vertical', theme='scientific', fontsize=12, save_path=None, dpi=300):
-    if theme == 'scientific':
-        plt.style.use('seaborn-v0_8-paper')
-        
+
+def plot_velocities_2D(
+    data,
+    indices,
+    xlim,
+    ylim,
+    orientation="vertical",
+    theme="scientific",
+    fontsize=12,
+    save_path=None,
+    dpi=300,
+):
+    if theme == "scientific":
+        plt.style.use("seaborn-v0_8-paper")
+
     # Set up the figure and axes
     num_plots = len(indices)
-    xlen = xlim[1]-xlim[0]
-    ylen = ylim[1]-ylim[0]
-    if orientation == 'vertical':
-        fig, axes = plt.subplots(num_plots, 1, figsize=(5.,(5.5*ylen/xlen)*num_plots), sharex=True)
+    xlen = xlim[1] - xlim[0]
+    ylen = ylim[1] - ylim[0]
+    if orientation == "vertical":
+        fig, axes = plt.subplots(
+            num_plots, 1, figsize=(5.0, (5.5 * ylen / xlen) * num_plots), sharex=True
+        )
     else:
-        fig, axes = plt.subplots(1, num_plots, figsize=((5.5*xlen/ylen)*num_plots, 5), sharey=True)
-    
+        fig, axes = plt.subplots(
+            1, num_plots, figsize=((5.5 * xlen / ylen) * num_plots, 5), sharey=True
+        )
+
     if num_plots == 1:  # Handle the case of a single subplot
         axes = [axes]
-        
+
     for ax, i in zip(axes, indices):
         dti = data[i]
         x_coords, y_coords = dti["coords"]
         cells = dti["cells"]
         u, v = dti["velocity_vector"]
 
-        ax.triplot(
-            x_coords, y_coords,
-            cells,
-            color="lightgray",
-            linewidth=0.5
-        )
-        ax.quiver(
-            x_coords, y_coords,
-            u, v,
-            units='xy',
-            color="darkblue",
-            alpha=0.8
-        )		
-        ax.set_aspect('equal', adjustable='box')
-        ax.set_xlim(xlim[0]- 0.1, xlim[1]+ 0.1)
-        ax.set_ylim(ylim[0]- 0.1, ylim[1]+ 0.1)
+        ax.triplot(x_coords, y_coords, cells, color="lightgray", linewidth=0.5)
+        ax.quiver(x_coords, y_coords, u, v, units="xy", color="darkblue", alpha=0.8)
+        ax.set_aspect("equal", adjustable="box")
+        ax.set_xlim(xlim[0] - 0.1, xlim[1] + 0.1)
+        ax.set_ylim(ylim[0] - 0.1, ylim[1] + 0.1)
         ax.set_title(f"i = {i}", fontsize=fontsize)
-    
+
     plt.tight_layout()
-        
+
     # Save or show the plots
     if save_path:
-        plt.savefig(save_path, dpi=dpi, bbox_inches='tight')
+        plt.savefig(save_path, dpi=dpi, bbox_inches="tight")
     else:
         plt.show()
 
 
-def plot_level_2D(coords, cells, cell_values, figsize=(6, 6), fontsize=12, filename=None, dpi=300):
-    
+def plot_level_2D(
+    coords, cells, cell_values, figsize=(6, 6), fontsize=12, filename=None, dpi=300
+):
+
     x_coords, y_coords = coords[:, 0], coords[:, 1]
-    
+
     # Define a binary colormap (white for 0, dark gray for 1)
     colors = [(1, 1, 1), (0.2, 0.2, 0.2)]  # RGB for white and dark gray
     cmap = ListedColormap(colors)
@@ -713,45 +794,52 @@ def plot_level_2D(coords, cells, cell_values, figsize=(6, 6), fontsize=12, filen
     # Create the plot
     fig, ax = plt.subplots(figsize=figsize)
     ax.tripcolor(
-        x_coords, y_coords,
+        x_coords,
+        y_coords,
         cells,
-        facecolors = [1 if v < 0 else 0 for v in cell_values],
-        shading='flat',
-        linewidth=0.5, cmap=cmap
+        facecolors=[1 if v < 0 else 0 for v in cell_values],
+        shading="flat",
+        linewidth=0.5,
+        cmap=cmap,
     )
-        
+
     # Adjust plot appearance
-    ax.set_aspect('equal')
+    ax.set_aspect("equal")
     ax.set_xlim(x_coords.min() - 0.1, x_coords.max() + 0.1)
     ax.set_ylim(y_coords.min() - 0.1, y_coords.max() + 0.1)
     ax.set_xlabel("x", fontsize=fontsize)
     ax.set_ylabel("y", fontsize=fontsize)
     ax.set_title("Level Set Function", fontsize=fontsize + 2)
-        
+
     # Improve layout
     fig.tight_layout()
-    
+
     if filename:
-        fig.savefig(filename, dpi=dpi, bbox_inches='tight')
-    
+        fig.savefig(filename, dpi=dpi, bbox_inches="tight")
+
     # Display the plot
     plt.show()
 
-def plot_levels_2D(data, indices, xlim, ylim, theme='scientific', fontsize=12, save_path=None, dpi=300):
+
+def plot_levels_2D(
+    data, indices, xlim, ylim, theme="scientific", fontsize=12, save_path=None, dpi=300
+):
     colors = [(1, 1, 1), (0.2, 0.2, 0.2)]
     cmap = ListedColormap(colors)
 
-    if theme == 'scientific':
-        plt.style.use('seaborn-v0_8-paper')
-        
+    if theme == "scientific":
+        plt.style.use("seaborn-v0_8-paper")
+
     # Set up the figure and axes
     num_plots = len(indices)
-    xlen = xlim[1]-xlim[0]
-    ylen = ylim[1]-ylim[0]
-    fig, axes = plt.subplots(num_plots, 1, figsize=(5.,(5.5*ylen/xlen)*num_plots), sharex=True)
+    xlen = xlim[1] - xlim[0]
+    ylen = ylim[1] - ylim[0]
+    fig, axes = plt.subplots(
+        num_plots, 1, figsize=(5.0, (5.5 * ylen / xlen) * num_plots), sharex=True
+    )
     if num_plots == 1:  # Handle the case of a single subplot
         axes = [axes]
-        
+
     for ax, i in zip(axes, indices):
         dti = data[i]
         x_coords, y_coords = dti["coords"]
@@ -759,82 +847,91 @@ def plot_levels_2D(data, indices, xlim, ylim, theme='scientific', fontsize=12, s
         cell_values = dti["cell_values"]
 
         ax.tripcolor(
-            x_coords, y_coords, cells,
-            facecolors=cell_values, shading='flat',
-            linewidth=0.5, cmap=cmap
+            x_coords,
+            y_coords,
+            cells,
+            facecolors=cell_values,
+            shading="flat",
+            linewidth=0.5,
+            cmap=cmap,
         )
-        
-        ax.set_aspect('equal', adjustable='box')
+
+        ax.set_aspect("equal", adjustable="box")
         ax.set_xlim(xlim[0], xlim[1])
         ax.set_ylim(ylim[0], ylim[1])
-        #ax.set_ylabel(f"i = {i}", fontsize=fontsize)
+        # ax.set_ylabel(f"i = {i}", fontsize=fontsize)
         ax.set_title(f"i = {i}", fontsize=fontsize)
-    
+
     plt.tight_layout()
-        
+
     # Save or show the plots
     if save_path:
-        plt.savefig(save_path, dpi=dpi, bbox_inches='tight')
+        plt.savefig(save_path, dpi=dpi, bbox_inches="tight")
     else:
         plt.show()
 
 
-
-def plot_magnitude(dim, points, cells, values, rank_dimension, boundaries = None, figsize = None, save_path = None):
+def plot_magnitude(
+    dim,
+    points,
+    cells,
+    values,
+    rank_dimension,
+    boundaries=None,
+    figsize=None,
+    save_path=None,
+):
     print("\n> plot magnitude")
     if dim == 2:
         x_coords, y_coords = points[:, 0], points[:, 1]
         x_range = x_coords.max() - x_coords.min()
         y_range = y_coords.max() - y_coords.min()
-        eps = min(5.*x_range/100., 5.*y_range/100.)
-        
+        eps = min(5.0 * x_range / 100.0, 5.0 * y_range / 100.0)
+
         triang = mtri.Triangulation(x_coords, y_coords, cells)
 
         if rank_dimension == 1:
             values = abs(values)
         elif rank_dimension == 2:
             vec = values.reshape((-1, 2))
-            #vec = values.copy()
-            values = np.linalg.norm(vec, axis = 1)
-            
+            # vec = values.copy()
+            values = np.linalg.norm(vec, axis=1)
+
         print(f"> minimum = {min(values)}, maximum = {max(values)}")
-        #norm = Normalize(vmin=0, vmax=7.5)
-        fig, ax = plt.subplots(figsize = figsize)
+        # norm = Normalize(vmin=0, vmax=7.5)
+        fig, ax = plt.subplots(figsize=figsize)
         tpc = ax.tripcolor(
             triang,
             values,
-            shading = "gouraud", 
-            cmap = "viridis",
-            #norm = norm
+            shading="gouraud",
+            cmap="viridis",
+            # norm = norm
         )
-        fig.colorbar(tpc, ax = ax)
-        
+        fig.colorbar(tpc, ax=ax)
+
         if rank_dimension == 2:
             ax.quiver(
-                x_coords, y_coords,
-                vec[:, 0]/values, vec[:, 1]/values,
-                units = 'xy',
-                color = "black",
-                alpha = 0.8
+                x_coords,
+                y_coords,
+                vec[:, 0] / values,
+                vec[:, 1] / values,
+                units="xy",
+                color="black",
+                alpha=0.8,
             )
 
-        ax.set_aspect('equal')
+        ax.set_aspect("equal")
         ax.set_xlim(x_coords.min() - eps, x_coords.max() + eps)
         ax.set_ylim(y_coords.min() - eps, y_coords.max() + eps)
 
         if boundaries:
             for xs, ys, cl in boundaries:
-                ax.plot(xs, ys, color = cl)
+                ax.plot(xs, ys, color=cl)
 
         fig.tight_layout()
 
         if save_path:
-            plt.savefig(save_path, format = save_path.split('.')[-1], dpi = 300)
+            plt.savefig(save_path, format=save_path.split(".")[-1], dpi=300)
             plt.close()
         else:
             plt.show()
-    
-
-    
-
-    

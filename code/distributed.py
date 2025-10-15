@@ -2367,17 +2367,20 @@ class NonlinearSolverWrapper:
         self.solver = solver
         self.u = u
         self.initial = initial
-        self.bcs = bcs
+        self.flag_callable = callable(initial)
+        self.solver_initial = None
+
+        if not self.flag_callable:
+            bi, li = system(initial)
+            self.solver_initial = create_solver(form(bi), form(li), bcs, self.u)
 
     def solve(self):
 
-        if callable(self.initial):
+        if self.flag_callable:
             # If initial is a function, interpolate it
             self.u.interpolate(self.initial)
         else:
-            # If initial is a form, solve the corresponding linear problem
-            bi, li = system(self.initial)
-            basic_solver(form(bi), form(li), self.bcs, self.u)
+            self.solver_initial.solve()  # this updates self.u
 
         n, converged = self.solver.solve(self.u)
         if not converged:
