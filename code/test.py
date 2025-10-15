@@ -47,7 +47,9 @@ test_19 : ?
 test_20 : Symmetric Cantilever 2D (non-rectangular domain) - Data Parallelism
 test_21 : Heat conduction with four sources (single) - Data Parallelism
 test_22 : Heat conduction with four sources (multiple) - Task Parallelism
-test_30 : Mechanism (Antoine - in progress) 
+test_22 : Heat conduction with four sources (multiple) - Mixed Parallelism
+test_31 : Mechanism (Antoine - in progress) 
+test_32 : Execution times
 """
 
 
@@ -2982,7 +2984,12 @@ def test_31():
 
 
 def test_32():
-    pass
+    """
+    Data paralellism
+    ----------------
+    Performance of tests 01, 03, and 21:
+        please run `python load.py 32`
+    """
 
 
 def test_33():

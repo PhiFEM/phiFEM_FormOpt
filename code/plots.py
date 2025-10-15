@@ -31,10 +31,10 @@ def plot_bars(num_procs, times, filename):
 
     ax.bar(num_procs, times, color=color_bar, edgecolor="black", linewidth=0.8)
 
-    ax.set_xlabel("Number of processors")
+    ax.set_xlabel("Number of processes")
     ax.set_ylabel("Execution time (s)")
     # ax.set_title("Execution time vs. number of processors", fontsize=13, pad=10)
-
+    ax.set_xticks(num_procs)
     # Labels over each bar (optional)
     for i, t in enumerate(times):
         ax.text(num_procs[i], t + 0.1, f"{t:.1f}", ha='center', va='bottom', fontsize=10)

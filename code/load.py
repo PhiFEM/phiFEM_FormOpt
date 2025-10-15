@@ -4,7 +4,8 @@ import numpy as np
 from plots import (
     plot_basic,
     see_initial_guess,
-    plot_results_for_doc
+    plot_results_for_doc,
+    plot_bars
 )
 
 from pathlib import Path
@@ -256,6 +257,64 @@ def test_19():
 def test_20():
     pass
 
+def test_32():
+    """
+    Performance of test 01
+    """
+    filename = Path("../tex/performance_1.png")
+    num_procs = np.arange(1, 11)
+    resolution_times = [
+        27.33817017199999,
+        13.547148835999906,
+        9.593779027999972,
+        7.400951124999665,
+        5.773146577999796,
+        5.587280580999959,
+        9.354751103000012,
+        6.425889066999957,
+        6.792038920999971,
+        7.094126409999944
+    ]
+    plot_bars(num_procs, resolution_times, filename)
+
+    """
+    Performance of test 03
+    """
+    filename = Path("../tex/performance_2.png")
+    num_procs = np.arange(1, 11)
+    resolution_times = [
+        35.07935065799984,
+        20.099389327000154,
+        14.756963701000132,
+        11.853981776999717,
+        10.23874729499994,
+        6.934067974999834,
+        12.757291769999938,
+        12.813011035000272,
+        12.131966675000058,
+        11.061559490000036
+    ]
+    plot_bars(num_procs, resolution_times, filename)
+
+    """
+    Performance of test 21
+    """
+    filename = Path("../tex/performance_3.png")
+    num_procs = np.arange(1, 11)
+    resolution_times = [
+        26.744602871000097,
+        14.725885109999808,
+        10.170385355000008,
+        8.05341802199996,
+        6.686465177999935,
+        5.905231507000053,
+        10.18865386199991,
+        9.384790290999717,
+        8.650962873000026,
+        7.873313986000085
+    ]
+    plot_bars(num_procs, resolution_times, filename)
+
 
 test_functions = {
     "01": test_01,
@@ -277,7 +336,8 @@ test_functions = {
     "17": test_17,
     "18": test_18,
     "19": test_19,
-    "20": test_20
+    "20": test_20,
+    "32": test_32
 }
 
 def main():
