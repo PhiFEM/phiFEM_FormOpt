@@ -63,7 +63,7 @@ def test_01():
     To save the output, append `> ../results/t01/out.txt`.
     To delete the images, enter `rm ../results/t01/*.png`.
 
-    Execution times:
+    Execution times (mesh_size = 0.015, 20 946 triangles):
     - 1 process (56 iterations):
         > Assembly time = 7.155405611000106 s
         > Resolution time = 27.33817017199999 s
@@ -106,6 +106,50 @@ def test_01():
         6.425889066999957,
         6.792038920999971,
         7.094126409999944
+    ]
+
+    Execution times (mesh_size = 0.0106, 42 035 triangles)
+    - 1 process (48 iterations):
+        > Assembly time = 13.443338451000045 s
+        > Resolution time = 40.41690818799998 s
+    - 2 processes (47 iterations):
+        > Assembly time = 15.514351726000086 s
+        > Resolution time = 20.677432958999816 s
+    - 3 processes (46 iterations):
+        > Assembly time = 7.284180616999947 s
+        > Resolution time = 14.434316678999949 s
+    - 4 processes (46 iterations):
+        > Assembly time = 15.922204741999849 s
+        > Resolution time = 11.582552148000104 s
+    - 5 processes (48 iterations):
+        > Assembly time = 16.057948435999833 s
+        > Resolution time = 10.01717478400019 s
+    - 6 processes (47 iterations):
+        > Assembly time = 7.912114128000212 s
+        > Resolution time = 8.236337578999837 s
+    - 7 processes (49 iterations):
+        > Assembly time = 11.057659164000142 s
+        > Resolution time = 14.209770140999808 s
+    - 8 processes (47 iterations):
+        > Assembly time = 11.494021365000208 s
+        > Resolution time = 11.625784706000104 s
+    - 9 processes (47 iterations):
+        > Assembly time = 11.499640653999904 s
+        > Resolution time = 11.156894338999791 s
+    - 10 processes (47 iterations):
+        > Assembly time = 12.399143296000148 s
+        > Resolution time = 10.104777174999981 s
+    resolution_times = [
+        40.41690818799998,
+        20.677432958999816,
+        14.434316678999949,
+        11.582552148000104,
+        10.01717478400019,
+        8.236337578999837,
+        14.209770140999808,
+        11.625784706000104,
+        11.156894338999791,
+        10.104777174999981
     ]
     """
 
