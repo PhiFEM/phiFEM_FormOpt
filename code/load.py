@@ -133,8 +133,14 @@ def test_09():
     plot_results_for_doc(
         test_path, 0, [[0, 1], [0, 1]], 8, Path("../tex/heat1_0.png"), boundaries
     )
+    last_iter = 204
     plot_results_for_doc(
-        test_path, 204, [[0, 1], [0, 1]], 8, Path("../tex/heat1_1.png"), boundaries
+        test_path,
+        last_iter,
+        [[0, 1], [0, 1]],
+        8,
+        Path("../tex/heat1_1.png"),
+        boundaries,
     )
 
 
@@ -153,8 +159,14 @@ def test_10():
     plot_results_for_doc(
         test_path, 0, [[0, 1], [0, 1]], 8, Path("../tex/heat2_0.png"), boundaries
     )
+    last_iter = 172
     plot_results_for_doc(
-        test_path, 127, [[0, 1], [0, 1]], 8, Path("../tex/heat2_1.png"), boundaries
+        test_path,
+        last_iter,
+        [[0, 1], [0, 1]],
+        8,
+        Path("../tex/heat2_1.png"),
+        boundaries,
     )
 
 
@@ -284,6 +296,81 @@ def test_20():
     pass
 
 
+def test_21():
+
+    print("\n\t Heat conduction with four sources (single) - Data Parallelism\n")
+    test_path = Path("../results/t21/")
+
+    vertices = np.array(
+        [
+            [0.05, 0.0],
+            [0.95, 0.0],
+            [1.0, 0.05],
+            [1.0, 0.95],
+            [0.95, 1.0],
+            [0.05, 1.0],
+            [0.0, 0.95],
+            [0.0, 0.05],
+            [0.05, 0.0],
+        ]
+    )
+
+    dir1_idx, dir1_mkr = [2], 1
+    dir2_idx, dir2_mkr = [4], 2
+    dir3_idx, dir3_mkr = [6], 3
+    dir4_idx, dir4_mkr = [8], 4
+
+    dir1 = np.array(vertices[(dir1_idx[0] - 1) : (dir1_idx[-1] + 1)])
+    dir2 = np.array(vertices[(dir2_idx[0] - 1) : (dir2_idx[-1] + 1)])
+    dir3 = np.array(vertices[(dir3_idx[0] - 1) : (dir3_idx[-1] + 1)])
+    dir4 = np.array(vertices[(dir4_idx[0] - 1) : (dir4_idx[-1] + 1)])
+
+    boundaries = [(dir1, "red"), (dir2, "red"), (dir3, "red"), (dir4, "red")]
+
+    plot_results_for_doc(
+        test_path, 0, [[0, 1], [0, 1]], 3, Path("../tex/heat5_0.png"), boundaries
+    )
+    plot_results_for_doc(
+        test_path, 80, [[0, 1], [0, 1]], 3, Path("../tex/heat5_2.png"), boundaries
+    )
+
+
+def test_22():
+
+    print("\n\t Heat conduction with four sources (multiple) - Task Parallelism\n")
+    test_path = Path("../results/t22/")
+
+    vertices = np.array(
+        [
+            [0.05, 0.0],
+            [0.95, 0.0],
+            [1.0, 0.05],
+            [1.0, 0.95],
+            [0.95, 1.0],
+            [0.05, 1.0],
+            [0.0, 0.95],
+            [0.0, 0.05],
+            [0.05, 0.0],
+        ]
+    )
+
+    dir1_idx, dir1_mkr = [2], 1
+    dir2_idx, dir2_mkr = [4], 2
+    dir3_idx, dir3_mkr = [6], 3
+    dir4_idx, dir4_mkr = [8], 4
+
+    dir1 = np.array(vertices[(dir1_idx[0] - 1) : (dir1_idx[-1] + 1)])
+    dir2 = np.array(vertices[(dir2_idx[0] - 1) : (dir2_idx[-1] + 1)])
+    dir3 = np.array(vertices[(dir3_idx[0] - 1) : (dir3_idx[-1] + 1)])
+    dir4 = np.array(vertices[(dir4_idx[0] - 1) : (dir4_idx[-1] + 1)])
+
+    boundaries = [(dir1, "red"), (dir2, "red"), (dir3, "red"), (dir4, "red")]
+
+    plot_results_for_doc(
+        test_path, 63, [[0, 1], [0, 1]], 3, Path("../tex/heat5_3.png"), boundaries
+    )
+
+
 def test_32():
     """
     Performance of test 01 (mesh_size = 0.015, 20 946 triangles)
@@ -383,6 +470,8 @@ test_functions = {
     "18": test_18,
     "19": test_19,
     "20": test_20,
+    "21": test_21,
+    "22": test_22,
     "32": test_32,
 }
 

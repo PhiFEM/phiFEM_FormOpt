@@ -1502,10 +1502,10 @@ assuming that the elements are identical equilateral triangles or regular tetrah
 
 \vspace*{0.5cm}
 \noindent \textbf{Penalized subdomains.}
-In some applications, specific subregions of $\mathcal{D}$ must remain fixed. 
+In some applications, specific subregions of $\overline{\mathcal{D}}$ must remain fixed. 
 To handle this, we have implemented the \code{Subdomain} class.
 This class constructs an indicator function from a list of inequalities that
-define a subdomain $\Om_0$ of $\mathcal{D}$. We can then use this function
+define a subdomain $\Om_0$ of $\overline{\mathcal{D}}$. We can then use this function
 to add a penalty term of the form
 \begin{equation}\label{eq:sub_dom}
 	{10}^4 \int_{\mathcal{D}} (\theta \cdot \xi) \chi_{\Omega_0}
@@ -1514,7 +1514,7 @@ to the bilinear form $B$.
 Solving \eqref{eq:velocity} with this additional term enforces $\theta \approx 0$ within $\Omega_0$, effectively keeping the subdomain $\Omega_0$ unperturbed during the shape optimization process.
 For instance, the subdomain
 \begin{equation}
-	\Omega_0 = \left\{ (x,y)\in \mathcal{D} \mid 1.95 < x,\, 0.42 < y < 0.58   \right\}
+	\Omega_0 = \left\{ (x,y)\in \overline{\mathcal{D}} \mid 1.95 < x,\, 0.42 < y < 0.58   \right\}
 \end{equation}
 is modeled using the function
 \begin{lstlisting}
@@ -2078,9 +2078,11 @@ subject to
 where $u$ is the solution to \tred{A: when writing the strong formulation we should always write it using transmission conditions to be rigorous. That's why I usually prefer to write first the wek formulation and then the strong formulation.}
 \begin{equation} \label{eq:heat_prob}
 	\begin{aligned}
-	-\operatorname{div}(A_{\Omega} \nabla u) &= f && \text{in } \mathcal{D}\\
+	-\operatorname{div}(A_{\Omega} \nabla u) &= f && \text{in } \Omega \text{ and } \mathcal{D}\setminus\overline{\Omega}\\
                                           u  &= 0 && \text{on } \Gamma_{0}\\
-                             \partial_{n} u  &= 0 && \text{on } \Gamma\setminus\Gamma_{0}                     
+                             \partial_{n} u  &= 0 && \text{on } \Gamma\setminus\Gamma_{0}\\
+			   (A_{\Omega} \partial_{n} u)^+ &= (A_{\Omega} \partial_{n} u)^- && \text{on }  \partial\Omega\\
+							             u^+ &= u^- && \text{on }  \partial\Omega        
 	\end{aligned}	
 \end{equation}
 and $A_{\Omega}:\overline{\mathcal{D}} \rightarrow \mathds{R}$ is given by
@@ -2113,15 +2115,15 @@ for the cost functional, and
 	S^C_0 = \boldsymbol{0},\quad S^C_1 = \frac{1}{V} \chi_\Omega I
 \end{equation*}
 for the constraint function.
-In all examples, we use the square domain $\mathcal{D} = (0, 1)\times(0, 1)$.
+In all examples, we use the square domain $\mathcal{D} = (0, 1)\times(0, 1)$,
+and red color to highlight $\Gamma_0$, where the temperature is fixed to zero.
 
 \noindent\textit{Example 1.}
 We apply a uniform heat $f \equiv 1$,
-with volume constraint $V = 0.25$ and
-fixed temperature $u=0$ on $\Gamma_0 = (0.4, 0.6)\times\{y=0\}$.
+with volume constraint $V = 0.25$ and $\Gamma_0 = (0.4, 0.6)\times\{y=0\}$.
 The test is carry out using data parallelism with two processes:
 \begin{lstlisting}
-mpirun -np 2 python test.py 09 # Data
+mpirun -np 2 python test.py 09 # Data (58 sec)
 \end{lstlisting}
 See the results in Figure \ref{fig:heat1}.
 In this example, we have employed the bilinear form
@@ -2130,39 +2132,43 @@ In this example, we have employed the bilinear form
 	+ {10}^4(\theta \cdot \xi) \chi_{\Omega_0}, 
 \end{equation*}
 with $\theta, \xi \in \mathbb{H} = H^1_0(\mathcal{D})^d$
-and $\Omega_0 = (0.3, 0.7)\times[0, 0.05)$ (which contains $\Gamma_0$).
-Thus, the material around $\Gamma_0$ is penalized in the bilinear form $B$.
+and $\Omega_0 = (0.3, 0.7)\times[0, 0.05)$, 
+in order to penalized the material around $\Gamma_0$.
 \begin{center}
 \includegraphics[width=0.48\linewidth]{heat1_0.png}
 \hfill
 \includegraphics[width=0.48\linewidth]{heat1_1.png}
 \captionof{figure}{
-	Initial guess and optimized design at iteration $i=204$.
-	The boundary $\Gamma_0$ is shown in red.
+	Initial guess and optimized design at iteration $i=204$,
+	computed on a mesh with {92\,582} triangles.
 }
 \label{fig:heat1}
 \end{center}
 
 \noindent\textit{Example 2.}
-
-$\Gamma_0 = \Gamma$
-
-$f \equiv 1$
-
-$V = 0.5$
-
+We apply a uniform heat $f\equiv 1$, with volume constraint $V = 0.6$
+and $\Gamma_0 = \Gamma$ (i.e., the whole boundary is kept at zero temperature).
+We run this example using data parallelism with two processes:
+%
 \begin{lstlisting}
-mpirun -np 2 python test.py 10 # Data
+mpirun -np 4 python test.py 10 # Data (51 sec)
 \end{lstlisting}
-
-Figure \ref{fig:heat2}
+%
+See the results in Figure \ref{fig:heat2}.
+The bilinear form $B$ is the same as in Example 1,
+but with $\Omega_0$ defined as
+\[
+\Omega_0 = \{x<0.1\} \cup \{x>0.9\} \cup \{y<0.1\} \cup \{y>0.9\}.
+\]
+Thus, the material is penalized close to the boundary.
 \begin{center}
 \includegraphics[width=0.48\linewidth]{heat2_0.png}
 \hfill
 \includegraphics[width=0.48\linewidth]{heat2_1.png}
 \captionof{figure}{
-	Initial guess and
-	optimized design at iteration $i=127$. \tred{A: we should make a comment about the fractal structure and small disconnected components? Is it a problem? Could we remove them with a perimeter constraint?}
+	Initial guess and optimized design at iteration $i=172$,
+	computed on a mesh with {144\,712} triangles.
+	\tred{A: we should make a comment about the fractal structure and small disconnected components? Is it a problem? Could we remove them with a perimeter constraint?}
 }
 \label{fig:heat2}
 \end{center}

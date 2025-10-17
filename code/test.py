@@ -1515,7 +1515,7 @@ def test_10():
     Heat conduction 2 - Data Parallelism
 
     Run `mpirun -np <nbr of processes> python test.py 10`.
-    For instance, `mpirun -np 2 python test.py 10`.
+    For instance, `mpirun -np 4 python test.py 10`.
 
     To save the output, append `> ../results/t10/out.txt`.
     To delete the images, enter `rm ../results/t10/*.png`.
@@ -1525,7 +1525,7 @@ def test_10():
     test_path = Path("../results/t10/")
     dim = 2
     rank_dim = 1
-    mesh_size = 5e-3
+    mesh_size = 4e-3
 
     vertices = np.array([[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]])
 
@@ -1543,7 +1543,7 @@ def test_10():
 
     # Create gmsh domain for Data Parallelism
     output = dib.create_domain_2d_DP(
-        vertices, boundary_parts, mesh_size, path=test_path, plot=True
+        vertices, boundary_parts, mesh_size, path=test_path, plot=False
     )
 
     domain, nbr_tri, boundary_tags = output
@@ -1557,25 +1557,25 @@ def test_10():
     space = dib.create_space(domain, "CG", rank_dim)
     # Dirichlet conditions
     dirichlet_bcs = dib.homogeneus_boundary(domain, space, dim, rank_dim)
-    area = 0.5
+    area = 0.6
     # Create the model
     md = Heat(dim, domain, space, dirichlet_bcs, area, test_path)
 
     @dib.region_of(domain)
     def sub_domain1(x):
-        return [0.05 - x[1]]
+        return [0.1 - x[1]]
 
     @dib.region_of(domain)
     def sub_domain2(x):
-        return [x[0] - 0.95]
+        return [x[0] - 0.9]
 
     @dib.region_of(domain)
     def sub_domain3(x):
-        return [x[1] - 0.95]
+        return [x[1] - 0.9]
 
     @dib.region_of(domain)
     def sub_domain4(x):
-        return [0.05 - x[0]]
+        return [0.1 - x[0]]
 
     md.sub = [
         sub_domain1.expression(),
@@ -1598,7 +1598,7 @@ def test_10():
     md.create_initial_level(centers, radii)
     md.save_initial_level(comm)
 
-    md.runDP(niter=200, dfactor=1e-1, ctrn_tol=1e-3, lgrn_tol=5e-2)
+    md.runDP(niter=200, dfactor=1e-1, ctrn_tol=1e-3)
 
 
 def test_11():
