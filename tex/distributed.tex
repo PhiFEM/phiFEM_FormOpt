@@ -1195,9 +1195,27 @@ are sufficient to configure this part.
 \label{sub:level}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-In the standard level set method \cite{MR965860}, the level set function is updated by solving a Hamilton-Jacobi equation on a short time interval, using a descent direction $\theta\cdot n$ in the normal direction,  derived from the boundary expression.
-In the distributed shape derivative-based level set method, one rather solves a linear transport equation, as $\theta$ is available in $\hold$ rather than $\theta\cdot n$ on $\partial\Om$, see \cite{MR3535238}.  
-In fact, we update the level set function by solving the diffusion-transport problem \tred{A: add a brief explanation as to why we need the diffusion term. It seems this diffusion term can be omitted sometimes, so it is only an option. Then one needs to explain that this gives more options, depedning on the type of problem.}
+In the standard level set method \cite{MR965860}, the level set function is updated by solving
+a Hamilton-Jacobi equation on a short time interval, using a descent direction $\theta\cdot n$
+in the normal direction,  derived from the boundary expression.
+In the distributed shape derivative-based level set method,
+one rather solves a linear transport equation, as $\theta$ is available
+in $\hold$ rather than $\theta\cdot n$ on $\partial\Om$, see \cite{MR3535238}.  
+During the shape optimization process,
+it was observed that small artificial interfaces may remain between
+regions that are expected to merge. 
+These thin ``ghost boundarie'' prevent the complete coalescence of nearby holes,
+leading to non-smooth intermediate geometries.
+To mitigate this issue, a diffusion term was added to
+the linear transport equation.
+The additional diffusion smooths the level set evolution
+and removes spurious residual interfaces.
+Thus, we update the level set function by solving the following diffusion--transport problem:
+% \tred{
+% 	A: add a brief explanation as to why we need the diffusion term.
+% 	It seems this diffusion term can be omitted sometimes, so it is only an option. 
+% 	Then one needs to explain that this gives more options, depedning on the type of problem.
+% }
 \begin{equation} \label{eq:transport}
 \begin{aligned}
 \partial_t \phi+\theta\cdot\nabla\phi &= h^2\nabla^2\varphi && x\in \mathcal{D},\, t>0, \\
@@ -1225,9 +1243,16 @@ and $\hat{\psi}=\psi+\tau \theta\cdot\nabla\psi$, with
 We solve \eqref{eq:weak_transport} up to a final time $T$ and
 define the new level set function as $\phi^{i+1}(x) \coloneqq \phi(T,x)$.
 
-The diffusion term in \eqref{eq:transport} can be omitted by setting the argument \code{smooth=False}
-in \code{run<DP|TP|MP>}. For instance,
-we recommend this configuration for heat conduction problems.
+The diffusion term in \eqref{eq:transport} can be added or removed
+by setting \code{True} or \code{False}, respectively, to the parameter \code{smooth},
+which is passed as an argument to the \code{run<DP|TP|MP>} functions.
+By default, \code{smooth=False}.
+We recommend keeping \code{smooth=False} for heat conduction problems
+where the goal is to obtain tree-like material morphologies.
+In contrast, for compliance minimization problems,
+we suggest setting \code{smooth=True} to suppress
+the formation of spurious residual interfaces.
+
 
 The Neumann boundary condition in \eqref{eq:transport} serves to eliminate
 the boundary integral term of the weak form of the diffusion term.
