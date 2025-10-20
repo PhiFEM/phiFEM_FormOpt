@@ -534,11 +534,11 @@ with $S_0^J$ and $S_1^J$ given by
 	%%%%
 	S^{J}_{1} & := \frac{\alpha}{2}{|u-v-g|}^2 I\\
 			  & \quad + \left(A_{\Omega}\sigma(u):\epsilon(p) + A_{\Omega}\sigma(v+g):\epsilon(q)\right)I\\
-			  & \quad + A_{\Omega} \left({Du}^{\top}\sigma(p) + {Dp}^{\top}\sigma(u)\right)\\
-			  & \quad + A_{\Omega} \left({Dv}^{\top}\sigma(q) + {Dq}^{\top}\sigma(v+g)\right),
+			  & \quad - A_{\Omega} \left({Du}^{\top}\sigma(p) + {Dp}^{\top}\sigma(u)\right)\\
+			  & \quad - A_{\Omega} \left({Dv}^{\top}\sigma(q) + {Dq}^{\top}\sigma(v+g)\right),
 \end{align*}
 respectively.
-\tred{A: I think there is an error, it should be $-A_{\Omega} \left({Du}^{\top}\sigma(p) + {Dp}^{\top}\sigma(u)\right)$, and $-A_{\Omega} \left({Dv}^{\top}\sigma(q) + {Dq}^{\top}\sigma(v+g)\right)$, no?}
+%\tred{A: I think there is an error, it should be $-A_{\Omega} \left({Du}^{\top}\sigma(p) + {Dp}^{\top}\sigma(u)\right)$, and $-A_{\Omega} \left({Dv}^{\top}\sigma(q) + {Dq}^{\top}\sigma(v+g)\right)$, no?}
 
 
 \textbf{Hadamard form.} Even though our numerical algorithm is based on the distributed expression~\eqref{eq:SDelast_inv}, it is instructive to compute the Hadamard form of the shape derivative, following Proposition~\ref{tensor_relations}.
@@ -954,8 +954,9 @@ Finally, the \code{bilinear\_form} method must return
 the chosen bilinear form $B$, where \code{th} and \code{xi}
 representing the arguments $\theta, \xi$ in $B(\theta, \xi)$.
 
-\tred{A: what do you mean, "By convention"? Maybe clarify.}
-By convention, all the contents of this class are written exclusively using
+%\tred{A: what do you mean, "By convention"? Maybe clarify.}
+
+We adopt the convention that all components of this class are implemented exclusively using
 UFL and native Python functions. For example, the following UFL
 functions were used across all our models (see \code{models.py}):
 \begin{lstlisting}
@@ -1051,10 +1052,17 @@ processes are divided into groups of equal size.
 Thus, the total number of processes (\code{size}) must be divisible
 by the number of groups (\code{nbr\_groups}), where \code{nbr\_groups}
 corresponds to the number of state equations (and adjoint equations, if present).
-Once this condition is verified \tred{A: but what if the condition is not satisfied? I guess there is another option, he will only use a smaller amount of processors?}, we assign a \code{color} to each process:
+Once this condition is verified, we assign a \code{color} to each process:
 processes in the same group share the same \code{color}.
-Of course, we expect each group to contain more than one process;
+We expect each group to contain more than one process;
 otherwise, the configuration corresponds to task parallelism.
+For simplicity,
+we do not consider the case where \code{size} is not divisible by \code{nbr\_groups},
+thus avoiding process groups of different sizes.
+
+%\tred{A: but what if the condition is not satisfied?
+%I guess there is another option, he will only use a smaller amount of processors?}
+
 The \code{Split} function returns the sub-communicator associated to each group:
 \begin{lstlisting}
 if size%nbr_groups != 0:
@@ -1064,7 +1072,7 @@ sub_comm = comm.Split(color, rank)
 \end{lstlisting}
 Using \code{sub\_comm}, one copy of the same domain must be created
 in each group of processes.
-Alternatively, one can use the function \code{create\_domain\_2d\_MP},
+Alternatively, one can use the function \code{create\_domain\_2d\_MP} to do this,
 passing \code{sub\_comm} as an argument.
 
 
@@ -2121,7 +2129,7 @@ and red color to highlight $\Gamma_0$, where the temperature is fixed to zero.
 \noindent\textit{Example 1.}
 We apply a uniform heat $f \equiv 1$,
 with volume constraint $V = 0.25$ and $\Gamma_0 = (0.4, 0.6)\times\{y=0\}$.
-The test is carry out using data parallelism with two processes:
+The test is carried out using data parallelism with two processes:
 \begin{lstlisting}
 mpirun -np 2 python test.py 09 # Data (58 sec)
 \end{lstlisting}
@@ -2174,11 +2182,9 @@ Thus, the material is penalized close to the boundary.
 \end{center}
 
 \noindent\textit{Example 3.} 
-
-$\Gamma_0 = \emptyset $
-
+We apply a localized heat source given by the function
 $f(x,y) \coloneqq \phi(\vert(x,y)-(0.5, 0.5)\vert_2)$
-where
+where $\phi$ is a radial function defined as
 \begin{equation}
 	\phi(r) \coloneqq
 	\begin{cases}
@@ -2186,28 +2192,26 @@ where
 	0  & \text{otherwise}.
 	\end{cases}
 \end{equation}
-is a radial function
-
-$f$ is radially symmetric around the point 
-$(0.5,0.5)$ and is infinitely differentiable on the entire plane
-
-$V = 0.5$
-
-The term \eqref{eq:bd_plt} is added to the bilinear form $B$ and
-the velocity problem is solved with $\mathbb{H} = H^1(\mathcal{D})^d$.
-
+Thus, $f$ is radially symmetric around the point 
+$(0.5,0.5)$ and infinitely differentiable on the entire plane.
+The support of $f$ is the disk centered at $(0.5,0.5)$ with radius $0.1$.
+The volume constraint is $V = 0.5$ and
+there is no fixed temperature on the boundary, i.e., $\Gamma_0 = \emptyset $.
+We run this example using data parallelism with six processes:
 \begin{lstlisting}
-mpirun -np 2 python test.py 11 # Data
+mpirun -np 6 python test.py 11 # Data (11 sec)
 \end{lstlisting}
-
-Figure \ref{fig:heat3}
+See the results in Figure \ref{fig:heat3}.
+The term \eqref{eq:bd_plt} is added to the bilinear form
+$B(\theta, \xi) = \int_{\mathcal{D}} D\theta : D\xi$ and
+the velocity problem is solved with $\mathbb{H} = H^1(\mathcal{D})^d$.
 \begin{center}
 \includegraphics[width=0.48\linewidth]{heat3_0.png}
 \hfill
 \includegraphics[width=0.48\linewidth]{heat3_1.png}
 \captionof{figure}{
-	Initial guess and
-	optimized design at iteration $i=207$.
+	Initial guess and optimized design at iteration $i=181$,
+	computed on a mesh with {23\,652} triangles.
 }
 \label{fig:heat3}
 \end{center}

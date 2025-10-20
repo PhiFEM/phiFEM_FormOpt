@@ -1606,7 +1606,7 @@ def test_11():
     Heat conduction with one source - Data Parallelism
 
     Run `mpirun -np <nbr of processes> python test.py 11`.
-    For instance, `mpirun -np 2 python test.py 11`.
+    For instance, `mpirun -np 6 python test.py 11`.
 
     To save the output, append `> ../results/t11/out.txt`.
     To delete the images, enter `rm ../results/t11/*.png`.
@@ -2556,7 +2556,7 @@ def test_21():
     test_path = Path("../results/t21/")
     dim = 2
     rank_dim = 1
-    mesh_size = 1e-2
+    mesh_size = 0.5e-2  # 1e-2
 
     vertices = np.array(
         [
