@@ -11,7 +11,40 @@ def test_01():
     print("\n\tSymmetric cantilever 2D (Data Parallelism)\n")
     test_path = Path("../results/t01/")
 
-    plot_basic(test_path)
+    vertices = np.array(
+        [
+            (0.0, 0.0),
+            (2.0, 0.0),
+            (2.0, 0.45),
+            (2.0, 0.55),
+            (2.0, 1.0),
+            (0.0, 1.0),
+            (0.0, 0.0),
+        ]
+    )
+
+    dir_idx, dir_mkr = [6], 1
+    neu_idx, neu_mkr = [3], 2
+
+    dir = np.array(vertices[(dir_idx[0] - 1) : (dir_idx[-1] + 1)])
+    neu = np.array(vertices[(neu_idx[0] - 1) : (neu_idx[-1] + 1)])
+    boundaries = [(dir, "red"), (neu, "deepskyblue")]
+
+    # plot_basic(test_path)
+
+    plot_results_for_doc(
+        test_path, 0, [[0, 2], [0, 1]], 8, Path("../tex/compli1_0.png"), boundaries
+    )
+
+    last_iter = 58
+    plot_results_for_doc(
+        test_path,
+        last_iter,
+        [[0, 2], [0, 1]],
+        8,
+        Path("../tex/compli1_1.png"),
+        boundaries,
+    )
 
 
 def test_02():
@@ -23,7 +56,48 @@ def test_03():
     print("\n\tMultiple load cases (Data Parallelism)\n")
     test_path = Path("../results/t03/")
 
-    plot_basic(test_path)
+    vertices = np.array(
+        [
+            [0.0, 0.0],
+            [1.0, 0.0],
+            [1.0, 0.1],
+            [1.0, 0.9],
+            [1.0, 1.0],
+            [0.0, 1.0],
+            [0.0, 0.0],
+        ]
+    )
+
+    dir_idx, dir_mkr = [6], 1
+    neu_idx_bot, neu_mkr_bot = [2], 2
+    neu_idx_top, neu_mkr_top = [4], 3
+
+    boundary_parts = [
+        (dir_idx, dir_mkr, "dir"),
+        (neu_idx_bot, neu_mkr_bot, "neu_bot"),
+        (neu_idx_top, neu_mkr_top, "neu_top"),
+    ]
+
+    dir = np.array(vertices[(dir_idx[0] - 1) : (dir_idx[-1] + 1)])
+    neu_bot = np.array(vertices[(neu_idx_bot[0] - 1) : (neu_idx_bot[-1] + 1)])
+    neu_top = np.array(vertices[(neu_idx_top[0] - 1) : (neu_idx_top[-1] + 1)])
+    boundaries = [(dir, "red"), (neu_bot, "deepskyblue"), (neu_top, "deepskyblue")]
+
+    # plot_basic(test_path)
+
+    plot_results_for_doc(
+        test_path, 0, [[0, 1], [0, 1]], 8, Path("../tex/compli3_0.png"), boundaries
+    )
+
+    last_iter = 69
+    plot_results_for_doc(
+        test_path,
+        last_iter,
+        [[0, 1], [0, 1]],
+        8,
+        Path("../tex/compli3_1.png"),
+        boundaries,
+    )
 
 
 def test_04():
@@ -285,7 +359,44 @@ def test_18():
     print("\n\tCantilever with two loads II (Task Parallelism)\n")
     test_path = Path("../results/t18/")
 
-    plot_basic(test_path)
+    vertices = np.array(
+        [
+            [0.0, 0.0],
+            [0.95, 0.0],
+            [1.05, 0.0],
+            [2.0, 0.0],
+            [2.0, 0.45],
+            [2.0, 0.55],
+            [2.0, 1.0],
+            [0.0, 1.0],
+            [0.0, 0.0],
+        ]
+    )
+
+    dir_idx, dir_mkr = [8], 1
+    neu_idx_bot, neu_mkr_bot = [2], 2
+    neu_idx_right, neu_mkr_right = [5], 3
+
+    dir = np.array(vertices[(dir_idx[0] - 1) : (dir_idx[-1] + 1)])
+    neu_bot = np.array(vertices[(neu_idx_bot[0] - 1) : (neu_idx_bot[-1] + 1)])
+    neu_right = np.array(vertices[(neu_idx_right[0] - 1) : (neu_idx_right[-1] + 1)])
+    boundaries = [(dir, "red"), (neu_bot, "deepskyblue"), (neu_right, "deepskyblue")]
+
+    # plot_basic(test_path)
+
+    plot_results_for_doc(
+        test_path, 0, [[0, 2], [0, 1]], 8, Path("../tex/compli4_0.png"), boundaries
+    )
+
+    last_iter = 66
+    plot_results_for_doc(
+        test_path,
+        last_iter,
+        [[0, 2], [0, 1]],
+        8,
+        Path("../tex/compli4_1.png"),
+        boundaries,
+    )
 
 
 def test_19():
@@ -293,7 +404,44 @@ def test_19():
 
 
 def test_20():
-    pass
+
+    print("\n\tSymmetric Cantilever 2D (non-rectangular domain) - Data Parallelism\n")
+    test_path = Path("../results/t20/")
+
+    vertices = np.array(
+        [
+            (0.0, 0.0),
+            (1.0, 0.0),
+            (2.0, 0.45),
+            (2.0, 0.55),
+            (1.0, 1.0),
+            (0.0, 1.0),
+            (0.0, 0.0),
+        ]
+    )
+
+    dir_idx, dir_mkr = [6], 1
+    neu_idx, neu_mkr = [3], 2
+
+    dir = np.array(vertices[(dir_idx[0] - 1) : (dir_idx[-1] + 1)])
+    neu = np.array(vertices[(neu_idx[0] - 1) : (neu_idx[-1] + 1)])
+    boundaries = [(dir, "red"), (neu, "deepskyblue")]
+
+    # plot_basic(test_path)
+
+    plot_results_for_doc(
+        test_path, 0, [[0, 2], [0, 1]], 8, Path("../tex/compli5_0.png"), boundaries
+    )
+
+    last_iter = 62
+    plot_results_for_doc(
+        test_path,
+        last_iter,
+        [[0, 2], [0, 1]],
+        8,
+        Path("../tex/compli5_1.png"),
+        boundaries,
+    )
 
 
 def test_21():

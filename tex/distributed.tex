@@ -1936,8 +1936,6 @@ The corresponding strong formulation is
 	\end{aligned}
 \end{equation}
 
-
-
 The solution to the adjoint problem is $p=-2u$.
 From \eqref{eq:compli_constr}, the constraint function is given by
 \begin{equation*}
@@ -1969,7 +1967,7 @@ The vertical force $g = (0, -2)^\top$ is applied on $\Gamma_1$.
 The material area is constrained to $V = 1$.
 We run this example using data parallelism with two processes:
 \begin{lstlisting}
-mpirun -np 2 python test.py 01 # Data
+mpirun -np 2 python test.py 01 # Data (14 sec)
 \end{lstlisting}
 See the results in Figure \ref{fig:compli1}.
 \tred{A: I think we should also write the configuration that was used to run these tests, and how fast it was. It can be interesting to mention that some tests are run on the laptop, others on the server, to show that running on the laptop is fast.}
@@ -1982,6 +1980,7 @@ See the results in Figure \ref{fig:compli1}.
 	(Top) Initial guess and optimized design at iteration $i=58$.
 	(Bottom) The level set function $\phi^{i}$ approximates the
 	distance function associated to $\Omega^{i}$.
+	Mesh $20\,946$ triangles.
 }
 \label{fig:compli1}
 \end{center}
@@ -1997,7 +1996,7 @@ The force $g = (0, 0, -4)^\top$ is applied on $\Gamma_1$.
 The volume material is constrained to $V = 1$.
 Run this example with
 \begin{lstlisting}
-python test.py 02
+python test.py 02 # Single process (1.3 h)
 \end{lstlisting}
 The number of tetrahedra was $2\,592\,000$. See Figure \ref{fig:compli2}.
 \begin{center}
@@ -2030,9 +2029,9 @@ $g^{\mathrm{I}} = g^{\mathrm{II}} = (0, -2)^\top$
 $V = 0.5$
 
 \begin{lstlisting}
-mpirun -np 2 python test.py 03 # Data 
-mpirun -np 2 python test.py 04 # Task	
-mpirun -np 2 python test.py 05 # Mixed		
+mpirun -np 2 python test.py 03 # Data (20 sec)
+mpirun -np 2 python test.py 04 # Task (26 sec)	
+mpirun -np 4 python test.py 05 # Mixed (15 sec)		
 \end{lstlisting}
 
 Figure \ref{fig:compli3}
@@ -2042,6 +2041,8 @@ Figure \ref{fig:compli3}
 \includegraphics[width=0.48\linewidth]{compli3_1.png}
 \captionof{figure}{
 	Initial and optimal domains.
+	69, 70, and 70 iterations for data, task, and mixed parallelism, respectively.
+	$16\,425$ triangles.
 }
 \label{fig:compli3}
 \end{center}
@@ -2062,7 +2063,7 @@ $g^{\mathrm{II}} = (0, 2)^\top$
 $V = 1.1$
 
 \begin{lstlisting}
-mpirun -np 2 python test.py 09 # Task
+mpirun -np 2 python test.py 18 # Task (44 sec)
 \end{lstlisting}
 
 Figure \ref{fig:compli4}
@@ -2072,6 +2073,8 @@ Figure \ref{fig:compli4}
 \includegraphics[width=0.48\linewidth]{compli4_1.png}
 \captionof{figure}{
 	Initial and optimal domains.
+	$i=66$
+	$33\,111$ triangles
 }
 \label{fig:compli4}
 \end{center}
@@ -2080,12 +2083,18 @@ Figure \ref{fig:compli4}
 
 Figure \ref{fig:compli5}
 
+\begin{lstlisting}
+mpirun -np 2 python test.py 20 # Data (14 sec)
+\end{lstlisting}
+
 \begin{center}
 \includegraphics[width=0.48\linewidth]{compli5_0.png}
 \hfill
 \includegraphics[width=0.48\linewidth]{compli5_1.png}
 \captionof{figure}{
 	Initial and optimal domains.
+	$i = 62$
+	$16\,304$ triangles
 }
 \label{fig:compli5}
 \end{center}

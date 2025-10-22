@@ -2139,9 +2139,9 @@ def test_18():
 
     @dib.region_of(domain)
     def sub_domain_bottom(x):
-        # 0.92 < x[0] < 1.08
+        # 0.94 < x[0] < 1.06
         # x[1] < 0.05
-        ineqs = [x[0] - 0.92, 1.08 - x[0], 0.05 - x[1]]
+        ineqs = [x[0] - 0.94, 1.06 - x[0], 0.05 - x[1]]
         return ineqs
 
     md.sub = [sub_domain_right.expression(), sub_domain_bottom.expression()]
@@ -2156,7 +2156,7 @@ def test_18():
     centers += [(0.3 + i * 0.35, 1.0) for i in range(5)]
     centers += [(0.475 + i * 0.35, 0.25) for i in range(4)]
     centers += [(0.475 + i * 0.35, 0.75) for i in range(4)]
-    centers += [(1.15, 0.0)]
+    centers += [(1.15, 0.0), (1.2, 0.0)]
     centers = np.array(centers)
     radii = np.repeat(0.1, centers.shape[0])
 
