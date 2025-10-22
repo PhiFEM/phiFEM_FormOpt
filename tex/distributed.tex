@@ -181,7 +181,9 @@ Another major improvement is the integration of parallel computing, which allows
 Three paradigms of parallelism are supported: data parallelism, distributing computations across multiple processes; task parallelism, enabling for example the simultaneous solution of the same PDE with different sources and mixed parallelism, combining both approaches.
 An additional objective of this paper is to offer an accessible introduction to parallelization and its application to PDE-constrained shape optimization.
 The foundation of our framework remains the tensor representation of the shape derivative, as in \cite{MR3843884}. Practically, this means that when considering a new problem, the main task is to specify the appropriate PDE and geometry, and to analytically compute the corresponding tensors of the distributed shape derivative.
-The \fopt files are available for download at \tred{(cite Github)}, along with several tutorials.
+The \fopt files are available for download at 
+\href{https://github.com/JD26/FormOpt}{\texttt{github.com/JD26/FormOpt}}, %\tred{(cite Github)}
+along with several tutorials.
 %This is an opportunity to learn about basic notions of shape sensitivity analysis.
 
 
@@ -231,16 +233,21 @@ Let $I$ denote the $d$-dimensional identity matrix.
 Let $\left|\cdot\right|_{\infty}$ denote the infinity norm.
 Given a vector-valued function $w \in H^1(\mathcal{D})^d$,
 $Dw$ denotes its Jacobian matrix.
-We use $\boldsymbol{1}$ for a vector of ones. \tred{A: what is the dimension of $\boldsymbol{1}$ actually?}
-
+We use $\boldsymbol{0}$ for the zero vector of $\mathds{R}^d$ and 
+$\boldsymbol{1}$ for the all-ones vector of $\mathds{R}^{N_c}$,
+where $N_c$ is the number of constraints.
+%\tred{A: what is the dimension of $\boldsymbol{1}$ actually?}
 
 We consider the following general shape optimization problem with constraints:
-\begin{equation} \label{eq:problem}
+\begin{equation} \label{eq:problem0}
 	\min_{\Omega\subset\mathcal{D}} \mathcal{J}(u,\Omega)
-	\quad \text{subject to} \, C(\Omega) = \boldsymbol{1}, e(u,\Om)=0,
+	\quad \text{subject to} \quad C(\Omega) = \boldsymbol{1}, \, e(u,\Om)=0,
 \end{equation}
 where $\mathcal{J}: \mathbb{H}\times \mathds{P}\to\R$ is a cost functional, 
-$C: \mathds{P}\to\R$ is a vector-valued constraint function, $e: \mathbb{H}\times \mathds{P}\to\R$ is a PDE constraint for $u$, and $\mathds{P}$ is a set of subsets of $\hold$, $\mathbb{H}$ is an appropriate function space.
+$C: \mathds{P}\to\R^{N_c}$ is a vector-valued constraint function,
+$e: \mathbb{H}\times \mathds{P}\to\R$ is a PDE constraint for $u$,
+$\mathds{P}$ is a set of subsets of $\hold$, and
+$\mathbb{H}$ is an appropriate function space.
 The additional constraint $C(\Omega) = \boldsymbol{1}$ is typically a geometric constraint, such as a volume or perimeter constraint.
 Assuming $u(\Om)$ is the unique solution of $e(u,\Om)=0$,  we introduce the reduced cost functional $J(\Om):= \mathcal{J}(u(\Om),\Om)$ and we consider the problem:
 \begin{equation} \label{eq:problem}
@@ -1096,9 +1103,8 @@ $\lambda$ and $\mu$ are Lagrange multipliers,
 $\alpha$ is a penalty parameter, and
 $\beta$ is a proximal parameter.
 Here, $\langle \cdot, \cdot \rangle$ and $\vert \cdot \vert$
-are the standard inner product and norm of $\mathds{R}^n$,
-where $n$ is the number of constraints.
-\tred{A: maybe change notation for $n$ which is already used for normal vector?}
+are the standard inner product and norm of $\mathds{R}^{N_c}$.
+%\tred{A: maybe change notation for $n$ which is already used for normal vector?}
 We then follow Algorithm 1 in \cite{MR4589221}:
 Given the parameters 
 $r\in(0,1)$,
@@ -1204,7 +1210,7 @@ in $\hold$ rather than $\theta\cdot n$ on $\partial\Om$, see \cite{MR3535238}.
 During the shape optimization process,
 it was observed that small artificial interfaces may remain between
 regions that are expected to merge. 
-These thin ``ghost boundarie'' prevent the complete coalescence of nearby holes,
+These thin ``ghost boundaries'' prevent the complete coalescence of nearby holes,
 leading to non-smooth intermediate geometries.
 To mitigate this issue, a diffusion term was added to
 the linear transport equation.
@@ -1225,6 +1231,21 @@ Thus, we update the level set function by solving the following diffusion--trans
 \end{equation}
 where $\theta$ is the velocity field obtained from \eqref{eq:velocity}
 and $h$ is the mesh diameter.
+
+The mesh diameter $h$ is defined as
+\begin{equation}
+	h \coloneqq
+	\begin{cases}
+		4\frac{\left|\mathcal{D}\right|}{N_T\sqrt{3}} & \text{if } d = 2,\\
+		\left(6\sqrt{2}\frac{\left|\mathcal{D}\right|}{N_T}\right)^{2/3} & \text{if } d = 3,	
+	\end{cases}
+\end{equation}
+where $\left|\mathcal{D}\right|$ denotes the area ($d=2$) or volume ($d=3$)
+of the domain $\mathcal{D}$, and $N_T$ denotes the number of triangles ($d=2$) 
+or tetrahedra ($d=3$).
+This expression provides an approximation of the maximum diameter of the finite elements,
+assuming that the elements are identical equilateral triangles or regular tetrahedra.
+
 We apply the Petrov-Galerkin method \cite{MR1640142} to \eqref{eq:transport},
 along with the Crank-Nicolson method to the time derivative.
 This results in iteratively solving the following weak formulation:
@@ -1381,10 +1402,11 @@ which carries information of the shape derivative components.
 In \eqref{eq:steps}, we just apply a concave increasing function
 to $T$ to find the number of steps.
 
-\tred{A: why do we need randomness here?}
-Moreover, randomness can be introduced by specifying
-a seed number $n_\mathrm{seed}$ and a noise level $\vartheta$ in the argument
-$\code{random\_pars} = (n_\mathrm{seed}, \vartheta)$:
+%\tred{A: why do we need randomness here?}
+To asses the robustness of the line search method,
+randomness can be introduced by specifying
+a seed number $N_\mathrm{seed}$ and a noise level $\vartheta$ in the argument
+$\code{random\_pars} = (N_\mathrm{seed}, \vartheta)$:
 $T$ is scaled by a random factor drawn from the uniform distribution
 $\mathcal{U}(1 - \vartheta, 1 + \vartheta)$
 and $\hat{s}$ is replaced by a sample drawn from the normal distribution
@@ -1487,25 +1509,26 @@ provides a callable method that uses the
 \noindent \textbf{Dirichlet extension.}
 In order to compute distributed shape derivatives, one sometimes need to extend functions defined on the boundary to the entire domain $\hold$. 
 This is precisely the case with the boundary measurements $g$ in Section~\ref{sec:model_prob}. 
-For this purpose we consider the Dirichlet extension of a function $u\in H^1(\mathcal{D})^{d}$ \tred{A: in fact it should be $u\in H^1(\Gamma)^{d}$, or even a subset of $\Gamma$? Need to clarify this.} is defined 
-as the solution to the following problem:
+For this purpose, we consider the Dirichlet extension of a function $u\in H^{-1/2}(\Gamma_{\text{sub}})^{d}$,
+where $\Gamma_{\text{sub}}\subseteq \Gamma$ is a subset of the boundary, defined as the solution to the following problem:
+%\tred{A: in fact it should be $u\in H^1(\Gamma)^{d}$, or even a subset of $\Gamma$? Need to clarify this.}
 Find $\eta\in H^1(\mathcal{D})^{d}$ such that
 \begin{equation} \label{eq:dir}
 \begin{aligned}
-	\int_{\mathcal{D}} D\eta : D\zeta &= 0 &&\quad \forall\, \zeta \in H^1_0(\mathcal{D})^{d}, \\
-	\eta &= u &&\quad \text{on } \Gamma.
+	\int_{\mathcal{D}} D\eta : D\zeta &= 0 &&\quad \forall\, \zeta \in H^1_{\Gamma_{\text{sub}}}(\mathcal{D})^{d}, \\
+	\eta &= u &&\quad \text{on } \Gamma_{\text{sub}}.
 \end{aligned}
 \end{equation}
 The $\code{dirichlet\_extension}$ function 
 sets up and solve \eqref{eq:dir} for a list
-of functions in $H^1(\mathcal{D})^{d}$, and returns
+of functions in $H^{-1/2}(\Gamma_{\text{sub}})^{d}$, and returns
 a list with the corresponding Dirichlet extensions.
 
 By solving \eqref{eq:dir}, we generate the data displacement $g$ used in \eqref{eq:w-g}.
 Since the data displacement must correspond to a force application,
 we provide the $\code{dir\_extension\_from}$ function, which
 solves \eqref{eq:w-f} and then extend its solution by calling
-$\code{dirichlet\_extension}$.
+the $\code{dirichlet\_extension}$ function.
 
 % \tred{A: do we really need the Dirichlet extension? Can one define $g$ directly inside the entire domain in general?}
 
@@ -1516,22 +1539,22 @@ $\code{dirichlet\_extension}$.
 % because of problems with non-homogeneous boundary conditions.
 % }
 
-\vspace*{0.5cm}
-\noindent \textbf{Mesh diameter.}
-\tred{A: the mesh diameter is used in Section 5.6, so should we move this definition to section 5.6?}
-We define the mesh diameter $h$ as
-\begin{equation}
-	h \coloneqq
-	\begin{cases}
-		4\frac{\left|\mathcal{D}\right|}{N_T\sqrt{3}} & \text{if } d = 2,\\
-		\left(6\sqrt{2}\frac{\left|\mathcal{D}\right|}{N_T}\right)^{2/3} & \text{if } d = 3,	
-	\end{cases}
-\end{equation}
-where $\left|\mathcal{D}\right|$ denotes the area ($d=2$) or volume ($d=3$)
-of the domain $\mathcal{D}$, and $N_T$ denotes the number of triangles ($d=2$) 
-or tetrahedra ($d=3$).
-This expression provides an approximation of the maximum diameter of the finite elements,
-assuming that the elements are identical equilateral triangles or regular tetrahedra.
+% \vspace*{0.5cm}
+% \noindent \textbf{Mesh diameter.}
+% \tred{A: the mesh diameter is used in Section 5.6, so should we move this definition to section 5.6?}
+% We define the mesh diameter $h$ as
+% \begin{equation}
+% 	h \coloneqq
+% 	\begin{cases}
+% 		4\frac{\left|\mathcal{D}\right|}{N_T\sqrt{3}} & \text{if } d = 2,\\
+% 		\left(6\sqrt{2}\frac{\left|\mathcal{D}\right|}{N_T}\right)^{2/3} & \text{if } d = 3,	
+% 	\end{cases}
+% \end{equation}
+% where $\left|\mathcal{D}\right|$ denotes the area ($d=2$) or volume ($d=3$)
+% of the domain $\mathcal{D}$, and $N_T$ denotes the number of triangles ($d=2$) 
+% or tetrahedra ($d=3$).
+% This expression provides an approximation of the maximum diameter of the finite elements,
+% assuming that the elements are identical equilateral triangles or regular tetrahedra.
 
 \vspace*{0.5cm}
 \noindent \textbf{Penalized subdomains.}
@@ -2117,7 +2140,7 @@ subject to
 \begin{equation}
 	\int_{\mathcal{D}} \chi_{\Omega} = V,
 \end{equation}
-where $u$ is the solution to \tred{A: when writing the strong formulation we should always write it using transmission conditions to be rigorous. That's why I usually prefer to write first the wek formulation and then the strong formulation.}
+where $u$ is the solution to %\tred{A: when writing the strong formulation we should always write it using transmission conditions to be rigorous. That's why I usually prefer to write first the wek formulation and then the strong formulation.}
 \begin{equation} \label{eq:heat_prob}
 	\begin{aligned}
 	-\operatorname{div}(A_{\Omega} \nabla u) &= f && \text{in } \Omega \text{ and } \mathcal{D}\setminus\overline{\Omega}\\
