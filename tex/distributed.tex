@@ -245,9 +245,9 @@ We consider the following general shape optimization problem with constraints:
 \end{equation}
 where $\mathcal{J}: \mathbb{H}\times \mathds{P}\to\R$ is a cost functional, 
 $C: \mathds{P}\to\R^{N_c}$ is a vector-valued constraint function,
-$e: \mathbb{H}\times \mathds{P}\to\R$ is a PDE constraint for $u$,
-$\mathds{P}$ is a set of subsets of $\hold$, and
-$\mathbb{H}$ is an appropriate function space.
+$e: \mathbb{H}\times \mathds{P}\to\mathbb{H}^*$ is a PDE constraint for $u$,
+$\mathds{P}$ is a set of subsets of $\hold$,
+$\mathbb{H}$ is an appropriate function space, and $\mathbb{H}^*$ is its dual space.
 The additional constraint $C(\Omega) = \boldsymbol{1}$ is typically a geometric constraint, such as a volume or perimeter constraint.
 Assuming $u(\Om)$ is the unique solution of $e(u,\Om)=0$,  we introduce the reduced cost functional $J(\Om):= \mathcal{J}(u(\Om),\Om)$ and we consider the problem:
 \begin{equation} \label{eq:problem}
