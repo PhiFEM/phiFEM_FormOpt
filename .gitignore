@@ -1,9 +1,7 @@
 references/
-results/
 tex/distributed.pdf
 docs/installation.pdf
 code/Tutorial.pdf
-code/ParaView
 code/deprecated/
 code/__pycache__/
 code/Links
