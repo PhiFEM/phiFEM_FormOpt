@@ -1793,7 +1793,7 @@ def test_12():
     md.create_initial_level(centers, radii)
     md.save_initial_level(comm)
 
-    md.runDP(niter=250, ctrn_tol=1e-3, lgrn_tol=1e-2)
+    md.runDP(niter=250, ctrn_tol=1e-3, lgrn_tol=5e-2)
 
 
 def test_13():

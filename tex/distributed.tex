@@ -2240,8 +2240,8 @@ Thus, the material is penalized close to the boundary.
 
 \noindent\textit{Example 3.} 
 We apply a localized heat source given by the function
-$f(x,y) \coloneqq \phi(\vert(x,y)-(0.5, 0.5)\vert_2)$
-where $\phi$ is a radial function defined as
+$f(x,y) \coloneqq \phi(\vert(x,y)-(0.5, 0.5)\vert_2)$,
+where $\phi$ is the radial function defined as
 \begin{equation}
 	\phi(r) \coloneqq
 	\begin{cases}
@@ -2273,28 +2273,28 @@ the velocity problem is solved with $\mathbb{H} = H^1(\mathcal{D})^d$.
 \label{fig:heat3}
 \end{center}
 
-\noindent\textit{Example 4.}  (multiple load cases)
-
-$\Gamma_0^\mathrm{I} = (0.4,0.6)\times\{y=0\}$
-
-$\Gamma_0^\mathrm{II} = \{x=1\}\times(0.4,0.6)$
-
-$\Gamma_0 = \Gamma_0^\mathrm{I} \cup \Gamma_0^\mathrm{II}$
-
-$f\equiv 1$
-
-$V = 0.4$
-
+\noindent\textit{Example 4.}
+In this example, two subsets of the boundary are kept at zero temperature:
+\[
+\Gamma_0^\mathrm{I} = (0.4,0.6)\times\{y=0\}\;,\;\Gamma_0^\mathrm{II} = \{x=1\}\times(0.4,0.6).
+\]
+First, we solve \eqref{eq:heat_cost}-\eqref{eq:heat_prob}
+with $\Gamma_0 = \Gamma_0^\mathrm{I} \cup \Gamma_0^\mathrm{II}$.
+Later, we solve the problem with multiple sinks
+($\Gamma_0^\mathrm{I}$ and $\Gamma_0^\mathrm{II}$ in this case),
+along with the cost functional given by the sum of the corresponding thermal compliances.
+In both cases, $f\equiv 1$ and $V = 0.4$.
+The first test is carried out using data parallelism with two processes:
 \begin{lstlisting}
-mpirun -np 2 python test.py 12 # Data
+mpirun -np 2 python test.py 12 # Data (68 sec)
 \end{lstlisting}
-
+Since in the second test there are two PDEs to be solved,
+we can employ task parallelism with two processes:
 \begin{lstlisting}
-mpirun -np 2 python test.py 13 # Task
+mpirun -np 2 python test.py 13 # Task (100 sec)
 \end{lstlisting}
-
-Lagrangian value : multiple = two times simple case 
-Figure \ref{fig:heat4}
+The results are in Figure \ref{fig:heat4}.
+%Lagrangian value : multiple = two times simple case 
 \begin{center}
 \includegraphics[width=0.48\linewidth]{heat4_0.png}
 \hfill
@@ -2303,8 +2303,11 @@ Figure \ref{fig:heat4}
 \hfill
 \includegraphics[width=0.48\linewidth]{heat4_3.png}
 \captionof{figure}{
-	Initial guess and
-	optimized design at iteration $i=207$.
+	Initial guess (top-left) and
+	Lagrangian values (top-right).
+	Note that the multiple case is approximately two times the simple case.
+	optimized designs at iteration $i=215$ and $i=199$, 
+	computed in a mesh with $92\,612$ triangles.
 }
 \label{fig:heat4}
 \end{center}

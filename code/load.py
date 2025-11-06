@@ -286,8 +286,15 @@ def test_12():
     plot_results_for_doc(
         test_path, 0, [[0, 1], [0, 1]], 6, Path("../tex/heat4_0.png"), boundaries
     )
+
+    last_iter = 215
     plot_results_for_doc(
-        test_path, 250, [[0, 1], [0, 1]], 6, Path("../tex/heat4_2.png"), boundaries
+        test_path,
+        last_iter,
+        [[0, 1], [0, 1]],
+        6,
+        Path("../tex/heat4_2.png"),
+        boundaries,
     )
 
 
@@ -317,8 +324,15 @@ def test_13():
 
     # plot_basic(test_path, boundaries)
 
+    last_iter = 199
+
     plot_results_for_doc(
-        test_path, 199, [[0, 1], [0, 1]], 6, Path("../tex/heat4_3.png"), boundaries
+        test_path,
+        last_iter,
+        [[0, 1], [0, 1]],
+        6,
+        Path("../tex/heat4_3.png"),
+        boundaries,
     )
 
 
