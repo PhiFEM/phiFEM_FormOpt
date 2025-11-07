@@ -1,4 +1,5 @@
 from pathlib import Path
+import types
 
 import gmsh
 from mpi4py import MPI
@@ -2367,7 +2368,7 @@ class NonlinearSolverWrapper:
         self.solver = solver
         self.u = u
         self.initial = initial
-        self.flag_callable = callable(initial)
+        self.flag_callable = isinstance(initial, types.FunctionType)
         self.solver_initial = None
 
         if not self.flag_callable:

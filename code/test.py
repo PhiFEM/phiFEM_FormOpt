@@ -8,7 +8,6 @@ from models import (
     InverseElasticity,
     Heat,
     HeatPlus,
-    HeatMultiple,
     Mechanism,
 )
 
