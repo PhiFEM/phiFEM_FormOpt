@@ -215,5 +215,5 @@ i = 202 | cost = 2.2476 | cstr = 1.0020 | nder = 1.0889 | steps = 13 | lagr = 2.
 i = 203 | cost = 2.2633 | cstr = 1.0015 | nder = 1.1815 | steps = 12 | lagr = 2.2664 | lm = 2.0091 | mu = 2.0060
 i = 204 | cost = 2.2738 | cstr = 1.0000 | nder = 1.3003 | steps = 13 | lagr = 2.2738 | lm = 2.0073 | mu = 2.0073
 > Stopping condition reached!
-> Assembly time = 5.168110449999972 s
-> Resolution time = 59.80019646099993 s
+> Assembly time = 5.159827824999979 s
+> Resolution time = 59.26874286000009 s

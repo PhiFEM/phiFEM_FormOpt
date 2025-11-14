@@ -91,5 +91,5 @@ i =  78 | cost = 0.1422 | cstr = 1.0000 | nder = 0.0417 | steps = 16 | lagr = 0.
 i =  79 | cost = 0.1421 | cstr = 0.9997 | nder = 0.0413 | steps = 16 | lagr = 0.1421 | lm = 0.1067 | mu = 0.1074
 i =  80 | cost = 0.1419 | cstr = 0.9999 | nder = 0.0407 | steps = 16 | lagr = 0.1419 | lm = 0.1068 | mu = 0.1071
 > Stopping condition reached!
-> Assembly time = 7.187380603000008 s
-> Resolution time = 14.804532279 s
+> Assembly time = 7.583934923000015 s
+> Resolution time = 15.235008393000044 s

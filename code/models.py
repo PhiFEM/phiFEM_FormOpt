@@ -21,6 +21,10 @@ from ufl import (
     cos,
     sqrt,
     nabla_div,
+    cofac,
+    det,
+    tr,
+    inv,
 )
 
 """
@@ -1000,5 +1004,260 @@ class Mechanism(Model):
             B += 1e4 * sb * dot(th, xi) * self.dx
 
         # Also need to modify a bit the bilinear form, so that the input and output regions do not move ... see the paper
+
+        return B, False
+
+
+class GrippingMechanism(Model):
+
+    def __init__(self, dim, domain, space, g, ds_g, k, dir_bcs, bc_theta, vol, path):
+
+        self.dim = dim
+        self.domain = domain
+        self.space = space
+        self.path = path
+
+        self.dx = Measure("dx", domain=domain)
+        self.ds = Measure("ds", domain=domain)
+        self.g = [as_vector(gi) for gi in g]
+        self.ds_g = ds_g
+        self.k = [as_vector(ki) for ki in k]
+        self.bc = dir_bcs
+        self.bc_theta = bc_theta
+        self.vol = vol
+        self.sub = []
+
+        E, nu = 1.0, 0.3
+        lmbda = E * nu / (1.0 + nu) / (1.0 - 2.0 * nu)
+        mu = E / 2.0 / (1.0 + nu)
+
+        self.zero_vec = as_vector(dim * [0.0])
+        self.Id = Identity(dim)
+        self.epsilon = lambda w: sym(grad(w))
+        self.sigma = lambda w: (
+            lmbda * nabla_div(w) * self.Id + 2.0 * mu * self.epsilon(w)
+        )
+        self.chi = lambda w: conditional(lt(w, 0.0), 1.0, 0.0)
+        self.A = lambda w: conditional(lt(w, 0.0), 1.0, 1e-3)
+
+    def pde(self, phi):
+
+        u = TrialFunction(self.space)
+        v = TestFunction(self.space)
+        su = self.sigma(u)
+        ev = self.epsilon(v)
+
+        W = self.A(phi) * inner(su, ev) * self.dx
+        for gi, dgi in zip(self.g, self.ds_g):
+            W -= dot(gi, v) * dgi
+
+        return [(W, self.bc)]
+
+    def adjoint(self, phi, U):
+
+        p = TrialFunction(self.space)
+        r = TestFunction(self.space)
+        sp = self.sigma(p)
+        er = self.epsilon(r)
+        su = self.sigma(U[0])
+
+        W = self.A(phi) * inner(sp, er) * self.dx
+        for ki, dgi in zip(self.k, self.ds_g):
+            W += dot(ki, r) * dgi
+
+        return [(W, self.bc)]
+
+    def cost(self, phi, U):
+
+        u = U[0]
+        J = sum([dot(ki, u) * dgi for ki, dgi in zip(self.k, self.ds_g)])
+
+        return J
+
+    def constraint(self, phi, U):
+
+        C = (1.0 / self.vol) * self.chi(phi) * self.dx
+
+        return [C]
+
+    def derivative(self, phi, U, P):
+
+        u = U[0]
+        p = P[0]
+        su = self.sigma(u)
+        eu = self.epsilon(u)
+        sp = self.sigma(p)
+        ep = self.epsilon(p)
+
+        S0_J = self.zero_vec
+        S1_J = self.A(phi) * (
+            -grad(u).T * sp
+            - grad(p).T * su
+            + 0.5 * inner(su, ep) * self.Id
+            + 0.5 * inner(eu, sp) * self.Id
+        )
+
+        S0_C = self.zero_vec
+        S1_C = (1.0 / self.vol) * self.chi(phi) * self.Id
+
+        S0 = (S0_J, [S0_C])
+        S1 = (S1_J, [S1_C])
+
+        return S0, S1
+
+    def bilinear_form(self, th, xi):
+
+        nv = FacetNormal(self.domain)
+
+        B = 0.01 * dot(th, xi) * self.dx
+        B += inner(grad(th), grad(xi)) * self.dx
+        B += 1e4 * dot(th, nv) * dot(xi, nv) * self.ds
+
+        for sb in self.sub:
+            B += 1e4 * sb * dot(th, xi) * self.dx
+
+        return B, self.bc_theta
+
+
+class NonlinearElasticity(Model):
+    def __init__(self, dim, domain, space, g, f, ds_g, dir_bcs, vol, path):
+
+        self.dim = dim
+        self.domain = domain
+        self.space = space
+        self.path = path
+
+        self.dx = Measure("dx", domain=domain)
+        self.ds = Measure("ds", domain=domain)
+        self.g = as_vector(g)
+        self.ds_g = ds_g
+        self.bc = dir_bcs
+        self.vol = vol
+        self.ini_func = None
+        self.sub = []
+
+        E, nu = 1.0, 0.3
+        lmbda = E * nu / (1.0 + nu) / (1.0 - 2.0 * nu)
+        mu = E / 2.0 / (1.0 + nu)
+
+        self.a1 = 2.0 * mu
+        self.a2 = 0.0
+        self.a3 = lmbda - 2.0 * self.a2
+
+        self.zero_vec = as_vector(dim * [0.0])
+        self.Id = Identity(dim)
+        self.epsilon = lambda w: sym(grad(w))
+        self.sigma = lambda w: (
+            lmbda * nabla_div(w) * self.Id + 2.0 * mu * self.epsilon(w)
+        )
+
+        self.F = lambda w: self.Id + grad(w)
+
+        self.WF = lambda w: (
+            0.5 * self.a1 * (inner(self.F(w), self.F(w)))
+            + 0.5 * self.a2 * (inner(cofac(self.F(w)), cofac(self.F(w))))
+            + 0.5 * self.a3 * (det(self.F(w)) - 1.0) ** 2
+        )
+
+        self.A = lambda w: conditional(lt(w, 0.0), 1.0, 1e-3)
+        self.chi = lambda w: conditional(lt(w, 0.0), 1.0, 0.0)
+
+    def dCof(self, F, dF):
+
+        return (tr((cofac(F)).T * dF) * self.Id - cofac(F) * (dF.T)) * (inv(F)).T
+
+    def d2Cof(self, dF1, dF2):
+        d = None
+        return d
+
+    def dW(self, F, dF):
+
+        d = self.a1 * inner(F, dF)
+        d += self.a2 * inner(cofac(F), self.dCof(F, dF))
+        d += self.a3 * (det(F) - 1.0) * inner(cofac(F), dF)
+
+        # Alternative version:
+        # H = cofac(F)
+        # MH = inner((inv(F)).T, H) * H - ((inv(F)).T) * (H.T) * H
+        # d = inner(dF, (self.a1 * F + self.a2 * MH + self.a3 * (det(F) - 1.0) * H))
+
+        return d
+
+    def d2W(self, F, dF1, dF2):
+
+        d = self.a1 * inner(dF1, dF2)
+        d += self.a2 * inner(self.dCof(F, dF1), self.dCof(F, dF2))
+        d += self.a2 * inner(cofac(F), self.d2Cof(dF1, dF2))
+        d += self.a3 * inner(cofac(F), dF1) * inner(cofac(F), dF2)
+        d += self.a3 * (det(F) - 1.0) * inner(self.dCof(F, dF1), dF2)
+
+        return d
+
+    def pde(self, phi):
+
+        u = Coefficient(self.space)
+        v = TestFunction(self.space)
+        du = TrialFunction(self.space)
+
+        # Nonlinear equation
+        N = self.A(phi) * self.dW(self.Id + grad(u), grad(v)) * self.dx
+        N -= dot(self.g, v) * self.ds_g
+
+        J = self.A(phi) * self.d2W(self.Id + grad(u), grad(du), grad(v)) * self.dx
+
+        return [(N, [], J, u, self.ini_func)]
+
+    def adjoint(self, phi, U):
+
+        u = U[0]
+        p = TrialFunction(self.space)
+        r = TestFunction(self.space)
+
+        W = self.A(phi) * self.d2W(self.Id + grad(u), grad(p), grad(r)) * self.dx
+        W += dot(self.g, r) * self.ds_g
+
+        return [(W, self.bc)]
+
+    def cost(self, phi, U):
+
+        u = U[0]
+        J = dot(self.g, U) * self.ds_g
+
+        return J
+
+    def constraint(self, phi, U):
+
+        C = (1.0 / self.vol) * self.chi(phi) * self.dx
+
+        return [C]
+
+    def derivative(self, phi, U, P):
+
+        u = U[0]
+        p = P[0]
+
+        S0_J = self.zero_vec
+        S1_J = self.A(phi) * self.dW(self.Id + grad(u), grad(p)) * self.Id  # \(o.o)/
+        S1_J += None
+        S1_J += None
+
+        S0_C = self.zero_vec
+        S1_C = (1.0 / self.vol) * self.chi(phi) * self.Id
+
+        S0 = (S0_J, [S0_C])
+        S1 = (S1_J, [S1_C])
+
+        return S0, S1
+
+    def bilinear_form(self, th, xi):
+
+        nv = FacetNormal(self.domain)
+
+        B = 0.1 * dot(th, xi) * self.dx
+        B += inner(grad(th), grad(xi)) * self.dx
+        B += 1e4 * dot(th, nv) * dot(xi, nv) * self.ds
+
+        for sb in self.sub:
+            B += 1e4 * sb * dot(th, xi) * self.dx
 
         return B, False

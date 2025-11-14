@@ -356,7 +356,6 @@ Further examples of tensor representation of the shape derivative for other PDEs
 
 
 \textbf{Inverse problem.}
-%\tred{A: add figure to illustrate the geometry.}%Ready!
 Let $\Gamma_0$, $\Gamma_1$ be subsets of $\Gamma:=\partial\hold$ such that $\Gamma=\Gamma_0\cup\Gamma_1$. 
 Let $H_{\Gamma_0}(\mathcal{D})^d$ be the space of functions
 \begin{equation*}
@@ -386,23 +385,23 @@ We follow a Kohn-Vogelius-type approach \cite{KohnVogelius1984}, considering the
 \end{equation}
 where $u$ and $y$ are the solutions to the transmission problems
 \begin{equation} \label{eq:f-prob}
-	\begin{array}{rcl}
-    -\mathrm{div} A_{\Omega} \sigma(u) = 0 & \text{in} & \Om \text{ and }  \hold\setminus\overline \Omega \\
-                                u = 0 & \text{on} & \Gamma_{0} \\
-                 A_{\Omega} \sigma(u)n = f & \text{on} & \Gamma_{1}   \\
-				 (A_{\Omega} \sigma(u)n)^+ = (A_{\Omega} \sigma(u)n)^- & \text{on} & \partial\Om\\      
-				 u^+ = u^- & \text{on} & \partial\Om      				              
-	\end{array}	
+	\begin{aligned}
+    -\mathrm{div} A_{\Omega} \sigma(u) &= 0 && \text{in } \Omega \text{ and } \mathcal{D}\setminus\overline{\Omega} \\
+                                     u &= 0 && \text{on } \Gamma_{0} \\
+                 A_{\Omega} \sigma(u)n &= f && \text{on } \Gamma_{1}   \\
+		     (A_{\Omega} \sigma(u)n)^+ &= (A_{\Omega} \sigma(u)n)^- && \text{on } \partial\Omega\\      
+				                   u^+ &= u^- && \text{on }  \partial\Omega      				              
+	\end{aligned}	
 \end{equation}
 and
 \begin{equation} \label{eq:g-prob}
-	\begin{array}{rcl}
-    -\mathrm{div} A_{\Omega} \sigma(y) = 0 & \text{in} & \Om  \text{ and }  \hold\setminus\overline \Omega \\
-                                y = 0 & \text{on} & \Gamma_{0} \\
-                                y = g & \text{on} & \Gamma_{1}   \\
-								(A_{\Omega} \sigma(y)n)^+ = (A_{\Omega} \sigma(y)n)^- & \text{on} & \partial\Om\\      
-								y^+ = y^- & \text{on} & \partial\Om       
-	\end{array}
+	\begin{aligned}
+    -\mathrm{div} A_{\Omega} \sigma(y) &= 0 && \text{in } \Om  \text{ and } \mathcal{D}\setminus\overline \Omega \\
+                                     y &= 0 && \text{on } \Gamma_{0} \\
+                                     y &= g && \text{on } \Gamma_{1}   \\
+			 (A_{\Omega} \sigma(y)n)^+ &= (A_{\Omega} \sigma(y)n)^- && \text{on } \partial\Omega\\      
+								   y^+ &= y^- && \text{on } \partial\Om       
+	\end{aligned}
 \end{equation}
 respectively, and $A_{\Omega}:\overline{\mathcal{D}} \rightarrow \mathds{R}$ is given by
 \begin{equation}\label{eq:AOmega}
@@ -1602,12 +1601,21 @@ def bilinear_form(self, th, xi):
 %Inverse elasticity 2D or 3D, Compliance 2D or 3D? Heat equation?
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Inverse Elasticity}\label{sec:num_inverse_elasticity}
+\subsection{Inverse elasticity}
+\label{sec:num_inverse_elasticity}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-We consider the inverse elasticity problem described in Section~\ref{sec:model_prob}, where the distributed shape derivative has been computed.
-We start by writing the model class for this problem. 
-We call our model \code{InverseElasticity}:
+We consider the inverse elasticity problem described in
+Section~\ref{sec:model_prob}, where the distributed shape derivative has been computed.
+%\tred{A: we could write this command at the beginning of the subsection maybe?}
+To perform this test, we employ mixed parallelism with $12$ processes,
+arranged in $6$ groups of $2$ processes each:
+\begin{lstlisting}
+mpirun -np 12 python test.py 08
+\end{lstlisting}
+
+We start by writing the model class for this problem,
+which we call \code{InverseElasticity}:
 \begin{lstlisting}
 from distributed import Model
 
@@ -1617,20 +1625,22 @@ class InverseElasticity(Model):
 \end{lstlisting}
 In addition to the mandatory parameters
 \code{dim}, \code{domain}, \code{space}, and \code{path},
-we add the following to the initializer:
+we include the following ones to the initializer:
 \begin{lstlisting}
 def __init__(self, dim, domain, space, forces, ds_forces, ds1, dirbc_partial, dirbc_total, path):
 \end{lstlisting}
 
-The parameters \code{forces} and \code{ds\_forces} are
-lists with the forces and the surfaces of application, respectively.
-The parameter \code{ds1} correspond to the surface $\Gamma_1$.
-Although in \eqref{eq:f-prob} the forces are applied over the whole $\Gamma_1$,
-here we assume $f\equiv\textbf{0}$ on a subset of $\Gamma_1$,
-so the \code{ds\_forces} list contains surfaces that are subsets of $\Gamma_1$.
+The parameters \code{forces} and \code{ds\_forces} are lists
+containing the forces and their corresponding surfaces of application, respectively.
+The parameter \code{ds1} corresponds to the surface $\Gamma_1$.
+Although in \eqref{eq:f-prob} the forces are applied over entire $\Gamma_1$,
+here we assume $f\equiv\textbf{0}$ on a subset of $\Gamma_1$.
+Thereofore, the \code{ds\_forces} list contains only whose surfaces
+that are subsets of $\Gamma_1$ where $f$ is not zero.
 
 The parameters \code{dirbc\_partial} and \code{dirbc\_total} are
-homogeneous Dirichlet conditions for $\Gamma_0$ and $\Gamma$, respectively.
+the homogeneous Dirichlet conditions imposed on $\Gamma_0$ and $\Gamma$,
+respectively.
 
 In \code{\_\_init\_\_} are defined the variables and functions
 that will be used to write the problem equations.
@@ -1644,11 +1654,12 @@ self.epsilon = lambda w: sym(grad(w))
 self.A = lambda w: conditional(lt(w, 0.0), 10.0, 1.0)
 \end{lstlisting}
 Here, \code{self.A} is an attribute of the \code{InverseElasticity} class
-and represents $A_\Omega$ with $\kappa = 10$.
-The argument of \code{self.A} will be the level set function:
-if negative, \code{self.A} returns 10, else 1.
+and represents $A_\Omega$ with $\kappa = 10$, see \eqref{eq:AOmega}.
+The argument passed to \code{self.A} will be the level set function:
+if negative, \code{self.A} returns $10$, else $1$.
 
-The weak formulations \eqref{eq:w-f} and \eqref{eq:w-g},
+The weak formulations for the force application \eqref{eq:w-f} and
+the observed displacement \eqref{eq:w-g},
 along with their boundary conditions, are returned
 by the methods \code{f\_prob} and \code{g\_prob}:
 \begin{lstlisting}
@@ -1671,7 +1682,7 @@ def g_prob(self, v, w, phi, g):
 \end{lstlisting}
 
 Using these methods we write the required \code{pde} method.
-It returns a list with the weak formulation
+It returns a list (\code{F+G}) with the weak formulation
 and boundary condition corresponding
 to each applied force and boundary displacement:
 \begin{lstlisting}
@@ -1685,8 +1696,8 @@ def pde(self, phi):
 \end{lstlisting}
 
 Similarly, we write the methods \code{adj\_f\_prob} and \code{adj\_g\_prob}
-to get the adjoint problems, 
-and collect all of them in the required \code{adjoint} method:
+to get the adjoint problems (see they in the file \code{models.py}), 
+and collect them in the required \code{adjoint} method:
 \begin{lstlisting}
 def adj_f_prob(self, p, r, phi, u, v, g):
 	# adjoint of f-problem
@@ -1744,7 +1755,7 @@ def constraint(self, phi, U):
 
 In order to write the \code{derivative} method,
 we first write the derivative components $S_0$ and $S_1$
-separately in the following methods:
+separately:
 \begin{lstlisting}
 def S0(self, u, v, q, g, phi):
 	i, j, k = indices(3)
@@ -1772,7 +1783,8 @@ def S1(self, u, v, p, q, g, phi):
 \end{lstlisting}
 
 The \code{derivative} method collect the derivative components
-for each pair of applied force and boundary displacement:
+for each pair of applied force and boundary displacement,
+by evaluating the \code{S0} and \code{S1} methods at state and adjoint solutions:
 \begin{lstlisting}
 def derivative(self, phi, U, P):
 	fu = U[:self.N]
@@ -1791,33 +1803,43 @@ def derivative(self, phi, U, P):
 	]
 	return (sum(S0), []), (sum(S1), [])
 \end{lstlisting}
-Since there are  constraints in this problem, and no derivative components of the constraints functions,
-there are empty lists on the tuples returned by \code{derivative}.
+Note that empty lists are returned in the place corresponding
+to the derivative components of the constraints.
 
-Finally, we write the bilinear form $B$, used to compute the velocity field $\theta$ by solving \eqref{eq:velocity}:
+Finally, we write the bilinear form $B$,
+used to compute the velocity field $\theta$
+by solving \eqref{eq:velocity}:
 \begin{lstlisting}
 def bilinear_form(self, th, xi):
     biform = 0.1*dot(th, xi)*self.dx
 	biform += inner(grad(th), grad(xi))*self.dx    
 	return biform, True
 \end{lstlisting}
-By returning \code{True} we are specifying homogeneous Dirichlet boundary condition, that is, $\mathbb{H}=H^1_0(\Omega)$.
+By returning \code{True} we are specifying homogeneous Dirichlet boundary condition,
+that is, $\mathbb{H}=H^1_0(\Omega)$.
 
-We are ready to write the test using mixed parallelism.
+We now are ready to write the test using mixed parallelism.
 We start by calling the MPI communicator:
 \begin{lstlisting}
 comm = MPI.COMM_WORLD
 rank = comm.rank
 size = comm.size
 \end{lstlisting}
-Since there are six state problems, we verify that the number of processes be a multiple of six
-and create the sub-communicator:
+
+We will consider three displacement observations with their corresponding
+applied forces. Thus, there are six state problems.
+Setting \code{nbr\_groups = 6}, and considering $12$ processes (\code{size=12}),
+number of processes is a multiple of \code{nbr\_groups},
+and the sub-communicator can be created:
 \begin{lstlisting}
-nbr_groups = 6 # size%nbr_groups = 0
 color = rank * nbr_groups // size
 sub_comm = comm.Split(color, rank)
 \end{lstlisting}
-For clarity and good coding practice, we first specify the output path for saving results, the domain dimension ($d=2$), the rank (i.e., the number of components of the state/adjoint solutions), and the mesh size.
+For clarity and good coding practice,
+we first specify the output path for saving results,
+the domain dimension ($d=2$), the rank
+(i.e., the number of components of the state/adjoint solutions),
+and the mesh size which will be used by \code{Gmsh}:
 \begin{lstlisting}
 test_path = Path("../results/t08/")
 dim = 2
@@ -1825,9 +1847,7 @@ rank_dim = 2
 mesh_size = 0.015
 \end{lstlisting}
 For this test, the domain $\mathcal{D}$ is a semi-ellipse.
-We use the \code{create\_domain\_2d\_MP}
-to create $\mathcal{D}$. Below we define
-the vertices and the boundary parts:
+Below we define the vertices and the boundary parts:
 \begin{lstlisting}
 npts = 80
 part = npts//4
@@ -1855,7 +1875,8 @@ boundary_parts = [
 	(neu_idxC, neu_mkrC, "neuC")
 ]
 \end{lstlisting}
-These variables are passed to \code{create\_domain\_2d\_MP}, along with the sub-communicator
+These variables and the sub-communicator are passed to
+the \code{create\_domain\_2d\_MP} function:
 \begin{lstlisting}
 output = dib.create_domain_2d_MP(
 	sub_comm, color,
@@ -1864,7 +1885,7 @@ output = dib.create_domain_2d_MP(
 )
 domain, nbr_tri, boundary_tags = output	
 \end{lstlisting}
-Now we create the space of functions and the Dirichlet boundary conditions
+We now create the space of functions and the Dirichlet boundary conditions:
 \begin{lstlisting}
 space = dib.create_space(domain, "CG", rank_dim)
 dirbc_partial = dib.homogeneous_dirichlet(
@@ -1874,7 +1895,8 @@ dirbc_total = dib.homogeneus_boundary(
 	domain, space, dim, rank_dim
 )
 \end{lstlisting}
-boundary measures
+
+Boundary measures are created to impose the Neumann conditions:
 \begin{lstlisting}
 ds_parts = dib.marked_ds(
 	domain, boundary_tags,
@@ -1882,20 +1904,19 @@ ds_parts = dib.marked_ds(
 )
 ds_forces = [ds_parts[1], ds_parts[2], ds_parts[3]] 
 ds1 = sum(ds_parts[1:], start = ds_parts[0])
-forces = [(-1.0, -1.0), (0.0, -1.0), (1.0, -1.0)]
 \end{lstlisting}
-instance of \code{InverseElasticity} class
+Finally, we create an object of the \code{InverseElasticity} class:
 \begin{lstlisting}
 md = InverseElasticity(
 	dim, domain, space, forces, ds_forces, ds1,
 	dirbc_partial, dirbc_total, test_path
 )
 \end{lstlisting}
-displacement data
-\begin{lstlisting}
-md.gs = dib.get_funcs_from(g_space, g_values[sub_comm.rank])
-\end{lstlisting}
-initial level set function 
+See the code for the details related to the forces and 
+displacement data that where used. 
+
+Befure run the test, we specify an initial level set function
+t
 \begin{lstlisting}
 centers = np.array([(0.0, 0.4)])
 radii = np.array([0.15])
@@ -1911,11 +1932,17 @@ md.runMP(
 	cost_tol = 1e-1
 )
 \end{lstlisting}
-in terminal, execute
-\begin{lstlisting}
-mpirun -np 12 python test.py 08
-\end{lstlisting}
-\tred{A: we could write this command at the beginning of the subsection maybe?}
+
+\begin{center}
+\includegraphics[width=0.48\linewidth]{inv1_0.png}
+\hfill
+\includegraphics[width=0.48\linewidth]{inv1_1.png}
+\captionof{figure}{
+	---
+}
+\label{fig:inv1}
+\end{center}
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Compliance minimization}
@@ -2123,11 +2150,15 @@ mpirun -np 2 python test.py 20 # Data (14 sec)
 \end{center}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Heat Conduction}
+\subsection{Heat conduction}
 \label{sub:heat}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Topology optimization for efficient thermal management plays a crucial role in modern applications such as battery thermal regulation \cite{Mo2021}, heat exchangers \cite{GAO2008805}, additive-manufactured cooling channels \cite{LamarcheGagnon2024}, and temperature-sensitive components in aerospace systems.
+Topology optimization for efficient thermal management plays a crucial role
+in modern applications such as battery thermal regulation \cite{Mo2021},
+heat exchangers \cite{GAO2008805},
+additive-manufactured cooling channels \cite{LamarcheGagnon2024}, and
+temperature-sensitive components in aerospace systems.
 
 Let $\Gamma_0$ be a subset of $\Gamma$.
 Let $V$ be a prefixed volume, less than the volume of $\mathcal{D}$.
@@ -2140,14 +2171,14 @@ subject to
 \begin{equation}
 	\int_{\mathcal{D}} \chi_{\Omega} = V,
 \end{equation}
-where $u$ is the solution to %\tred{A: when writing the strong formulation we should always write it using transmission conditions to be rigorous. That's why I usually prefer to write first the wek formulation and then the strong formulation.}
+where $u$ is the solution to
 \begin{equation} \label{eq:heat_prob}
 	\begin{aligned}
-	-\operatorname{div}(A_{\Omega} \nabla u) &= f && \text{in } \Omega \text{ and } \mathcal{D}\setminus\overline{\Omega}\\
-                                          u  &= 0 && \text{on } \Gamma_{0}\\
-                             \partial_{n} u  &= 0 && \text{on } \Gamma\setminus\Gamma_{0}\\
-			   (A_{\Omega} \partial_{n} u)^+ &= (A_{\Omega} \partial_{n} u)^- && \text{on }  \partial\Omega\\
-							             u^+ &= u^- && \text{on }  \partial\Omega        
+	-\mathrm{div} A_{\Omega} \nabla u &= f && \text{in } \Omega \text{ and } \mathcal{D}\setminus\overline{\Omega}\\
+                                    u &= 0 && \text{on } \Gamma_{0}\\
+                       \partial_{n} u &= 0 && \text{on } \Gamma\setminus\Gamma_{0}\\
+		(A_{\Omega} \partial_{n} u)^+ &= (A_{\Omega} \partial_{n} u)^- && \text{on }  \partial\Omega\\
+							      u^+ &= u^- && \text{on }  \partial\Omega        
 	\end{aligned}	
 \end{equation}
 and $A_{\Omega}:\overline{\mathcal{D}} \rightarrow \mathds{R}$ is given by
@@ -2187,9 +2218,11 @@ and red color to highlight $\Gamma_0$, where the temperature is fixed to zero.
 We apply a uniform heat $f \equiv 1$,
 with volume constraint $V = 0.25$ and $\Gamma_0 = (0.4, 0.6)\times\{y=0\}$.
 The test is carried out using data parallelism with two processes:
+%
 \begin{lstlisting}
 mpirun -np 2 python test.py 09 # Data (58 sec)
 \end{lstlisting}
+%
 See the results in Figure \ref{fig:heat1}.
 In this example, we have employed the bilinear form
 \begin{equation*}
@@ -2216,7 +2249,7 @@ and $\Gamma_0 = \Gamma$ (i.e., the whole boundary is kept at zero temperature).
 We run this example using data parallelism with two processes:
 %
 \begin{lstlisting}
-mpirun -np 4 python test.py 10 # Data (51 sec)
+mpirun -np 4 python test.py 10 # Data (52 sec)
 \end{lstlisting}
 %
 See the results in Figure \ref{fig:heat2}.
@@ -2242,7 +2275,7 @@ Thus, the material is penalized close to the boundary.
 We apply a localized heat source given by the function
 $f(x,y) \coloneqq \phi(\vert(x,y)-(0.5, 0.5)\vert_2)$,
 where $\phi$ is the radial function defined as
-\begin{equation}
+\begin{equation} \label{eq:rad}
 	\phi(r) \coloneqq
 	\begin{cases}
 	25(1 + \cos(10 \pi r )) & \text{if } r < 0.1, \\
@@ -2274,27 +2307,33 @@ the velocity problem is solved with $\mathbb{H} = H^1(\mathcal{D})^d$.
 \end{center}
 
 \noindent\textit{Example 4.}
-In this example, two subsets of the boundary are kept at zero temperature:
+In this example, we perform two tests.
+In the first test, we solve the problem with one heat sink
+$\Gamma_0 = \Gamma_0^\mathrm{I} \cup \Gamma_0^\mathrm{II}$,
+where
 \[
 \Gamma_0^\mathrm{I} = (0.4,0.6)\times\{y=0\}\;,\;\Gamma_0^\mathrm{II} = \{x=1\}\times(0.4,0.6).
 \]
-First, we solve \eqref{eq:heat_cost}-\eqref{eq:heat_prob}
-with $\Gamma_0 = \Gamma_0^\mathrm{I} \cup \Gamma_0^\mathrm{II}$.
-Later, we solve the problem with multiple sinks
-($\Gamma_0^\mathrm{I}$ and $\Gamma_0^\mathrm{II}$ in this case),
-along with the cost functional given by the sum of the corresponding thermal compliances.
+In the second test, we solve the problem with multiple heat sinks
+$\Gamma_0^\mathrm{I}$ and $\Gamma_0^\mathrm{II}$. In this case,
+the cost functional is given by the sum of the corresponding thermal compliances:
+\[
+	J(\Omega) \coloneqq \frac{1}{2}\int_{\mathcal{D}} A_{\Omega}\left|\nabla u^\mathrm{I}\right|^{2}+
+	\frac{1}{2}\int_{\mathcal{D}} A_{\Omega}\left|\nabla u^\mathrm{II}\right|^{2},
+\]
+where $u^\mathrm{I}$ solves \eqref{eq:heat_prob} with $\Gamma_0 = \Gamma_0^\mathrm{I}$
+and $u^\mathrm{II}$ solves \eqref{eq:heat_prob} with $\Gamma_0 = \Gamma_0^\mathrm{II}$.
 In both cases, $f\equiv 1$ and $V = 0.4$.
 The first test is carried out using data parallelism with two processes:
 \begin{lstlisting}
 mpirun -np 2 python test.py 12 # Data (68 sec)
 \end{lstlisting}
 Since in the second test there are two PDEs to be solved,
-we can employ task parallelism with two processes:
+we employ task parallelism with two processes:
 \begin{lstlisting}
-mpirun -np 2 python test.py 13 # Task (100 sec)
+mpirun -np 2 python test.py 13 # Task (106 sec)
 \end{lstlisting}
 The results are in Figure \ref{fig:heat4}.
-%Lagrangian value : multiple = two times simple case 
 \begin{center}
 \includegraphics[width=0.48\linewidth]{heat4_0.png}
 \hfill
@@ -2303,43 +2342,56 @@ The results are in Figure \ref{fig:heat4}.
 \hfill
 \includegraphics[width=0.48\linewidth]{heat4_3.png}
 \captionof{figure}{
-	Initial guess (top-left) and
-	Lagrangian values (top-right).
-	Note that the multiple case is approximately two times the simple case.
-	optimized designs at iteration $i=215$ and $i=199$, 
-	computed in a mesh with $92\,612$ triangles.
+	Initial guess (top-left) and cost values (top-right),
+	along with the optimized designs of the single case (bottom-left)
+	and multiple case (bottom-right), at iteration $i=215$ and $i=199$, respectively.
+	The final cost value of the multiple sink test
+	approximately duplicates the one of the single sink test.
 }
 \label{fig:heat4}
 \end{center}
 
-\noindent\textit{Example 5.}  (multiple load cases)
-
-
-$\Gamma_0$ 
-
-$\vert \Gamma_0 \vert = 0.05\sqrt{2}$
-
-$f^\mathrm{I}(x,y) \coloneqq \phi(\vert(x,y)-(0.5, 0.25)\vert_2)$
-
-$f^\mathrm{II}(x,y) \coloneqq \phi(\vert(x,y)-(0.75, 0.5)\vert_2)$
-
-$f^\mathrm{III}(x,y) \coloneqq \phi(\vert(x,y)-(0.5, 0.75)\vert_2)$
-
-$f^\mathrm{IV}(x,y) \coloneqq \phi(\vert(x,y)-(0.25, 0.5)\vert_2)$
-
-$f = f^\mathrm{I} + f^\mathrm{II} + f^\mathrm{III} + f^\mathrm{IV}$
-
-$V = 0.45$
-
+\noindent\textit{Example 5.}
+%
+As the previous example, here we consider the single and multiple cases,
+but of the heat source.
+In the single case test, we apply one heat source 
+$f = f^\mathrm{I} + f^\mathrm{II} + f^\mathrm{III} + f^\mathrm{IV}$,
+where
+\[
+	f^\mathrm{I}(x,y) \coloneqq \phi(\vert(x,y)-(0.5, 0.25)\vert_2),
+\]
+\[
+	f^\mathrm{II}(x,y) \coloneqq \phi(\vert(x,y)-(0.75, 0.5)\vert_2),
+\]
+\[
+	f^\mathrm{III}(x,y) \coloneqq \phi(\vert(x,y)-(0.5, 0.75)\vert_2),
+\]
+\[
+	f^\mathrm{IV}(x,y) \coloneqq \phi(\vert(x,y)-(0.25, 0.5)\vert_2).
+\]
+The function $\phi$ was defined in \eqref{eq:rad}.
+In the multiple case, we consider four heat sources 
+$f=f^\mathrm{I}$, $f=f^\mathrm{II}$, $f=f^\mathrm{III}$, and $f=f^\mathrm{IV}$,
+along with the cost functional
+\[
+	J(\Omega) \coloneqq \sum_{i=\mathrm{I}}^{\mathrm{IV}}\frac{1}{4}
+	\int_{\mathcal{D}} A_{\Omega}\left|\nabla u^i\right|^{2},
+\]
+where $u^i$ solves \eqref{eq:heat_prob} with $f = f^i$.
+In both cases, the volume constraint is $V = 0.45$, and 
+$\Gamma_0$ consists of four small subsets
+of the boundary in the corners of the domain, each one with length $0.05\sqrt{2}$.
+The first test is carried out using data parallelism with two processes:
 \begin{lstlisting}
-mpirun -np 2 python test.py 21 # Data
+mpirun -np 2 python test.py 21 # Data (15 sec)
 \end{lstlisting}
-
+Since in the second test there are four PDEs to be solved,
+we employ task parallelism with four processes:
 \begin{lstlisting}
-mpirun -np 4 python test.py 22 # Task
+mpirun -np 4 python test.py 22 # Task (20 sec)
 \end{lstlisting}
-
-Figure \ref{fig:heat5}
+The numerical results are in Figure \ref{fig:heat5}.
 \begin{center}
 \includegraphics[width=0.48\linewidth]{heat5_0.png}
 \hfill
@@ -2348,8 +2400,11 @@ Figure \ref{fig:heat5}
 \hfill
 \includegraphics[width=0.48\linewidth]{heat5_3.png}
 \captionof{figure}{
-	Initial guess and
-	optimized design at iteration $i=?$.
+	Initial guess (top-left) and cost values (top-right),
+	along with the optimized designs of the single case (bottom-left)
+	and multiple case (bottom-right), at iteration $i=80$ and $i=63$, respectively.
+	The final cost value of the multiple source test
+	approximately duplicates the one of the single source test.
 }
 \label{fig:heat5}
 \end{center}

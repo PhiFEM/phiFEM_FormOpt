@@ -49,7 +49,7 @@ def plot_bars(num_procs, times, filename):
     plt.savefig(filename, dpi=300, bbox_inches="tight")
 
 
-def plot_tutorial(h5file, size, limits=None, filenames=[None, None]):
+def plot_tutorial(h5file, size, limits=None, boundaries=None, lw=2):
 
     with h5py.File(h5file, "r") as f:
 
@@ -66,7 +66,9 @@ def plot_tutorial(h5file, size, limits=None, filenames=[None, None]):
             phi_group["0"][:, 0],
             figsize=size,
             lims=limits,
-            filename=filenames[0],
+            filename=None,
+            boundaries=boundaries,
+            lw=lw,
         )
 
         plot_level(
@@ -76,9 +78,10 @@ def plot_tutorial(h5file, size, limits=None, filenames=[None, None]):
             phi_group[str(niter)][:, 0],
             figsize=size,
             lims=limits,
-            filename=filenames[1],
+            filename=None,
+            boundaries=boundaries,
+            lw=lw,
         )
-        print("> iterations:", niter)
 
 
 def InitialLevel(centers, radii, ftr=1.0):
@@ -388,6 +391,7 @@ def plot_level(
     values,
     lims=None,
     boundaries=None,
+    lw=2,
     figsize=None,
     title=None,
     filename=None,
@@ -428,7 +432,7 @@ def plot_level(
 
         if boundaries:
             for xy, cl in boundaries:
-                ax.plot(xy[:, 0], xy[:, 1], color=cl)
+                ax.plot(xy[:, 0], xy[:, 1], color=cl, linewidth=lw)
 
         if filename:
             # format = filename.suffix[1:]

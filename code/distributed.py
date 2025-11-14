@@ -1704,9 +1704,14 @@ class Velocity:
         self.liform = form(-(dot(S0, xi) + inner(S1, grad(xi))) * dx)
         self.bc = []
 
-        if dirbc:
+        if dirbc == True:
             # domain dimension = velocity rank
             self.bc = homogeneus_boundary(domain, space, dim, dim)
+
+        if isinstance(dirbc, tuple):
+            self.bc = dirichlet_bcs = homogeneous_dirichlet(
+                domain, space, dirbc[0], dirbc[1], dim
+            )
 
         self.solver = build_solver(domain, self.biform, self.bc)
 

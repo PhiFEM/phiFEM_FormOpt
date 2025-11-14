@@ -1,7 +1,13 @@
 import sys
 import numpy as np
 
-from plots import plot_basic, see_initial_guess, plot_results_for_doc, plot_bars
+from plots import (
+    plot_basic,
+    see_initial_guess,
+    plot_results_for_doc,
+    plot_bars,
+    plot_lag2,
+)
 
 from pathlib import Path
 
@@ -197,25 +203,12 @@ def test_09():
     test_path = Path("../results/t09/")
 
     vertices = [[0.0, 0.0], [0.4, 0.0], [0.6, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]]
-
     dir_idx, dir_mkr = [2], 1
     vertices = vertices + [vertices[0]]
     dir = np.array(vertices[(dir_idx[0] - 1) : (dir_idx[-1] + 1)])
     boundaries = [(dir, "red")]
 
     # plot_basic(test_path, boundaries)
-    plot_results_for_doc(
-        test_path, 0, [[0, 1], [0, 1]], 8, Path("../tex/heat1_0.png"), boundaries
-    )
-    last_iter = 204
-    plot_results_for_doc(
-        test_path,
-        last_iter,
-        [[0, 1], [0, 1]],
-        8,
-        Path("../tex/heat1_1.png"),
-        boundaries,
-    )
 
 
 def test_10():
@@ -224,19 +217,19 @@ def test_10():
     test_path = Path("../results/t10/")
 
     vertices = [[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]]
-
     vertices = vertices + [vertices[0]]
     dir = np.array(vertices)
     boundaries = [(dir, "red")]
 
     # plot_basic(test_path, boundaries)
+
+    # Plots for manuscript
     plot_results_for_doc(
         test_path, 0, [[0, 1], [0, 1]], 8, Path("../tex/heat2_0.png"), boundaries
     )
-    last_iter = 172
     plot_results_for_doc(
         test_path,
-        last_iter,
+        172,
         [[0, 1], [0, 1]],
         8,
         Path("../tex/heat2_1.png"),
@@ -249,12 +242,7 @@ def test_11():
     print("\n\tHeat conduction 3 (Data Parallelism)\n")
     test_path = Path("../results/t11/")
 
-    # plot_basic(test_path, boundaries)
-
-    plot_results_for_doc(test_path, 0, [[0, 1], [0, 1]], 8, Path("../tex/heat3_0.png"))
-    plot_results_for_doc(
-        test_path, 181, [[0, 1], [0, 1]], 8, Path("../tex/heat3_1.png")
-    )
+    # plot_basic(test_path)
 
 
 def test_12():
@@ -283,20 +271,6 @@ def test_12():
 
     # plot_basic(test_path, boundaries)
 
-    plot_results_for_doc(
-        test_path, 0, [[0, 1], [0, 1]], 6, Path("../tex/heat4_0.png"), boundaries
-    )
-
-    last_iter = 215
-    plot_results_for_doc(
-        test_path,
-        last_iter,
-        [[0, 1], [0, 1]],
-        6,
-        Path("../tex/heat4_2.png"),
-        boundaries,
-    )
-
 
 def test_13():
 
@@ -313,19 +287,16 @@ def test_13():
         [1.0, 1.0],
         [0.0, 1.0],
     ]
-
     dir1_idx, dir1_mkr = [2], 1
     dir2_idx, dir2_mkr = [5], 2
-
     dir1 = np.array(vertices[(dir1_idx[0] - 1) : (dir1_idx[-1] + 1)])
     dir2 = np.array(vertices[(dir2_idx[0] - 1) : (dir2_idx[-1] + 1)])
-
     boundaries = [(dir1, "red"), (dir2, "red")]
 
     # plot_basic(test_path, boundaries)
 
+    # Plots for manuscript
     last_iter = 199
-
     plot_results_for_doc(
         test_path,
         last_iter,
