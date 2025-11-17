@@ -560,7 +560,7 @@ def test_32():
         12.131966675000058,
         11.061559490000036,
     ]
-    plot_bars(num_procs, resolution_times, filename)
+    # plot_bars(num_procs, resolution_times, filename)
 
     """
     Performance of test 21
@@ -579,7 +579,29 @@ def test_32():
         8.650962873000026,
         7.873313986000085,
     ]
-    plot_bars(num_procs, resolution_times, filename)
+    # plot_bars(num_procs, resolution_times, filename)
+
+    """
+    Performance of test 01 (mesh_size = 0.0095, 52 085 triangles)
+    in Debian Server
+    """
+    filename = Path("../tex/performance_2.png")
+    num_procs = np.arange(1, 13)
+    resolution_times = [
+        54.046916580000016,
+        34.789148807999936,
+        27.615198225999848,
+        200.10213796800008,
+        392.05579936699996,
+        10.760523565999847,
+        9.672573813999861,
+        8.835757973,
+        8.317567439999948,
+        7.94264718300019,
+        7.5465694800000165,
+        6.773041067999657,
+    ]
+    plot_bars(num_procs, resolution_times, filename, [0, 60])
 
 
 test_functions = {

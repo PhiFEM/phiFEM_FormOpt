@@ -25,7 +25,7 @@ from mpi4py import MPI
 rank = MPI.COMM_WORLD.rank
 
 
-def plot_bars(num_procs, times, filename):
+def plot_bars(num_procs, times, filename, ylimits=None):
     #  "DarkGray" or "CornflowerBlue"
     color_bar = "CornflowerBlue"
 
@@ -38,13 +38,14 @@ def plot_bars(num_procs, times, filename):
     # ax.set_title("Execution time vs. number of processors", fontsize=13, pad=10)
     ax.set_xticks(num_procs)
     # Labels over each bar (optional)
-    for i, t in enumerate(times):
-        ax.text(
-            num_procs[i], t + 0.1, f"{t:.1f}", ha="center", va="bottom", fontsize=10
-        )
+    # for i, t in enumerate(times):
+    #     ax.text(
+    #         num_procs[i], t + 0.1, f"{t:.1f}", ha="center", va="bottom", fontsize=10
+    #     )
 
     ax.grid(axis="y", linestyle="--", linewidth=0.5, alpha=0.7)
-
+    if ylimits:
+        ax.set_ylim(ylimits)
     plt.tight_layout()
     plt.savefig(filename, dpi=300, bbox_inches="tight")
 

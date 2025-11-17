@@ -582,7 +582,6 @@ Then, when taking the jump of $\mathfrak{G}$ accross $\partial\Om$, there are a 
 \end{align*}
 }
 
-
 % \textbf{Bilinear form.}
 % In addition to the state/adjoint problems and the derivative components,
 % it is necessary to choose a positive bilinear form
@@ -594,18 +593,12 @@ Then, when taking the jump of $\mathfrak{G}$ accross $\partial\Om$, there are a 
 % \end{equation}
 % \tred{A: should probably write $\alpha$ instead of $10^{-1}$, and specify the value of $\alpha$ later.}
 
+% \tred{A: regarding the bilinear form, I think you mean that the coefficient is $10^{-1}$ for this inverse problem. I think we should rather write this in the numerical section, in Section \eqref{sec:num_inverse_elasticity}, as it is just a choice of parameter.}
 
-\tred{A: regarding the bilinear form, I think you mean that the coefficient is $10^{-1}$ for this inverse problem. I think we should rather write this in the numerical section, in Section \eqref{sec:num_inverse_elasticity}, as it is just a choice of parameter.}
-
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Main algorithm}\label{sec:algo}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-
-
-
+%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Main algorithm}
+\label{sec:algo}
+%%%%%%%%%%%%%%%%%%%%%%%%
 
 In this section we describe the main steps of the algorithm, which can be summarized as follows. 
 We employ the level set method, introduced by Osher and Sethian~\cite{MR965860}, to update $\Om$. 
@@ -676,23 +669,18 @@ will be explained in the following subsections.
 	\Statex \hspace{3em} Let $P$ be the solutions.
 	\State Use $\Omega^i$ and $U$ to calculate the \textbf{cost} value.
 	\State Use $\Omega^i$ and $U$ to calculate the \textbf{constraint} error.
+	\State Check stopping criterion based on the cost value and constraint error.
 	\State Use $\Omega^i$, $U$, $P$ to construct the derivative components:
 	\Statex \hspace{1.2em} $S_0^{J}$, $S_1^{J}$ (cost) and $S_0^{C}$, $S_1^{C}$ (constraint).
 	\State Solve the \textbf{velocity} equation \eqref{eq:velocity_eq0} with $S_0^{J}$, $S_1^{J}$, $S_0^{C}$, $S_1^{C}$.
 	\Statex \hspace{3em} Let $\theta:\overline{\mathcal{D}} \rightarrow \mathds{R}^d$ be the solution.
 	\State Solve the \textbf{transport} equation \eqref{eq:transport0} with $\theta$.
 	\Statex \hspace{3em} Let $\phi^{i+1}:\overline{\mathcal{D}} \rightarrow \mathds{R}$ be the solution.
+	\State Check stopping criterion.
 \EndFor
-\State \tred{Add stopping criterion?}
+% \State \tred{Add stopping criterion?}
 \end{algorithmic}
 \end{algorithm}
-
-
-
-
-
-
-
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Numerical implementation}\label{sec:numerics}
@@ -1600,19 +1588,14 @@ def bilinear_form(self, th, xi):
 %Here we need to decide which examples we want to show. 
 %Inverse elasticity 2D or 3D, Compliance 2D or 3D? Heat equation?
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Inverse elasticity}
 \label{sec:num_inverse_elasticity}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-We consider the inverse elasticity problem described in
-Section~\ref{sec:model_prob}, where the distributed shape derivative has been computed.
-%\tred{A: we could write this command at the beginning of the subsection maybe?}
-To perform this test, we employ mixed parallelism with $12$ processes,
-arranged in $6$ groups of $2$ processes each:
-\begin{lstlisting}
-mpirun -np 12 python test.py 08
-\end{lstlisting}
+We consider the inverse elasticity problem
+described in Section~\ref{sec:model_prob},
+where the distributed shape derivative has been computed.
 
 We start by writing the model class for this problem,
 which we call \code{InverseElasticity}:
@@ -1661,7 +1644,7 @@ if negative, \code{self.A} returns $10$, else $1$.
 The weak formulations for the force application \eqref{eq:w-f} and
 the observed displacement \eqref{eq:w-g},
 along with their boundary conditions, are returned
-by the methods \code{f\_prob} and \code{g\_prob}:
+by the \code{f\_prob} and \code{g\_prob} methods:
 \begin{lstlisting}
 def f_prob(self, u, w, phi, f, df):
 	# f-problem
@@ -1695,30 +1678,9 @@ def pde(self, phi):
 	return F + G
 \end{lstlisting}
 
-Similarly, we write the methods \code{adj\_f\_prob} and \code{adj\_g\_prob}
-to get the adjoint problems (see they in the file \code{models.py}), 
-and collect them in the required \code{adjoint} method:
-\begin{lstlisting}
-def adj_f_prob(self, p, r, phi, u, v, g):
-	# adjoint of f-problem
-	sp = self.sigma(p)
-	er = self.epsilon(r)
-	a_g = u - v - g
-	b_g = u - g
-	W = self.A(phi)*inner(sp, er)*self.dx
-	W += self.alpha*dot(a_g, r)*self.dx
-	W += self.beta*dot(b_g, r)*self.ds1
-	return (W, self.bcF)
-
-def adj_g_prob(self, q, r, phi, u, v, g):
-	# adjoint of g-problem
-	sq = self.sigma(q)
-	er = self.epsilon(r)
-	a_g = u - v - g
-	W = self.A(phi)*inner(sq, er)*self.dx
-	W -= self.alpha*dot(a_g, r)*self.dx
-	return (W, self.bcG)	
-\end{lstlisting}
+Similarly, we write the \code{adj\_f\_prob} and \code{adj\_g\_prob} methods
+to get the adjoint problems, and then we call them to collect all the adjoint equations
+in the required \code{adjoint} method:  
 \begin{lstlisting}
 def adjoint(self, phi, U):
 	a = TrialFunction(self.space)
@@ -1729,14 +1691,12 @@ def adjoint(self, phi, U):
 		AG += [self.adj_g_prob(a,b,phi,u,v,g)]
 	return AF + AG
 \end{lstlisting}
-Observe that in the \code{adjoint} method
-we iterate over \code{U}: the sub-lists
-\code{U[:self.N]} and \code{U[self.N:]} 
-shall contain the solutions of \eqref{eq:f-prob} and \eqref{eq:g-prob}, respectively,
-considering \code{self.N} applied forces and \code{self.N} boundary displacements in each case.
+Observe that in the \code{adjoint} method we iterate over \code{U}:
+the sub-lists \code{U[:self.N]} and \code{U[self.N:]} 
+contain the solutions of \eqref{eq:f-prob} and \eqref{eq:g-prob}, respectively.
 
-The cost functional \eqref{eq:cost}
-is returned by the \code{cost} method:
+The cost functional \eqref{eq:cost} is returned by the \code{cost} method
+(the weights \code{self.alpha} and \code{self.beta} are defined in \code{\_\_init\_\_}):
 \begin{lstlisting}
 def cost(self, phi, U):
 	uvg = zip(U[:self.N], U[self.N:], self.gs)
@@ -1754,8 +1714,7 @@ def constraint(self, phi, U):
 \end{lstlisting}
 
 In order to write the \code{derivative} method,
-we first write the derivative components $S_0$ and $S_1$
-separately:
+we first write the derivative components $S_0$ and $S_1$ separately:
 \begin{lstlisting}
 def S0(self, u, v, q, g, phi):
 	i, j, k = indices(3)
@@ -1765,7 +1724,6 @@ def S0(self, u, v, q, g, phi):
 	s0b = as_vector(sq[i,j]*(grad(eg))[i,j,k], (k))
 	return -self.alpha*s0a + self.A(phi)*s0b	
 \end{lstlisting}
-
 \begin{lstlisting}
 def S1(self, u, v, p, q, g, phi):
 	su = self.sigma(u)
@@ -1783,8 +1741,10 @@ def S1(self, u, v, p, q, g, phi):
 \end{lstlisting}
 
 The \code{derivative} method collect the derivative components
-for each pair of applied force and boundary displacement,
-by evaluating the \code{S0} and \code{S1} methods at state and adjoint solutions:
+for each pair of force and displacement
+by evaluating the \code{S0} and \code{S1} methods
+at state and adjoint solutions,
+then the sums \code{sum(S0)} and \code{sum(S1)} are returned: 
 \begin{lstlisting}
 def derivative(self, phi, U, P):
 	fu = U[:self.N]
@@ -1803,12 +1763,11 @@ def derivative(self, phi, U, P):
 	]
 	return (sum(S0), []), (sum(S1), [])
 \end{lstlisting}
-Note that empty lists are returned in the place corresponding
+Empty lists are returned in the place corresponding
 to the derivative components of the constraints.
 
-Finally, we write the bilinear form $B$,
-used to compute the velocity field $\theta$
-by solving \eqref{eq:velocity}:
+Finally, we write the bilinear form used to compute
+the velocity field $\theta$ by solving \eqref{eq:velocity}:
 \begin{lstlisting}
 def bilinear_form(self, th, xi):
     biform = 0.1*dot(th, xi)*self.dx
@@ -1818,7 +1777,9 @@ def bilinear_form(self, th, xi):
 By returning \code{True} we are specifying homogeneous Dirichlet boundary condition,
 that is, $\mathbb{H}=H^1_0(\Omega)$.
 
-We now are ready to write the test using mixed parallelism.
+We now are ready to write the numerical test. 
+Results using all parallelism modes are reported,
+but here we describe only the test using mixed parallelism.
 We start by calling the MPI communicator:
 \begin{lstlisting}
 comm = MPI.COMM_WORLD
@@ -1826,77 +1787,99 @@ rank = comm.rank
 size = comm.size
 \end{lstlisting}
 
-We will consider three displacement observations with their corresponding
-applied forces. Thus, there are six state problems.
-Setting \code{nbr\_groups = 6}, and considering $12$ processes (\code{size=12}),
-number of processes is a multiple of \code{nbr\_groups},
+We will consider two examples with three and eigth pairs of
+applied forces with their corresponding displacement observations.
+Thus, there are six (resp. sixteen) state problems.
+Setting \code{nbr\_groups = 6} (resp. \code{16}),
+and considering \code{size=12} processes (resp. \code{32}),
+the number of processes \code{size} is a multiple of \code{nbr\_groups},
 and the sub-communicator can be created:
 \begin{lstlisting}
 color = rank * nbr_groups // size
 sub_comm = comm.Split(color, rank)
 \end{lstlisting}
-For clarity and good coding practice,
-we first specify the output path for saving results,
-the domain dimension ($d=2$), the rank
-(i.e., the number of components of the state/adjoint solutions),
-and the mesh size which will be used by \code{Gmsh}:
+
+Both example have similar structure; the main differences lie in
+the number of inclusions and the number of force--displacement pairs. 
+We now describe the examples, alternating between them.
+
+For clarity and good coding practice, we first specify
+the output path for saving results,
+the domain dimension ($d=2$),
+the rank (i.e., the number of components of the state/adjoint solutions),
+and the mesh-size parameter which will be used by \code{Gmsh} to create the mesh:
 \begin{lstlisting}
 test_path = Path("../results/t08/")
 dim = 2
 rank_dim = 2
 mesh_size = 0.015
 \end{lstlisting}
-For this test, the domain $\mathcal{D}$ is a semi-ellipse.
-Below we define the vertices and the boundary parts:
+The above path corresponds to the first example.
+
+Artificial displacements are generated by applying forces along the boundary.
+This is done in the same location as in the example codes (see the codes in \code{test.py}).
+We ommit this step here, as it is a standard procedure in inverse problems. 
+
+In both examples, the domain $\mathcal{D}$ is a semi-ellipse truncated at the bottom.
+Below we define the vertices and the boundary parts of $\mathcal{D}$ for the second example:
 \begin{lstlisting}
 npts = 80
-part = npts//4
+part = npts // 8
 
-vertices = np.column_stack(
-	semi_ellipse(0.75, 0.5, 0.2, npts)
-)
+vertices = np.column_stack(semi_ellipse(0.75,0.5,0.15,npts))
 
+# 1 dirichlet boundary and 8 neumann boundaries
 dir_idx, dir_mkr = [npts], 1
-bR_idx = np.arange(1,part//2+1)
-bL_idx = np.arange(part//2+3*part+1, npts)
-bR_mkr, bL_mkr = 2, 6
-neu_idxA = part//2 + np.arange(1, part+1)
-neu_idxB = part//2 + np.arange(part+1, 2*part+1)
-neu_idxC = part//2 + np.arange(2*part+1, 3*part+1)
-neu_mkrA, neu_mkrB, neu_mkrC = 3, 4, 5
-bL_idx = np.arange(part//2+3*part+1, npts)
+neu_idxA, neu_mkrA = np.arange(1, part+1), 2
+neu_idxB, neu_mkrB = np.arange(part+1, 2*part+1), 3
+neu_idxC, neu_mkrC = np.arange(2*part+1, 3*part+1), 4
+neu_idxD, neu_mkrD = np.arange(3*part+1, 4*part+1), 5
+neu_idxE, neu_mkrE = np.arange(4*part+1, 5*part+1), 6
+neu_idxF, neu_mkrF = np.arange(5*part+1, 6*part+1), 7
+neu_idxG, neu_mkrG = np.arange(6*part+1, 7*part+1), 8
+neu_idxH, neu_mkrH = np.arange(7*part+1, npts), 9
 
 boundary_parts = [
 	(dir_idx, dir_mkr, "dir"),
-	(bR_idx, bR_mkr, "bRight"),
-	(bL_idx, bL_mkr, "bLeft"),
 	(neu_idxA, neu_mkrA, "neuA"),
 	(neu_idxB, neu_mkrB, "neuB"),
-	(neu_idxC, neu_mkrC, "neuC")
+	(neu_idxC, neu_mkrC, "neuC"),
+	(neu_idxD, neu_mkrD, "neuD"),
+	(neu_idxE, neu_mkrE, "neuE"),
+	(neu_idxF, neu_mkrF, "neuF"),
+	(neu_idxG, neu_mkrG, "neuG"),
+	(neu_idxH, neu_mkrH, "neuH"),
 ]
 \end{lstlisting}
+
 These variables and the sub-communicator are passed to
 the \code{create\_domain\_2d\_MP} function:
 \begin{lstlisting}
 output = dib.create_domain_2d_MP(
-	sub_comm, color,
-	vertices, boundary_parts, mesh_size,
-	path = test_path, plot = True
+	sub_comm, color, vertices, boundary_parts,
+	mesh_size, path=test_path, plot=True
 )
 domain, nbr_tri, boundary_tags = output	
 \end{lstlisting}
-We now create the space of functions and the Dirichlet boundary conditions:
+Set \code{plot=False} to hide the mesh plotted by \code{Gmsh}.
+
+In both examples, there is only one subset of $\Gamma$ where
+we impose zero displacement. In addition, it is necessary to consider the 
+boundary condition of problem \eqref{eq:w-g}.  
+Then we create the space of functions and the Dirichlet boundary conditions
+using predefined functions from our module:
 \begin{lstlisting}
 space = dib.create_space(domain, "CG", rank_dim)
 dirbc_partial = dib.homogeneous_dirichlet(
 	domain, space, boundary_tags, [dir_mkr], rank_dim
 )
-dirbc_total = dib.homogeneus_boundary(
-	domain, space, dim, rank_dim
-)
+dirbc_total =
+dib.homogeneus_boundary(domain, space, dim, rank_dim)
 \end{lstlisting}
 
-Boundary measures are created to impose the Neumann conditions:
+
+Boundary measures are created to impose the Neumann conditions, that is,
+the forces applied along the boundary:
 \begin{lstlisting}
 ds_parts = dib.marked_ds(
 	domain, boundary_tags,
@@ -1905,54 +1888,110 @@ ds_parts = dib.marked_ds(
 ds_forces = [ds_parts[1], ds_parts[2], ds_parts[3]] 
 ds1 = sum(ds_parts[1:], start = ds_parts[0])
 \end{lstlisting}
-Finally, we create an object of the \code{InverseElasticity} class:
+The above code corresponds to the first example, where three forces are applied
+on three different parts of $\Gamma$.
+The \code{ds\_forces} list containts the boundary parts to apply each force, 
+and \code{ds1} joints these parts.
+The marks \code{bR\_mkr} and \code{bL\_mkr} corresponds to areas where neither 
+forces and displacements are considered. In the second example these areas do not exist.
+
+Finally, we pass all these variables to an object of the \code{InverseElasticity} class:
 \begin{lstlisting}
 md = InverseElasticity(
 	dim, domain, space, forces, ds_forces, ds1,
 	dirbc_partial, dirbc_total, test_path
 )
 \end{lstlisting}
-See the code for the details related to the forces and 
-displacement data that where used. 
-
-Befure run the test, we specify an initial level set function
-t
+Before run the examples, we define a level set function to set
+the initial inclusions in $\mathcal{D}$.
+For the second example, two balls of radius $0.15$ are considered as initial inclusions:
 \begin{lstlisting}
-centers = np.array([(0.0, 0.4)])
-radii = np.array([0.15])
+centers = np.array([(-0.3, 0.4), (0.3, 0.4)])
+radii = np.array([0.15, 0.15])
 md.create_initial_level(centers, radii, -1.0)
 \end{lstlisting}
-\code{runMP} method
+
+In both examples we run the \code{runMP} method
+with the following parameter values:
 \begin{lstlisting}
 md.runMP(
-	sub_comm,
-	niter = 200,
-	dfactor = 1e-1,
-	lv_time = (1e-3, 1.0),
-	cost_tol = 1e-1
+	sub_comm, niter=200, dfactor=1e-1,
+	lv_time=(1e-3, 1.0), cost_tol=1e-1
 )
 \end{lstlisting}
 
+Next, we present the numerical results of the two examples.
+The boundary with zero displacement is highlighted in red, and
+the boundary of the true inclusions is shown in green.
+
+\noindent\textit{Example 1.}
+The data consists of three pairs of force and displacement.
+The forces are applied separately in differents parts of $\Gamma_1$,
+all them with direction to the center of the body.
+The resulting boundary displacements are measured, only in $\Gamma_1$
+since $\Gamma_0$ is fixed.
+Thus, we have six state equations and their corresponding adjoints.
+We employ data parallelism with $6$ processes,
+task parallelism with $6$ processes, and
+mixed parallelism with $12$ processes
+(arranged in $6$ groups of $2$ processes each):
+\begin{lstlisting}
+mpirun -np 6 python test.py 06 # Data (33 sec)
+mpirun -np 6 python test.py 07 # Task (29 sec)
+mpirun -np 12 python test.py 08 # Mixed (27 sec)
+\end{lstlisting}
+The number of iterations was $124$, $114$, and $116$, respectively.
+See the numerical result in Figure \ref{fig:inv1}.
 \begin{center}
 \includegraphics[width=0.48\linewidth]{inv1_0.png}
 \hfill
 \includegraphics[width=0.48\linewidth]{inv1_1.png}
 \captionof{figure}{
-	---
+	Initial and recovered inclusion.
+	A mesh with $12\,713$ triangles was employed.
 }
 \label{fig:inv1}
 \end{center}
 
+\noindent\textit{Example 2.}
+The data consists of eigth pairs of force and displacement.
+The forces are applied separately in differents parts of $\Gamma_1$,
+all them with direction to the center of the body,
+and convering the whole boundary $\Gamma_1$;
+then resulting boundary displacements are measured.
+Thus, we have sixteen state equations and their corresponding adjoints.
+We employ data parallelism with $16$ processes,
+task parallelism with $16$ processes, and
+mixed parallelism with $32$ processes
+(arranged in $16$ groups of $2$ processes each):
+\begin{lstlisting}
+mpirun -np 16 python test.py 34 # Data (146 sec)
+mpirun -np 16 python test.py 35 # Task (660 sec)
+mpirun -np 32 python test.py 36 # Mixed (43 sec)
+\end{lstlisting}
+This tests were carried in the server.
+The number of iterations was $174$, $173$, and $174$, respectively.
+See the recovered inclusions in Figure \ref{fig:inv2}.
+\begin{center}
+\includegraphics[width=0.48\linewidth]{inv2_0.png}
+\hfill
+\includegraphics[width=0.48\linewidth]{inv2_1.png}
+\captionof{figure}{
+	Initial and recovered inclusions. 
+	A mesh with $13\,391$ triangles was employed.
+}
+\label{fig:inv2}
+\end{center}
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Compliance minimization}
 \label{sub:compli}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Compliance minimization is a standard problem in structural mechanics, for which an abundant literature exists, see  \cite{MR1911658,MR2033390,Sigmund2014,vanDijk2013,MR1951408,MR2108636}.
 Compliance minimization using the distributed shape derivative is also the main topic of the previous work \cite{MR3843884}.
 We use it here to illustrate the performance of FormOpt on benchmark problems such as the cantilever.
-Instead of working directly with the variable domain $\Omega$, it is  convenient to reformulate the problem on the fixed domain $\hold$. To this end, we follow the standard approach of approximating the original problem by filling the complement $\hold \setminus \Omega$ with an ``ersatz material.''
+Instead of working directly with the variable domain $\Omega$, it is  convenient to reformulate the problem on the fixed domain $\hold$. To this end, we follow the standard approach of approximating the original problem by filling the complement $\hold \setminus \Omega$ with an ``ersatz material''.
 
 We minimize the compliance in a linear elasticity problem:
 \begin{equation} \label{eq:compli_cost}
@@ -2044,11 +2083,11 @@ and
 $\Gamma_1 = \{1\} \times (0.4,0.6) \times (0.4,0.6)$.
 The force $g = (0, 0, -4)^\top$ is applied on $\Gamma_1$.
 The volume material is constrained to $V = 1$.
-Run this example with
+We run this example in the server using one process:
 \begin{lstlisting}
 python test.py 02 # Single process (1.3 h)
 \end{lstlisting}
-The number of tetrahedra was $2\,592\,000$. See Figure \ref{fig:compli2}.
+See some iterations in Figure \ref{fig:compli2}.
 \begin{center}
 \includegraphics[width=0.48\linewidth]{compli2_0.png}
 \hfill
@@ -2060,6 +2099,7 @@ The number of tetrahedra was $2\,592\,000$. See Figure \ref{fig:compli2}.
 The three-dimensional cantilever at	
 $i=0$ and $i=20$ (top);
 $i=50$ and $i=100$ (bottom).
+The number of tetrahedra was $2\,592\,000$.
 }
 \label{fig:compli2}
 \end{center}
@@ -2129,25 +2169,25 @@ Figure \ref{fig:compli4}
 \label{fig:compli4}
 \end{center}
 
-\noindent\textit{Example 5.} 
+% \noindent\textit{Example 5.} 
 
-Figure \ref{fig:compli5}
+% Figure \ref{fig:compli5}
 
-\begin{lstlisting}
-mpirun -np 2 python test.py 20 # Data (14 sec)
-\end{lstlisting}
+% \begin{lstlisting}
+% mpirun -np 2 python test.py 20 # Data (14 sec)
+% \end{lstlisting}
 
-\begin{center}
-\includegraphics[width=0.48\linewidth]{compli5_0.png}
-\hfill
-\includegraphics[width=0.48\linewidth]{compli5_1.png}
-\captionof{figure}{
-	Initial and optimal domains.
-	$i = 62$
-	$16\,304$ triangles
-}
-\label{fig:compli5}
-\end{center}
+% \begin{center}
+% \includegraphics[width=0.48\linewidth]{compli5_0.png}
+% \hfill
+% \includegraphics[width=0.48\linewidth]{compli5_1.png}
+% \captionof{figure}{
+% 	Initial and optimal domains.
+% 	$i = 62$
+% 	$16\,304$ triangles
+% }
+% \label{fig:compli5}
+% \end{center}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Heat conduction}
@@ -2567,10 +2607,43 @@ after \code{F}.
 \tred{A: Here we should discuss some performance data of the code. Show that the code is extremely fast in 2D. Show what size of 3D problems we can consider using a server (also large amount of sources).
 Also maybe show weak scalabilty tests for parallel computing, as in \cite{Jia2024}.}
 
+Performances of symmetric cantilever (see Example 1 in Section \ref{sub:compli})
+using data parallelism.
+\begin{center}
+\includegraphics[width=0.48\linewidth]{performance_1a.png}
+\hfill
+\includegraphics[width=0.48\linewidth]{performance_1b.png}
+\captionof{figure}{
+	Performance results on meshes with 
+	$20\,946$ (left) and $42\,035$ (right) triangles,
+	executed in a laptop.
+	After six processes there is no improvement.
+}
+\label{fig:perform1}
+\end{center}
+
+\begin{center}
+\includegraphics[width=0.48\linewidth]{performance_2.png}
+\captionof{figure}{
+	Performance results on a mesh with 
+	$52\,085$ triangles, executed in a server.
+	Anomalous execution times when four and five processes are used.
+}
+\label{fig:perform2}
+\end{center}
+
 
 \tred{A: I am also thinking that we do not have a test with many sources or measurements, to illustrate the task and mixed parallelisms. Maybe we could try the elastic inverse problem with more sources (with small compact support maybe), like 12 sources? Or maybe define a sort of simplified EIT with more sources. I think I will try to implement this module myself. }
 
+Most of tests were executed on a laptop; a server was used only when explicitly indicated.
+Both machines run on a 64-bit x86\_64 architecture.
+Their specifications are as follows:
 
+\textbf{Laptop:} Ubuntu 22.04.5 LTS, equipped with an Intel Core i9-13900H
+processor (14 physical cores, 20 threads) and 62 GB of RAM.
+
+\textbf{Server:} Debian 12 (bookworm) equipped with two AMD EPYC 9684X
+processors (192 physical cores in total, 1 thread per core) and 1.5 TB of RAM.
 
 %%%%%%%%%%%%%%%%%%%%%%%
 \section{Conclusion}

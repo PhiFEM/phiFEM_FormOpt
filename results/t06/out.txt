@@ -141,5 +141,5 @@ i = 122 | cost = 0.000008 | nder = 0.0006 | steps = 16 |
 i = 123 | cost = 0.000008 | nder = 0.0006 | steps = 15 | 
 i = 124 | cost = 0.000008 | nder = 0.0006 | steps = 15 | 
 > Stopping condition reached!
-> Assembly time = 21.23688195799997 s
-> Resolution time = 34.52437554400001 s
+> Assembly time = 19.128951690999997 s
+> Resolution time = 33.108504890000006 s

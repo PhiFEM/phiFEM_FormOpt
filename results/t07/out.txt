@@ -8,27 +8,27 @@ Info    : 161 entities
 Info    : 6503 nodes
 Info    : Reading '../results/t07/domain.msh'...
 Info    : 161 entities
+Info    : Reading '../results/t07/domain.msh'...
+Info    : 161 entities
+Info    : Reading '../results/t07/domain.msh'...
+Info    : 161 entities
+Info    : Reading '../results/t07/domain.msh'...
+Info    : 161 entities
+Info    : Reading '../results/t07/domain.msh'...
+Info    : 161 entities
 Info    : 6503 nodes
+Info    : 6503 nodes
+Info    : 6503 nodes
+Info    : 6503 nodes
+Info    : 6503 nodes
+Info    : 13004 elements
+Info    : 13004 elements
+Info    : 13004 elements
+Info    : 13004 elements
 Info    : 13004 elements
 Info    : 13004 elements
 Info    : Done reading '../results/t07/domain.msh'
 Info    : Done reading '../results/t07/domain.msh'
-Info    : Reading '../results/t07/domain.msh'...
-Info    : 161 entities
-Info    : Reading '../results/t07/domain.msh'...
-Info    : 161 entities
-Info    : Reading '../results/t07/domain.msh'...
-Info    : 161 entities
-Info    : Reading '../results/t07/domain.msh'...
-Info    : 161 entities
-Info    : 6503 nodes
-Info    : 6503 nodes
-Info    : 6503 nodes
-Info    : 6503 nodes
-Info    : 13004 elements
-Info    : 13004 elements
-Info    : 13004 elements
-Info    : 13004 elements
 Info    : Done reading '../results/t07/domain.msh'
 Info    : Done reading '../results/t07/domain.msh'
 Info    : Done reading '../results/t07/domain.msh'
@@ -156,5 +156,5 @@ i = 112 | cost = 0.000010 | nder = 0.0007 | steps = 16 |
 i = 113 | cost = 0.000010 | nder = 0.0006 | steps = 16 | 
 i = 114 | cost = 0.000010 | nder = 0.0009 | steps = 16 | 
 > Stopping condition reached!
-> Assembly time = 4.252746063000018 s
-> Resolution time = 29.062362488999952 s
+> Assembly time = 4.093016288000001 s
+> Resolution time = 28.502968081000006 s

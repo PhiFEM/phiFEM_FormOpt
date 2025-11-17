@@ -1038,7 +1038,7 @@ class GrippingMechanism(Model):
             lmbda * nabla_div(w) * self.Id + 2.0 * mu * self.epsilon(w)
         )
         self.chi = lambda w: conditional(lt(w, 0.0), 1.0, 0.0)
-        self.A = lambda w: conditional(lt(w, 0.0), 1.0, 1e-3)
+        self.A = lambda w: conditional(lt(w, 0.0), 1.0, 1e-4)
 
     def pde(self, phi):
 
@@ -1119,8 +1119,9 @@ class GrippingMechanism(Model):
         return B, self.bc_theta
 
 
-class NonlinearElasticity(Model):
-    def __init__(self, dim, domain, space, g, f, ds_g, dir_bcs, vol, path):
+class NonlinearElasticity2D(Model):
+
+    def __init__(self, dim, domain, space, g, ds_g, dir_bcs, vol, path):
 
         self.dim = dim
         self.domain = domain
@@ -1140,9 +1141,13 @@ class NonlinearElasticity(Model):
         lmbda = E * nu / (1.0 + nu) / (1.0 - 2.0 * nu)
         mu = E / 2.0 / (1.0 + nu)
 
-        self.a1 = 2.0 * mu
-        self.a2 = 0.0
-        self.a3 = lmbda - 2.0 * self.a2
+        # self.a1 = 0.08361
+        # self.a2 = 0.08361
+        # self.a3 = 33.3333
+
+        self.a1 = 0.09615385
+        self.a2 = 0.09615385
+        self.a3 = 0.83333333
 
         self.zero_vec = as_vector(dim * [0.0])
         self.Id = Identity(dim)
@@ -1152,44 +1157,33 @@ class NonlinearElasticity(Model):
         )
 
         self.F = lambda w: self.Id + grad(w)
-
-        self.WF = lambda w: (
-            0.5 * self.a1 * (inner(self.F(w), self.F(w)))
-            + 0.5 * self.a2 * (inner(cofac(self.F(w)), cofac(self.F(w))))
-            + 0.5 * self.a3 * (det(self.F(w)) - 1.0) ** 2
-        )
+        self.cf = lambda M: tr(M) * self.Id - M.T
 
         self.A = lambda w: conditional(lt(w, 0.0), 1.0, 1e-3)
         self.chi = lambda w: conditional(lt(w, 0.0), 1.0, 0.0)
 
-    def dCof(self, F, dF):
+    def W(self, F):
 
-        return (tr((cofac(F)).T * dF) * self.Id - cofac(F) * (dF.T)) * (inv(F)).T
+        W1 = 0.5 * self.a1 * inner(F, F)
+        W2 = 0.5 * self.a2 * inner(self.cf(F), self.cf(F))
+        W3 = 0.5 * self.a3 * (det(F) - 1.0) ** 2
 
-    def d2Cof(self, dF1, dF2):
-        d = None
-        return d
+        return W1 + W2 + W3
 
     def dW(self, F, dF):
 
         d = self.a1 * inner(F, dF)
-        d += self.a2 * inner(cofac(F), self.dCof(F, dF))
-        d += self.a3 * (det(F) - 1.0) * inner(cofac(F), dF)
-
-        # Alternative version:
-        # H = cofac(F)
-        # MH = inner((inv(F)).T, H) * H - ((inv(F)).T) * (H.T) * H
-        # d = inner(dF, (self.a1 * F + self.a2 * MH + self.a3 * (det(F) - 1.0) * H))
+        d += self.a2 * inner(self.cf(F), self.cf(dF))
+        d += self.a3 * (det(F) - 1.0) * inner(self.cf(F), dF)
 
         return d
 
     def d2W(self, F, dF1, dF2):
 
         d = self.a1 * inner(dF1, dF2)
-        d += self.a2 * inner(self.dCof(F, dF1), self.dCof(F, dF2))
-        d += self.a2 * inner(cofac(F), self.d2Cof(dF1, dF2))
-        d += self.a3 * inner(cofac(F), dF1) * inner(cofac(F), dF2)
-        d += self.a3 * (det(F) - 1.0) * inner(self.dCof(F, dF1), dF2)
+        d += self.a2 * inner(self.cf(dF1), self.cf(dF2))
+        d += self.a3 * inner(self.cf(F), dF1) * inner(self.cf(F), dF2)
+        d += self.a3 * (det(F) - 1.0) * inner(self.cf(dF1), dF2)
 
         return d
 
@@ -1200,12 +1194,16 @@ class NonlinearElasticity(Model):
         du = TrialFunction(self.space)
 
         # Nonlinear equation
-        N = self.A(phi) * self.dW(self.Id + grad(u), grad(v)) * self.dx
+        N = self.A(phi) * self.dW(self.F(u), grad(v)) * self.dx
         N -= dot(self.g, v) * self.ds_g
 
-        J = self.A(phi) * self.d2W(self.Id + grad(u), grad(du), grad(v)) * self.dx
+        J = self.A(phi) * self.d2W(self.F(u), grad(du), grad(v)) * self.dx
 
-        return [(N, [], J, u, self.ini_func)]
+        uu = TrialFunction(self.space)
+        W = self.A(phi) * inner(self.sigma(uu), self.epsilon(v)) * self.dx
+        W -= dot(self.g, v) * self.ds_g
+
+        return [(N, self.bc, J, u, W)]
 
     def adjoint(self, phi, U):
 
@@ -1213,7 +1211,7 @@ class NonlinearElasticity(Model):
         p = TrialFunction(self.space)
         r = TestFunction(self.space)
 
-        W = self.A(phi) * self.d2W(self.Id + grad(u), grad(p), grad(r)) * self.dx
+        W = self.A(phi) * self.d2W(self.F(u), grad(p), grad(r)) * self.dx
         W += dot(self.g, r) * self.ds_g
 
         return [(W, self.bc)]
@@ -1221,7 +1219,7 @@ class NonlinearElasticity(Model):
     def cost(self, phi, U):
 
         u = U[0]
-        J = dot(self.g, U) * self.ds_g
+        J = dot(self.g, u) * self.ds_g
 
         return J
 
@@ -1231,15 +1229,42 @@ class NonlinearElasticity(Model):
 
         return [C]
 
+    def Q1(self, u, v):
+
+        cfF = self.cf(self.F(u))
+
+        q1 = -self.a1 * grad(v) * (self.F(u)).T
+        q1 -= self.a2 * tr(cfF) * grad(v)
+        q1 += self.a2 * grad(v) * cfF
+        q1 -= self.a3 * (det(self.F(u)) - 1.0) * grad(v) * cfF.T
+
+        return q1
+
+    def Q2(self, u, v):
+
+        cfF = self.cf(self.F(u))
+
+        q2 = -self.a1 * grad(u) * (grad(v)).T
+        q2 -= self.a2 * tr(grad(v)) * grad(v)
+        q2 += self.a2 * grad(v) * grad(v)
+        q2 -= self.a3 * inner(cfF, grad(v)) * (grad(v) * cfF.T)
+        q2 -= (
+            self.a3
+            * (det(self.F(u)) - 1.0)
+            * (tr(grad(v)) * grad(u) - grad(u) * grad(v))
+        )
+
+        return q2
+
     def derivative(self, phi, U, P):
 
         u = U[0]
         p = P[0]
 
         S0_J = self.zero_vec
-        S1_J = self.A(phi) * self.dW(self.Id + grad(u), grad(p)) * self.Id  # \(o.o)/
-        S1_J += None
-        S1_J += None
+        S1_J = self.A(phi) * self.dW(self.F(u), grad(p)) * self.Id
+        S1_J += self.A(phi) * self.Q1(u, p)
+        S1_J += self.A(phi) * self.Q2(u, p)
 
         S0_C = self.zero_vec
         S1_C = (1.0 / self.vol) * self.chi(phi) * self.Id
