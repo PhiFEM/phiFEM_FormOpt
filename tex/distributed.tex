@@ -1180,7 +1180,7 @@ B(\theta, \xi) =  {10}^{-1} \int_{\mathcal{D}} \theta \cdot \xi +
 indicating that $\mathbb{H} = H^1(\mathcal{D})^d$.
 
 Recall that the \code{Velocity} class sets up and solve \eqref{eq:velocity} internally.
-The outputs of the \code{derivatives} and \code{bilinear\_form} methods
+The outputs of the \code{derivative} and \code{bilinear\_form} methods
 are sufficient to configure this part. 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1923,6 +1923,11 @@ md.runMP(
 Next, we present the numerical results of the two examples.
 The boundary with zero displacement is highlighted in red, and
 the boundary of the true inclusions is shown in green.
+In both examples we use the following bilinear form
+\begin{equation*}
+	B(\theta, \xi) = \int_{\mathcal{D}} {10}^{-1}\theta \cdot \xi + D\theta : D\xi
+\end{equation*}
+with $\theta, \xi \in \mathbb{H} = H_0^1(\mathcal{D})^d$.
 
 \noindent\textit{Example 1.}
 The data consists of three pairs of force and displacement.
@@ -1969,7 +1974,7 @@ mpirun -np 16 python test.py 34 # Data (146 sec)
 mpirun -np 16 python test.py 35 # Task (660 sec)
 mpirun -np 32 python test.py 36 # Mixed (43 sec)
 \end{lstlisting}
-This tests were carried in the server.
+This tests were carried out on the server.
 The number of iterations was $174$, $173$, and $174$, respectively.
 See the recovered inclusions in Figure \ref{fig:inv2}.
 \begin{center}
@@ -2016,12 +2021,12 @@ and $A_{\Omega}:\overline{\mathcal{D}} \rightarrow \mathds{R}$ is given by
 The corresponding strong formulation is
 \begin{equation}\label{eq:compli_prob}
 	\begin{aligned}
-	   -\operatorname{div} A_{\Omega} \sigma(u) &= 0 && \text{in } \Om \text{ and }\Om\setminus\overline{\mathcal{D}}\\
+	   -\operatorname{div} A_{\Omega} \sigma(u) &= 0 && \text{in } \Omega \text{ and }\Omega\setminus\overline{\mathcal{D}}\\
 											 u  &= 0 && \text{on } \Gamma_{0}\\
 					     A_{\Omega} \sigma(u)n  &= g && \text{on } \Gamma_{1} \\
 					     A_{\Omega} \sigma(u)n  &= 0 && \text{on } \Gamma \setminus (\Gamma_{1} \cup \Gamma_{1})	\\
-						 (A_{\Omega} \sigma(u)n)^+ &= (A_{\Omega} \sigma(u)n)^- && \text{on }  \partial\Om\\      
-						 u^+ &= u^- && \text{on }  \partial\Om   					 
+				      (A_{\Omega} \sigma(u)n)^+ &= (A_{\Omega} \sigma(u)n)^- && \text{on }  \partial\Omega\\      
+						                    u^+ &= u^- && \text{on } \partial\Omega   					 
 	\end{aligned}
 \end{equation}
 
@@ -2041,35 +2046,62 @@ The \code{Compliance} and \code{CompliancePlus} classes
 contain the equations for compliance minimization.
 \code{CompliancePlus} extends \code{Compliance} by considering
 multiple forces $\left\{g_k\right\}_k$, along with
-the cost functional $J(\Omega)$ as a sum of compliances associated to each $g_k$,
-namely
-\begin{equation}
+the cost functional $J(\Omega)$ as a sum of compliances associated to each $g_k$, namely
+\begin{equation} \label{eq:compli_plus}
 	J(\Omega) \coloneqq \sum_{k} \int_{\mathcal{D}} A_{\Omega}\sigma(u_k):\epsilon(u_k),
 \end{equation}
 where $u_k$ is the solution to \eqref{eq:compli_weak} with $g=g_k$.
+
+In the following examples, the region with zero displacement and
+the force application areas are shown in red and aqua, respectively.
+% \tred{A: I think we should also write the configuration that was used to run these tests, 
+% and how fast it was. It can be interesting to mention that some tests are run on the laptop,
+%  others on the server, to show that running on the laptop is fast.}
 
 \noindent\textit{Example 1.} (Symmetric cantilever)
 We consider the rectangular domain $\mathcal{D} = (0, 2)\times(0, 1)$
 with boundary subsets $\Gamma_0 = \{0\} \times (0, 1)$
 and $\Gamma_1 = \{2\} \times (0.45,0.55)$.
-The vertical force $g = (0, -2)^\top$ is applied on $\Gamma_1$.
-The material area is constrained to $V = 1$.
-We run this example using data parallelism with two processes:
+The vertical force $g = (0, -2)^\top$ is applied on $\Gamma_1$ and
+the material area is constrained to $V = 1$.
+We run this example using data parallelism with four processes:
 \begin{lstlisting}
-mpirun -np 2 python test.py 01 # Data (14 sec)
+mpirun -np 4 python test.py 01 # Data (6 sec)
 \end{lstlisting}
-See the results in Figure \ref{fig:compli1}.
-\tred{A: I think we should also write the configuration that was used to run these tests, and how fast it was. It can be interesting to mention that some tests are run on the laptop, others on the server, to show that running on the laptop is fast.}
+See the results in Figure \ref{fig:compli1}. 
+We have performed a reinitialization of the level set function
+every four steps, with $20$ iterations and a final time of $0.1$.
+This yields a well approximated distance function.
+The other parameters passed to the \code{runDP} method (for data parallelism)
+have the following values (with default values used for all unspecified parameters): 
+\begin{lstlisting}
+md.runDP(
+	ctrn_tol=1e-3, dfactor=1e-1,
+	reinit_step=4, reinit_pars=(20, 0.1), smooth=True
+)
+\end{lstlisting} 
+Note that smoothness of the level set function was enforced by setting \code{smooth=True}.
+The bilinear form used in this example is
+\begin{equation}\label{eq:compli1_bili}
+\begin{aligned}
+B(\theta, \xi) &= \int_{\mathcal{D}} {10}^{-1}\theta \cdot \xi + D\theta : D\xi \\
+			   &+ \int_{\mathcal{D}} {10}^4 (\theta \cdot n)(\xi \cdot n) +
+			   {10}^4(\theta \cdot \xi) \chi_{\Omega_0},
+\end{aligned}
+\end{equation}	
+with $\theta, \xi \in \mathbb{H} = H^1(\mathcal{D})^d$ and $\Omega_0 = (1.95,2]\times (0.42, 0.58)$.
+Thus, we penalize the material around the boundary $\Gamma_1$ and
+allow only tangential displacements along the boundary $\partial \mathcal{D}$.
 \begin{center}
 \includegraphics[width=0.48\linewidth]{compli1_0.png}
 \hfill
 \includegraphics[width=0.48\linewidth]{compli1_1.png}
 \includegraphics[width=0.85\linewidth]{compli1_2.png}
 \captionof{figure}{
-	(Top) Initial guess and optimized design at iteration $i=58$.
-	(Bottom) The level set function $\phi^{i}$ approximates the
-	distance function associated to $\Omega^{i}$.
-	Mesh $20\,946$ triangles.
+(Top) Initial guess and optimized design at iteration $i=50$.
+(Bottom) The resulting level set function $\phi^{i}$ approximates the
+distance function associated to $\Omega^{i}$.
+The domain $\mathcal{D}$ was discretized with $20\,946$ triangles.
 }
 \label{fig:compli1}
 \end{center}
@@ -2081,13 +2113,30 @@ with boundary subsets
 $\Gamma_0 = \{0\} \times (0,1) \times (0,1)$
 and
 $\Gamma_1 = \{1\} \times (0.4,0.6) \times (0.4,0.6)$.
-The force $g = (0, 0, -4)^\top$ is applied on $\Gamma_1$.
-The volume material is constrained to $V = 1$.
-We run this example in the server using one process:
+The force $g = (0, 0, -4)^\top$ is applied on $\Gamma_1$, and
+volume material is constrained to $V = 1$.
+We run this example on the server using a single process:
 \begin{lstlisting}
-python test.py 02 # Single process (1.3 h)
+python test.py 02 # (1.3 h)
 \end{lstlisting}
 See some iterations in Figure \ref{fig:compli2}.
+We employ the bilinear form \eqref{eq:compli1_bili} with
+$\Omega_0 = (1.90,2]\times (0.35, 0.65) \times (0.35, 0.65)$
+in order to penalize the material around $\Gamma_1$.
+The level set function used as initial guess was constructed
+with infinity-norm balls:
+\begin{lstlisting}
+md.create_initial_level(centers, radii, ord=np.inf)
+\end{lstlisting} 
+This choice is consistent with the the regular cubic lattice of
+the mesh generated by the \code{create\_box} function of \code{FEniCSX}.
+The parameters passed to the \code{runDP} method are as follows:
+\begin{lstlisting}
+md.runDP(
+	ctrn_tol=1e-3, dfactor=1e-1,
+	reinit_step=4, smooth=True
+)
+\end{lstlisting} 
 \begin{center}
 \includegraphics[width=0.48\linewidth]{compli2_0.png}
 \hfill
@@ -2097,42 +2146,48 @@ See some iterations in Figure \ref{fig:compli2}.
 \includegraphics[width=0.48\linewidth]{compli2_3.png}
 \captionof{figure}{
 The three-dimensional cantilever at	
-$i=0$ and $i=20$ (top);
-$i=50$ and $i=100$ (bottom).
-The number of tetrahedra was $2\,592\,000$.
+$i=0$ and $i=14$ (top);
+$i=30$ and $i=81$ (bottom).
+A mesh with $2\,592\,000$ tetrahedra was employed.
 }
 \label{fig:compli2}
 \end{center}
 
 \noindent\textit{Example 3.} (Cantilever with two loads)
-We consider the square domain
-$\mathcal{D} = (0, 1)\times(0, 1)$
-with boundary subsets
-$\Gamma_0 = \{0\} \times (0, 1)$ 
-and
-$\Gamma_1^{\mathrm{I}} = \{1\} \times (0,0.1)$
-and
-$\Gamma_1^{\mathrm{II}} = \{x=1\} \times (0.9,1)$
-
-$g^{\mathrm{I}} = g^{\mathrm{II}} = (0, -2)^\top$
-
-$V = 0.5$
-
+We consider the domain $\mathcal{D}$ as the unit square and 
+solve the problem with multiple forces $g^{\mathrm{I}} = g^{\mathrm{II}} = (0, -2)^\top$,
+applied on $\Gamma_1^{\mathrm{I}} = \{1\} \times (0,0.1)$ (right-upper side)
+and $\Gamma_1^{\mathrm{II}} = \{x=1\} \times (0.9,1)$ (right-bottom side),
+respectively.
+The boundary of zero displacement is $\Gamma_0 = \{0\} \times (0, 1)$,
+and the material area is constrained to $V = 0.5$.
+Thus, we minimize the cost functional \eqref{eq:compli_plus},
+which is implemented in the \code{cost} method of the \code{CompliancePlus} class.
+To compare performances, we employ data parallelism with $2$ processes,
+task parallelism with with $2$ processes, and
+mixed parallelism with $4$ processes
+(arranged in $2$ groups of $2$ processes each):
 \begin{lstlisting}
 mpirun -np 2 python test.py 03 # Data (20 sec)
 mpirun -np 2 python test.py 04 # Task (26 sec)	
 mpirun -np 4 python test.py 05 # Mixed (15 sec)		
 \end{lstlisting}
-
-Figure \ref{fig:compli3}
+The optimized design and the number of iterations are the same in all cases,
+see Figure \ref{fig:compli3}.
+We have used the bilinear form \eqref{eq:compli1_bili} without any penalized subdomain.
+The configuration passed to the \code{runDP}, \code{runTP}, and \code{runMP} methods was:
+\begin{lstlisting}
+ctrn_tol=1e-3, dfactor=1e-1,
+reinit_step=4, reinit_pars=(16, 0.05), smooth=True
+\end{lstlisting}
 \begin{center}
 \includegraphics[width=0.48\linewidth]{compli3_0.png}
 \hfill
 \includegraphics[width=0.48\linewidth]{compli3_1.png}
 \captionof{figure}{
 	Initial and optimal domains.
-	69, 70, and 70 iterations for data, task, and mixed parallelism, respectively.
-	$16\,425$ triangles.
+	A total of $70$ iterations were perfomed for the three modes of parallelism.
+	A mesh with $16\,425$ triangles was employed.
 }
 \label{fig:compli3}
 \end{center}

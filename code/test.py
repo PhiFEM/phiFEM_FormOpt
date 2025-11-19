@@ -10,7 +10,7 @@ from models import (
     HeatPlus,
     Mechanism,
     GrippingMechanism,
-    NonlinearElasticity2D,
+    SaintVenant_Kirchhoff,
 )
 
 import numpy as np
@@ -163,7 +163,7 @@ def test_01():
     test_path = Path("../results/t01/")
     dim = 2
     rank_dim = 2
-    mesh_size = 0.015  # mpirun -np 5 python test.py 01
+    mesh_size = 0.015
 
     vertices = np.array(
         [(0.0, 0.0), (2.0, 0.0), (2.0, 0.45), (2.0, 0.55), (2.0, 1.0), (0.0, 1.0)]
@@ -212,22 +212,22 @@ def test_01():
 
     # Initial guess: centers and radii
 
-    # First set of centers:
-    # centers = [(2.0, 0.35), (2.0, 0.65), (2.0, 0.0), (2.0, 1.0)]
-    # centers += [(0.0, 0.25), (0.0, 0.5), (0.0, 0.75)]
-    # centers += [(0.3 + i*0.7, 0.0) for i in range(3)]
-    # centers += [(0.65 + i*0.7, 0.25) for i in range(2)]
-    # centers += [(0.3 + i*0.7, 0.5) for i in range(3)]
-    # centers += [(0.65 + i*0.7, 0.75) for i in range(2)]
-    # centers += [(0.3 + i*0.7, 1.0) for i in range(3)]
+    # First set of centers (for example in manuscript):
+    centers = [(2.0, 0.35), (2.0, 0.65), (2.0, 0.0), (2.0, 1.0)]
+    centers += [(0.0, 0.25), (0.0, 0.5), (0.0, 0.75)]
+    centers += [(0.3 + i * 0.7, 0.0) for i in range(3)]
+    centers += [(0.65 + i * 0.7, 0.25) for i in range(2)]
+    centers += [(0.3 + i * 0.7, 0.5) for i in range(3)]
+    centers += [(0.65 + i * 0.7, 0.75) for i in range(2)]
+    centers += [(0.3 + i * 0.7, 1.0) for i in range(3)]
 
     # Second set of centers:
-    centers = [(0.0, 0.5), (2.0, 0.35), (2.0, 0.65)]
-    centers += [((1 + i) * 0.25, 0.0) for i in range(8)]
-    centers += [(i * 0.5, 0.25) for i in range(5)]
-    centers += [(0.25 + i * 0.5, 0.5) for i in range(4)]
-    centers += [(i * 0.5, 0.75) for i in range(5)]
-    centers += [((1 + i) * 0.25, 1.0) for i in range(8)]
+    # centers = [(0.0, 0.5), (2.0, 0.35), (2.0, 0.65)]
+    # centers += [((1 + i) * 0.25, 0.0) for i in range(8)]
+    # centers += [(i * 0.5, 0.25) for i in range(5)]
+    # centers += [(0.25 + i * 0.5, 0.5) for i in range(4)]
+    # centers += [(i * 0.5, 0.75) for i in range(5)]
+    # centers += [((1 + i) * 0.25, 1.0) for i in range(8)]
 
     centers = np.array(centers)
     radii = np.repeat(0.1, centers.shape[0])
@@ -240,11 +240,9 @@ def test_01():
     md.runDP(
         ctrn_tol=1e-3,
         dfactor=1e-1,
-        lv_iter=(10, 16),
         reinit_step=4,
-        reinit_pars=(20, 0.08),
+        reinit_pars=(20, 0.1),
         smooth=True,
-        random_pars=(111, 0.05),
     )
 
 
@@ -373,7 +371,7 @@ def test_02():
     md.save_initial_level(comm)
 
     # Run data parallelism
-    md.runDP(niter=300, ctrn_tol=1e-3, dfactor=1e-1, reinit_step=4, smooth=True)
+    md.runDP(ctrn_tol=1e-3, dfactor=1e-1, reinit_step=4, smooth=True)
 
 
 def test_03():
@@ -485,10 +483,8 @@ def test_03():
 
     # Run Data Parallelism
     md.runDP(
-        niter=100,
         ctrn_tol=1e-3,
         dfactor=1e-1,
-        lv_time=(0.001, 1.0),
         reinit_step=4,
         reinit_pars=(16, 0.05),
         smooth=True,
@@ -567,7 +563,6 @@ def test_04():
 
     # Run Task Parallelism
     md.runTP(
-        niter=100,
         ctrn_tol=1e-3,
         dfactor=1e-1,
         reinit_step=4,
@@ -677,7 +672,6 @@ def test_05():
     # Run Mix Parallelism
     md.runMP(
         sub_comm=sub_comm,
-        niter=100,
         ctrn_tol=1e-3,
         dfactor=1e-1,
         reinit_step=4,
@@ -4196,6 +4190,15 @@ def test_36():
 
 
 def test_37():
+    """
+    Nonlinear Elasticity (cantilever) - Data Parallelism
+
+    Run `mpirun -np <nbr of processes> python test.py 37`.
+    For instance, `mpirun -np 4 python test.py 37`.
+
+    Incomplete test.
+    """
+
     test_name = "Nonlinear Elasticity (cantilever) - Data Parallelism"
     test_path = Path("../results/t37/")
     dim = 2
@@ -4233,19 +4236,15 @@ def test_37():
     # Boundary to force application
     ds_g = dib.marked_ds(domain, boundary_tags, [neu_mkr])
 
-    area = 1.0
-    g = (0.0, -2.0)
+    area = 0.8
+    g = (0.0, -1.0)
     # Create the model
-    md = NonlinearElasticity2D(
-        dim, domain, space, g, ds_g[0], dirichlet_bcs, area, test_path
-    )
-
-    md.ini_func = lambda x: 0.0 * x[:2]
+    md = Compliance(dim, domain, space, g, ds_g[0], dirichlet_bcs, area, test_path)
 
     @dib.region_of(domain)
     def sub_domain(x):
         # 0.42 < x[1] < 0.58
-        # 1.90 < x[0]
+        # 1.95 < x[0]
         ineqs = [x[1] - 0.42, 0.58 - x[1], x[0] - 1.90]
         return ineqs
 
@@ -4255,11 +4254,11 @@ def test_37():
 
     centers = [(0.0, 0.5), (2.0, 0.35), (2.0, 0.65)]
     centers += [((1 + i) * 0.25, 0.0) for i in range(8)]
-    centers += [(i * 0.5, 0.25) for i in range(5)]
-    centers += [(0.25 + i * 0.5, 0.5) for i in range(4)]
-    centers += [(i * 0.5, 0.75) for i in range(5)]
+    # centers += [(i * 0.5, 0.25) for i in range(5)]
+    centers += [(0.25 + i * 0.5, 0.5) for i in range(4) if i not in [1, 2]]
+    # centers += [(i * 0.5, 0.75) for i in range(5)]
     centers += [((1 + i) * 0.25, 1.0) for i in range(8)]
-
+    centers += [(1.0, 0.5), (0.6, 0.25), (1.4, 0.25), (0.6, 0.75), (1.4, 0.75)]
     centers = np.array(centers)
     radii = np.repeat(0.1, centers.shape[0])
 
@@ -4269,15 +4268,45 @@ def test_37():
     md.save_initial_level(comm)
 
     md.runDP(
-        niter=200,
         ctrn_tol=1e-3,
         dfactor=1e-1,
-        lv_iter=(8, 12),
+        lv_iter=(10, 16),
         reinit_step=4,
         reinit_pars=(15, 0.08),
         smooth=True,
         random_pars=(111, 0.05),
     )
+
+    # new force
+    g = (0.0, -2.0)
+    md_next = Compliance(dim, domain, space, g, ds_g[0], dirichlet_bcs, area, test_path)
+    md_next.sub = [sub_domain.expression()]
+    md_next.set_initial_level(md.phi)
+    dib.res_name = "results_next"
+    md_next.runDP(
+        ctrn_tol=1e-3,
+        dfactor=1e-1,
+        lv_iter=(10, 16),
+        reinit_step=4,
+        reinit_pars=(15, 0.08),
+        smooth=True,
+        random_pars=(111, 0.05),
+    )
+
+    # g = (0.0, -20.0)
+    # md1 = SaintVenant_Kirchhoff(dim, domain, space, g, ds_g[0], dirichlet_bcs, area, test_path)
+
+    # md1.sub = [sub_domain.expression()]
+
+    # md1.set_initial_level(md.phi)
+
+    # md1.runDP(
+    #     niter=50,
+    #     ctrn_tol=1e-3,
+    #     dfactor=1.0,
+    #     lv_iter=(10, 16),
+    #     random_pars=(111, 0.05),
+    # )
 
 
 test_functions = {

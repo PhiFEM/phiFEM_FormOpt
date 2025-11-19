@@ -1141,10 +1141,6 @@ class NonlinearElasticity2D(Model):
         lmbda = E * nu / (1.0 + nu) / (1.0 - 2.0 * nu)
         mu = E / 2.0 / (1.0 + nu)
 
-        # self.a1 = 0.08361
-        # self.a2 = 0.08361
-        # self.a3 = 33.3333
-
         self.a1 = 0.09615385
         self.a2 = 0.09615385
         self.a3 = 0.83333333
@@ -1286,3 +1282,141 @@ class NonlinearElasticity2D(Model):
             B += 1e4 * sb * dot(th, xi) * self.dx
 
         return B, False
+
+
+class SaintVenant_Kirchhoff(Model):
+
+    def __init__(self, dim, domain, space, g, ds_g, dir_bcs, vol, path):
+
+        self.dim = dim
+        self.domain = domain
+        self.space = space
+        self.path = path
+
+        self.dx = Measure("dx", domain=domain)
+        self.ds = Measure("ds", domain=domain)
+        self.g = as_vector(g)
+        self.ds_g = ds_g
+        self.bc = dir_bcs
+        self.vol = vol
+        self.ini_func = None
+        self.sub = []
+
+        E, nu = 1.0, 0.3
+        lmbda = E * nu / (1.0 + nu) / (1.0 - 2.0 * nu)
+        mu = E / 2.0 / (1.0 + nu)
+
+        self.zero_vec = as_vector(dim * [0.0])
+        self.Id = Identity(dim)
+        self.epsilon = lambda w: sym(grad(w))
+        self.sigma = lambda w: (
+            lmbda * nabla_div(w) * self.Id + 2.0 * mu * self.epsilon(w)
+        )
+
+        self.F = lambda w: self.Id + grad(w)
+        self.E = lambda M: 0.5 * (M.T * M - self.Id)
+        self.dE = lambda M, N: 0.5 * (M.T * N + N.T * M)
+        self.S = lambda M: lmbda * tr(M) * self.Id + 2.0 * mu * M
+        self.dS = lambda N: lmbda * tr(N) * self.Id + 2.0 * mu * N
+
+        self.W = lambda F: (lmbda / 2.0) * (
+            (tr(self.E(F))) ** 2
+        ) * self.Id + mu * inner(self.E(F), self.E(F))
+
+        self.A = lambda w: conditional(lt(w, 0.0), 1.0, 1e-3)
+        self.chi = lambda w: conditional(lt(w, 0.0), 1.0, 0.0)
+
+    def dW(self, F, dF):
+
+        return inner(F * self.S(self.E(F)), dF)
+
+    def d2W(self, F, dF1, dF2):
+
+        d = inner(dF1 * self.S(self.E(F)), dF2)
+        d += inner(F * self.dS(self.dE(F, dF1)), dF2)
+
+        return d
+
+    def pde(self, phi):
+
+        u = Coefficient(self.space)
+        v = TestFunction(self.space)
+        du = TrialFunction(self.space)
+
+        # Nonlinear equation
+        N = self.A(phi) * self.dW(self.F(u), grad(v)) * self.dx
+        N -= dot(self.g, v) * self.ds_g
+
+        J = self.A(phi) * self.d2W(self.F(u), grad(du), grad(v)) * self.dx
+
+        uu = TrialFunction(self.space)
+        W = self.A(phi) * inner(self.sigma(uu), self.epsilon(v)) * self.dx
+        W -= dot(self.g, v) * self.ds_g
+
+        return [(N, self.bc, J, u, W)]
+
+    def adjoint(self, phi, U):
+
+        u = U[0]
+        p = TrialFunction(self.space)
+        r = TestFunction(self.space)
+
+        W = self.A(phi) * self.d2W(self.F(u), grad(p), grad(r)) * self.dx
+        W += dot(self.g, r) * self.ds_g
+
+        return [(W, self.bc)]
+
+    def cost(self, phi, U):
+
+        u = U[0]
+        J = dot(self.g, u) * self.ds_g
+
+        return J
+
+    def constraint(self, phi, U):
+
+        C = (1.0 / self.vol) * self.chi(phi) * self.dx
+
+        return [C]
+
+    def Q1(self, u, v):
+
+        return -grad(v) * self.S(self.E(self.F(u))) * (self.F(u)).T
+
+    def Q2(self, u, v):
+
+        q2 = -grad(u) * self.S(self.E(self.F(u))) * (grad(v)).T
+        q2 -= grad(u) * self.dS(self.dE(self.F(u), grad(v))) * (self.F(u)).T
+
+        return q2
+
+    def derivative(self, phi, U, P):
+
+        u = U[0]
+        p = P[0]
+
+        S0_J = self.zero_vec
+        S1_J = self.A(phi) * self.dW(self.F(u), grad(p)) * self.Id
+        S1_J += self.A(phi) * self.Q1(u, p)
+        S1_J += self.A(phi) * self.Q2(u, p)
+
+        S0_C = self.zero_vec
+        S1_C = (1.0 / self.vol) * self.chi(phi) * self.Id
+
+        S0 = (S0_J, [S0_C])
+        S1 = (S1_J, [S1_C])
+
+        return S0, S1
+
+    def bilinear_form(self, th, xi):
+
+        nv = FacetNormal(self.domain)
+
+        B = 0.1 * dot(th, xi) * self.dx
+        B += inner(grad(th), grad(xi)) * self.dx
+        # B += 1e4 * dot(th, nv) * dot(xi, nv) * self.ds
+
+        for sb in self.sub:
+            B += 1e4 * sb * dot(th, xi) * self.dx
+
+        return B, True

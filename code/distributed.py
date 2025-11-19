@@ -301,6 +301,14 @@ class Model(ABC):
                 raise NotImplementedError(f"Models must define the '{attr}' attribute.")
 
     @final
+    def set_initial_level(self, func: Function) -> None:
+        """
+        Set a initial level set function as initial guess.
+        """
+        func_class = ObjFunc(func)
+        self.ini_lvl = func_class
+
+    @final
     def create_initial_level(
         self,
         centers: npt.NDArray[np.float64],
@@ -421,7 +429,7 @@ class Model(ABC):
 
         self.__verification(["dim", "domain", "space", "path"])
 
-        runDP(
+        self.phi = runDP(
             self,
             niter,
             reinit_step,
@@ -508,7 +516,7 @@ class Model(ABC):
 
         self.__verification(["dim", "domain", "space", "path"])
 
-        runTP(
+        self.phi = runTP(
             self,
             niter,
             reinit_step,
@@ -596,7 +604,7 @@ class Model(ABC):
 
         self.__verification(["dim", "domain", "space", "path"])
 
-        runMP(
+        self.phi = runMP(
             sub_comm,
             self,
             niter,
@@ -613,6 +621,15 @@ class Model(ABC):
             prev,
             random_pars,
         )
+
+
+class ObjFunc:
+    """
+    Class to save and pass a level set function
+    """
+
+    def __init__(self, func):
+        self.func = func
 
 
 class Subdomain:
@@ -1702,16 +1719,22 @@ class Velocity:
 
         self.biform = form(b)
         self.liform = form(-(dot(S0, xi) + inner(S1, grad(xi))) * dx)
-        self.bc = []
+        self.bc = None
 
         if dirbc == True:
-            # domain dimension = velocity rank
+            # Homogeneous Dirichlet boundary condition on the whole boundary
+            # Recall that domain dimension = velocity rank
             self.bc = homogeneus_boundary(domain, space, dim, dim)
-
-        if isinstance(dirbc, tuple):
-            self.bc = dirichlet_bcs = homogeneous_dirichlet(
-                domain, space, dirbc[0], dirbc[1], dim
-            )
+        elif isinstance(dirbc, tuple):
+            # Homogeneous Dirichlet boundary condition on a subset of the boundary.
+            # dirbc is a tuple with two components,
+            # boundary tags and a list of marks. For instance,
+            # dirbc = (tags, [mark0, mark1])
+            self.bc = homogeneous_dirichlet(domain, space, dirbc[0], dirbc[1], dim)
+        else:
+            # By defult,
+            # homogeneous Neumann boundary condition on the whole boundary
+            self.bc = []
 
         self.solver = build_solver(domain, self.biform, self.bc)
 
@@ -2434,7 +2457,7 @@ def runDP(
     cost_tol: float,
     prev: int,
     random_pars: Tuple[int, float],
-) -> None:
+) -> Function:
     """
     Implements Data Parallelism.
     """
@@ -2742,6 +2765,8 @@ def runDP(
         print(f"> Assembly time = {max_assembly} s")
         print(f"> Resolution time = {max_solve} s")
 
+    return phi
+
 
 def runTP(
     model: Model,
@@ -2758,7 +2783,7 @@ def runTP(
     cost_tol: float,
     prev: int,
     random_pars: Tuple[int, float],
-) -> None:
+) -> Function:
     """
     Implements Task Parallelism.
     """
@@ -3102,6 +3127,8 @@ def runTP(
         print(f"> Assembly time = {max_assembly} s")
         print(f"> Resolution time = {max_solve} s")
 
+    return phi
+
 
 def runMP(
     sub_comm: MPI.Comm,
@@ -3119,7 +3146,7 @@ def runMP(
     cost_tol: float,
     prev: int,
     random_pars: Tuple[int, float],
-) -> None:
+) -> Function:
     """
     Implements Mix Parallelism.
     """
@@ -3472,3 +3499,5 @@ def runMP(
         tosave.save(model.path)
         print(f"> Assembly time = {max_assembly} s")
         print(f"> Resolution time = {max_solve} s")
+
+    return phi
