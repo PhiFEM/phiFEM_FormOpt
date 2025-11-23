@@ -25,6 +25,8 @@ from ufl import (
     det,
     tr,
     inv,
+    Constant,
+    derivative,
 )
 
 """
@@ -653,132 +655,9 @@ class HeatPlus(Model):
         return B, True
 
 
-class HeatMultiple(Model):
-
-    def __init__(self, dim, domain, space, dirichlet_bcs, vol):
-
-        self.dim = dim
-        self.domain = domain
-        self.space = space
-
-        self.dx = Measure("dx", domain=domain)
-        self.ds = Measure("ds", domain=domain)
-        self.bcs = dirichlet_bcs
-        self.vol = vol
-        self.wts = None
-        self.gs = None
-        self.fs = None
-        self.subs = None
-
-        self.zero_vec = as_vector(dim * [0.0])
-        self.Id = Identity(dim)
-        self.A = lambda w: conditional(lt(w, 0.0), 1.0, 1e-3)
-        self.chi = lambda w: conditional(lt(w, 0.0), 1.0, 0.0)
-
-    def state_prob(self, u, v, phi, g, bc):
-
-        W = self.A(phi) * dot(grad(u), grad(v)) * self.dx
-        W += self.A(phi) * dot(grad(g), grad(v)) * self.dx
-
-        return [W, bc]
-
-    def adjoint_prob(self, p, q, phi, wt, u, g, bc):
-
-        W = self.A(phi) * dot(grad(p), grad(q)) * self.dx
-        W += 2.0 * wt * dot(grad(u + g), grad(q)) * self.dx
-
-        return [W, bc]
-
-    def pde(self, phi):
-
-        u = TrialFunction(self.space)
-        v = TestFunction(self.space)
-
-        S = [self.state_prob(u, v, phi, g, bc) for g, bc in zip(self.gs, self.bcs)]
-
-        return S
-
-    def adjoint(self, phi, U):
-
-        p = TrialFunction(self.space)
-        q = TestFunction(self.space)
-
-        A = [
-            self.adjoint_prob(p, q, phi, wt, u, g, bc)
-            for wt, u, g, bc in zip(self.wts, U, self.gs, self.bcs)
-        ]
-
-        return A
-
-    def cost(self, phi, U):
-
-        J = [
-            wt * dot(grad(u + g), grad(u + g)) * self.dx
-            for wt, u, g in zip(self.wts, U, self.gs)
-        ]
-
-        return sum(J)
-
-    def constraint(self, phi, U):
-
-        C = self.chi(phi) / self.vol * self.dx
-
-        return [C]
-
-    def S0(self, phi, wt, u, g, p):
-
-        D2g = grad(grad(g))
-
-        s0 = 2.0 * wt * D2g * grad(u + g)
-        s0 += self.A(phi) * D2g * grad(p)
-
-        return s0
-
-    def S1(self, phi, wt, u, g, p):
-
-        grad_ug = grad(u + g)
-
-        s1 = wt * dot(grad_ug, grad_ug) * self.Id
-        s1 -= 2.0 * wt * outer(grad(u), grad_ug)
-        s1 += self.A(phi) * dot(grad(p), grad_ug) * self.Id
-        s1 -= self.A(phi) * outer(grad(p), grad_ug)
-        s1 -= self.A(phi) * outer(grad(u), grad(p))
-
-        return s1
-
-    def derivative(self, phi, U, P):
-
-        S0_J = []
-        S1_J = []
-
-        for wt, u, g, p in zip(self.wts, U, self.gs, P):
-            S0_J.append(self.S0(phi, wt, u, g, p))
-            S1_J.append(self.S1(phi, wt, u, g, p))
-
-        S0_C = self.zero_vec
-        S1_C = self.chi(phi) / self.vol * self.Id
-
-        S0 = [sum(S0_J), [S0_C]]
-        S1 = [sum(S1_J), [S1_C]]
-
-        return S0, S1
-
-    def bilinear_form(self, th, xi):
-
-        nv = FacetNormal(self.domain)
-
-        B = inner(grad(th), grad(xi)) * self.dx
-        B += 1e4 * dot(th, nv) * dot(xi, nv) * self.ds
-
-        for sb in self.subs:
-            B += 1e5 * sb * dot(th, xi) * self.dx
-
-        return B, False
-
-
 class Logistic(Model):
 
-    def __init__(self, dim, domain, space, path):
+    def __init__(self, dim, domain, space, vol, r, u0, path):
 
         self.dim = dim
         self.domain = domain
@@ -788,40 +667,21 @@ class Logistic(Model):
         self.dx = Measure("dx", domain=domain)
         self.ds = Measure("ds", domain=domain)
 
-        self.d = None
-        self.name = None
-        self.args = None
-
-        self.vol = None
-        self.ini_func = None
+        self.r = r
+        self.vol = vol
+        self.u0 = u0
 
         self.zero_vec = as_vector(dim * [0.0])
         self.Id = Identity(dim)
 
         self.chi = lambda w: (conditional(lt(w, 0.0), 1.0, 0.0))
-        self.T = lambda w, tmax, tmin: (conditional(lt(w, 0.0), tmax, tmin))
+        self.K = lambda w: (conditional(lt(w, 0.0), 1.0, 1e-2))
 
-    def L(self, u, phi):
-        if self.name == "K":
-            r, kmax, kmin = self.args
-            return r * (1.0 - u / self.T(phi, kmax, kmin))
-        elif self.name == "R":
-            rmax, rmin = self.args
-            return self.T(phi, rmax, rmin) - u
-        elif self.name == "I":
-            r, imax, imin = self.args
-            return r - self.T(phi, imax, imin) * u
+    def L(self, phi, u):
+        return self.r * (1.0 - u / self.K(phi)) * u
 
-    def DL(self, u, phi):
-        if self.name == "K":
-            r, kmax, kmin = self.args
-            return r * (1.0 - 2.0 * u / self.T(phi, kmax, kmin))
-        elif self.name == "R":
-            rmax, rmin = self.args
-            return self.T(phi, rmax, rmin) - 2.0 * u
-        elif self.name == "I":
-            r, imax, imin = self.args
-            return r - 2.0 * self.T(phi, imax, imin) * u
+    def DL(self, phi, u, du):
+        return self.r * (1.0 - 2.0 * u / self.K(phi)) * du
 
     def pde(self, phi):
 
@@ -829,13 +689,13 @@ class Logistic(Model):
         v = TestFunction(self.space)
         du = TrialFunction(self.space)
 
-        F = self.d * dot(grad(u), grad(v)) * self.dx
-        F -= self.L(u, phi) * u * v * self.dx
+        F = dot(grad(u), grad(v)) * self.dx
+        F -= self.L(phi, u) * v * self.dx
 
-        J = self.d * dot(grad(du), grad(v)) * self.dx
-        J -= self.DL(u, phi) * du * v * self.dx
+        J = dot(grad(du), grad(v)) * self.dx
+        J -= self.DL(phi, u, du) * v * self.dx
 
-        return [(F, [], J, u, self.ini_func)]
+        return [(F, [], J, u, self.u0)]
 
     def adjoint(self, phi, U):
 
@@ -844,8 +704,8 @@ class Logistic(Model):
         p = TrialFunction(self.space)
         q = TestFunction(self.space)
 
-        W = self.d * dot(grad(p), grad(q)) * self.dx
-        W -= self.DL(u, phi) * p * q * self.dx
+        W = dot(grad(p), grad(q)) * self.dx
+        W -= self.DL(phi, u, q) * p * self.dx
         W -= q * self.dx
 
         return [(W, [])]
@@ -867,9 +727,9 @@ class Logistic(Model):
         p = P[0]
 
         S0_J = self.zero_vec
-        S1_J = (-u + self.d * dot(grad(u), grad(p))) * self.Id
-        S1_J -= self.L(u, phi) * u * p * self.Id
-        S1_J -= self.d * (outer(grad(u), grad(p)) + outer(grad(p), grad(u)))
+        S1_J = (dot(grad(u), grad(p)) - u) * self.Id
+        S1_J -= self.L(phi, u) * p * self.Id
+        S1_J -= outer(grad(u), grad(p)) + outer(grad(p), grad(u))
 
         S0_C = self.zero_vec
         S1_C = (1.0 / self.vol) * self.chi(phi) * self.Id
@@ -882,8 +742,6 @@ class Logistic(Model):
     def bilinear_form(self, th, xi):
 
         nv = FacetNormal(self.domain)
-
-        # B = 0.1*dot(th, xi)*self.dx
         B = inner(grad(th), grad(xi)) * self.dx
         B += 1e4 * dot(th, nv) * dot(xi, nv) * self.ds
 
@@ -1301,27 +1159,18 @@ class SaintVenant_Kirchhoff(Model):
         self.vol = vol
         self.ini_func = None
         self.sub = []
+        self.u0 = lambda x: 0.0 * x[:dim]
 
-        E, nu = 1.0, 0.3
+        E, nu = 1000.0, 0.3
         lmbda = E * nu / (1.0 + nu) / (1.0 - 2.0 * nu)
         mu = E / 2.0 / (1.0 + nu)
 
         self.zero_vec = as_vector(dim * [0.0])
         self.Id = Identity(dim)
-        self.epsilon = lambda w: sym(grad(w))
-        self.sigma = lambda w: (
-            lmbda * nabla_div(w) * self.Id + 2.0 * mu * self.epsilon(w)
-        )
 
-        self.F = lambda w: self.Id + grad(w)
         self.E = lambda M: 0.5 * (M.T * M - self.Id)
         self.dE = lambda M, N: 0.5 * (M.T * N + N.T * M)
         self.S = lambda M: lmbda * tr(M) * self.Id + 2.0 * mu * M
-        self.dS = lambda N: lmbda * tr(N) * self.Id + 2.0 * mu * N
-
-        self.W = lambda F: (lmbda / 2.0) * (
-            (tr(self.E(F))) ** 2
-        ) * self.Id + mu * inner(self.E(F), self.E(F))
 
         self.A = lambda w: conditional(lt(w, 0.0), 1.0, 1e-3)
         self.chi = lambda w: conditional(lt(w, 0.0), 1.0, 0.0)
@@ -1333,7 +1182,7 @@ class SaintVenant_Kirchhoff(Model):
     def d2W(self, F, dF1, dF2):
 
         d = inner(dF1 * self.S(self.E(F)), dF2)
-        d += inner(F * self.dS(self.dE(F, dF1)), dF2)
+        d += inner(F * self.S(self.dE(F, dF1)), dF2)
 
         return d
 
@@ -1342,18 +1191,15 @@ class SaintVenant_Kirchhoff(Model):
         u = Coefficient(self.space)
         v = TestFunction(self.space)
         du = TrialFunction(self.space)
+        l = Constant(self.domain)
 
-        # Nonlinear equation
-        N = self.A(phi) * self.dW(self.F(u), grad(v)) * self.dx
-        N -= dot(self.g, v) * self.ds_g
+        F = self.Id + grad(u)
+        Eq = self.A(phi) * self.dW(F, grad(v)) * self.dx
+        Eq -= l * dot(self.g, v) * self.ds_g
 
-        J = self.A(phi) * self.d2W(self.F(u), grad(du), grad(v)) * self.dx
+        Jac = self.A(phi) * self.d2W(F, grad(du), grad(v)) * self.dx
 
-        uu = TrialFunction(self.space)
-        W = self.A(phi) * inner(self.sigma(uu), self.epsilon(v)) * self.dx
-        W -= dot(self.g, v) * self.ds_g
-
-        return [(N, self.bc, J, u, W)]
+        return [(Eq, self.bc, Jac, u, self.u0, l, (0.1, 12))]
 
     def adjoint(self, phi, U):
 
@@ -1361,7 +1207,8 @@ class SaintVenant_Kirchhoff(Model):
         p = TrialFunction(self.space)
         r = TestFunction(self.space)
 
-        W = self.A(phi) * self.d2W(self.F(u), grad(p), grad(r)) * self.dx
+        F = self.Id + grad(u)
+        W = self.A(phi) * self.d2W(F, grad(p), grad(r)) * self.dx
         W += dot(self.g, r) * self.ds_g
 
         return [(W, self.bc)]
@@ -1379,26 +1226,20 @@ class SaintVenant_Kirchhoff(Model):
 
         return [C]
 
-    def Q1(self, u, v):
-
-        return -grad(v) * self.S(self.E(self.F(u))) * (self.F(u)).T
-
-    def Q2(self, u, v):
-
-        q2 = -grad(u) * self.S(self.E(self.F(u))) * (grad(v)).T
-        q2 -= grad(u) * self.dS(self.dE(self.F(u), grad(v))) * (self.F(u)).T
-
-        return q2
-
     def derivative(self, phi, U, P):
 
         u = U[0]
         p = P[0]
 
+        F = self.Id + grad(u)
+
+        Q0 = self.dW(F, grad(p)) * self.Id
+        Q1 = grad(p) * self.S(self.E(F)) * F.T
+        Q2 = grad(u) * self.S(self.E(F)) * (grad(p)).T
+        Q2 += grad(u) * self.S(self.dE(F, grad(p))) * F.T
+
         S0_J = self.zero_vec
-        S1_J = self.A(phi) * self.dW(self.F(u), grad(p)) * self.Id
-        S1_J += self.A(phi) * self.Q1(u, p)
-        S1_J += self.A(phi) * self.Q2(u, p)
+        S1_J = self.A(phi) * (Q0 - Q1 - Q2)
 
         S0_C = self.zero_vec
         S1_C = (1.0 / self.vol) * self.chi(phi) * self.Id
@@ -1414,9 +1255,9 @@ class SaintVenant_Kirchhoff(Model):
 
         B = 0.1 * dot(th, xi) * self.dx
         B += inner(grad(th), grad(xi)) * self.dx
-        # B += 1e4 * dot(th, nv) * dot(xi, nv) * self.ds
+        B += 1e4 * dot(th, nv) * dot(xi, nv) * self.ds
 
         for sb in self.sub:
             B += 1e4 * sb * dot(th, xi) * self.dx
 
-        return B, True
+        return B, False

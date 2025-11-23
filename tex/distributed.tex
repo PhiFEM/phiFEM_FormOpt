@@ -146,7 +146,7 @@ Given the vast literature on topology optimization, we provide only a few illust
 The range of software available for shape and topology optimization is rapidly expanding.
 Along commercial softwares, numerous open-source tools have been developed.
 For topology optimization in structural mechanics, the trend of educational codes began in 2001 with Sigmund's 99-line \texttt{MATLAB} code \cite{Sigmund2014}, followed by an improved version in \cite{Andreassen2010}. Another pioneering contribution is the \texttt{FreeFEM} implementation \cite{MR2252743}.
-Since then, codes have been released for various platforms, including \texttt{NGsolve} \cite{MR4233697}, \texttt{FEniCS} \cite{BLAUTH2021100646,MR3843884} and \texttt{Firedrake}~\cite{Paganini2021}. 
+Since then, codes have been released for various platforms, including \texttt{NGsolve} \cite{MR4233697}, \texttt{FEniCS} \cite{fenicsx, BLAUTH2021100646,MR3843884} and \texttt{Firedrake}~\cite{Paganini2021}. 
 An open-source \texttt{Python} implementation of the Null Space Optimizer is also available \cite{MR4686093}. For a comparison of algorithms, we refer to \cite{Gain2013}.
  
 % 4) We use here the distributed shape derivative approach, why it is good?
@@ -353,8 +353,6 @@ Shape sensitivity analysis for a related problem was studied in \cite{MEFTAHI201
 \rood{A: in fact there are several issues in \cite{MEFTAHI20151554}, for instance they use strong formulations in the variational formulations but they do not have enough regularity for that. We won't discuss that here, as this is beyond the scope.}
 Further examples of tensor representation of the shape derivative for other PDEs are provided in Section~\ref{sec:results}.
 
-
-
 \textbf{Inverse problem.}
 Let $\Gamma_0$, $\Gamma_1$ be subsets of $\Gamma:=\partial\hold$ such that $\Gamma=\Gamma_0\cup\Gamma_1$. 
 Let $H_{\Gamma_0}(\mathcal{D})^d$ be the space of functions
@@ -363,8 +361,8 @@ Let $H_{\Gamma_0}(\mathcal{D})^d$ be the space of functions
 \end{equation*}
 The strain and stress tensors are given by, respectively,
 \begin{equation*}
-	\epsilon(w)\coloneqq\frac{Dw+{Dw}^{\top}}{2},\quad\sigma(w)\coloneqq2\mu\,\epsilon(w) 
-	+ \lambda (\mathrm{div}w) I,
+	\epsilon(w) \coloneqq \frac{Dw+{Dw}^{\top}}{2},\quad
+	\sigma(w) \coloneqq \lambda\,\mathrm{tr}(\epsilon(w))I + 2\mu\,\epsilon(w),
 \end{equation*}
 where $\mu$ and $\lambda$ are the Lam\'e parameters.
 Let $f\in H^{1/2}(\Gamma_1)^d$ and $g\in H^{1/2}(\Gamma_1)^d$ be vector-valued functions defined on $\Gamma_1$.
@@ -792,7 +790,7 @@ Interior holes and curves (formed by line segments) are supported.
 
 
 \item \code{create\_space}:
-This is wrapper function for creating a \fx function space.
+This is wrapper function for creating a \fx\ function space.
 
 \item \code{homogeneous\_dirichlet}:
 This function creates homogeneous Dirichlet boundary conditions
@@ -847,22 +845,20 @@ to the errors and tolerances to decide when to stop the algorithm. See ``Stoppin
 Finally, the \code{random\_pars} parameter adds randomness to the integration of the level set equation.
 See the last part of ``Line search method'' in Subsection \ref{sub:other} for more details.
 
-We point out that the user-defined subclasses
-inherit these functions from the \code{Model} class.
+We point out that the user-defined subclasses inherit these functions from the \code{Model} class.
 
-In addition to \code{distributed.py}, we have implemented
-several models in \code{models.py}:
+In addition to \code{distributed.py}, we have implemented several models in \code{models.py}:
 \begin{itemize}[left=0.0em]
 \item \code{Compliance}: compliance minimization;
-\item \code{CompliancePlus}: similar to \code{Compliance}, but with multiple load cases;
+\item \code{CompliancePlus}: similar to \code{Compliance}, but with multiple loads;
 \item \code{InverseElasticity}: inverse problem in linear elasticity;
 \item \code{Heat}: heat conduction problem;
-\item \code{HeatPlus}: same as \code{Heat}, but with multiple sinks.
+\item \code{HeatPlus}: same as \code{Heat}, but with multiple sinks and sources;
+\item \code{Logistic}: resource distribution for a population governed by the logistic equation.
 \end{itemize}
 The problem formulation of these models are provided in the documentation.
 Tests using these models can be found in \code{test.py}.
-For each test, there is a corresponding folder in \code{results/},
-where the results are saved.
+For each test, there is a corresponding folder in \code{results/}, where the results are saved.
 
 The files \code{load.py} and \code{plots.py} contain auxiliary code
 for visualizing the results. 
@@ -1236,17 +1232,17 @@ assuming that the elements are identical equilateral triangles or regular tetrah
 We apply the Petrov-Galerkin method \cite{MR1640142} to \eqref{eq:transport},
 along with the Crank-Nicolson method to the time derivative.
 This results in iteratively solving the following weak formulation:
-Find $\phi(t+\Delta t,\cdot) \in H^1(\mathcal{D})$ such that
+Find $\phi(t+\delta t,\cdot) \in H^1(\mathcal{D})$ such that
 \begin{align} \label{eq:weak_transport}
-	& \int_{\mathcal{D}} \phi(t+\Delta t,\cdot)\hat{\psi} + \Delta t \, \mathcal{F}(\phi(t+\Delta t,\cdot), \hat{\psi}) = \nonumber \\
-	& \int_{\mathcal{D}} \phi(t,\cdot) \hat{\psi} - \Delta t \, \mathcal{F}(\phi(t,\cdot), \hat{\psi})
+	& \int_{\mathcal{D}} \phi(t+\delta t,\cdot)\hat{\psi} + \delta t \, \mathcal{F}(\phi(t+\delta t,\cdot), \hat{\psi}) = \nonumber \\
+	& \int_{\mathcal{D}} \phi(t,\cdot) \hat{\psi} - \delta t \, \mathcal{F}(\phi(t,\cdot), \hat{\psi})
 	\quad \forall \, \psi\in H^1(\mathcal{D}),
 \end{align}
-where $\Delta t$ is the time step,
+where $\delta t$ is the time step,
 $\mathcal{F}(u, v) = \frac{(\theta \cdot \nabla u) v}{2} + h^2\frac{\nabla u \cdot \nabla v}{2}$,
 and $\hat{\psi}=\psi+\tau \theta\cdot\nabla\psi$, with 
 \begin{equation} \label{eq:tau_lv}
-	\tau = 2\left(\frac{1}{\Delta t^2}  + \frac{|\theta|^2}{h^2}\right)^{-1/2}.
+	\tau = 2\left(\frac{1}{\delta t^2}  + \frac{|\theta|^2}{h^2}\right)^{-1/2}.
 \end{equation}
 We solve \eqref{eq:weak_transport} up to a final time $T$ and
 define the new level set function as $\phi^{i+1}(x) \coloneqq \phi(T,x)$.
@@ -1276,8 +1272,8 @@ as in the \code{Level} class.
 \label{sub:other}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\textbf{Reinitialization.} As in the standard level set method \cite{MR965860}, see also \cite{MR3843884}, we regularly perform a reinitialization of
-the level set function $\phi = \phi(T, \cdot)$ (obtained from \eqref{eq:transport})
+\textbf{Reinitialization.} As in the standard level set method \cite{MR965860}, see also \cite{MR3843884},
+we regularly perform a reinitialization of the level set function $\phi = \phi(T, \cdot)$ (obtained from \eqref{eq:transport})
 by solving the diffusive Eikonal equation with fictitious time derivative:
 \begin{equation} \label{eq:Eikonal}
 \begin{aligned}
@@ -1309,15 +1305,15 @@ These observations let us to consider, again,
 the Petrov-Galerkin method developed in \cite{MR1640142}. 
 Discretizing the time derivative with the two-step Adams-Bashforth method,
 we obtain the following iterative scheme:
-Find $\varphi(t + \Delta t, \cdot) \in H^1(\mathcal{D})$ such that
+Find $\varphi(t + \delta t, \cdot) \in H^1(\mathcal{D})$ such that
 \begin{align} \label{eq:weak_HJ}
-	& \int_{\mathcal{D}}  \varphi(t + \Delta t, \cdot) \hat{\psi} = \int_{\mathcal{D}} (\varphi(t, \cdot) + {\Delta t} \, S(\phi)) \hat{\psi} + {}\nonumber \\
-	& \int_{\mathcal{D}} {\Delta t}\,\mathcal{G}(\varphi(t, \cdot), \varphi(t - \Delta t, \cdot), \hat{\psi}) \quad \forall \, \psi\in H^1(\mathcal{D}),
+	& \int_{\mathcal{D}}  \varphi(t + \delta t, \cdot) \hat{\psi} = \int_{\mathcal{D}} (\varphi(t, \cdot) + {\delta t} \, S(\phi)) \hat{\psi} + {}\nonumber \\
+	& \int_{\mathcal{D}} {\delta t}\,\mathcal{G}(\varphi(t, \cdot), \varphi(t - \delta t, \cdot), \hat{\psi}) \quad \forall \, \psi\in H^1(\mathcal{D}),
 \end{align}
 where $\mathcal{G}(u, v, w) = \tfrac{H(\nabla v)-3H(\nabla u)}{2} w + h^2 \tfrac{\nabla v - 3\nabla u}{2} \cdot \nabla w$
 and $\hat{\psi}=\psi+\tau\nabla H(\nabla \varphi(t, \cdot)) \cdot\nabla\psi $, with 
 \begin{equation}
-	\tau = 2\left(\frac{1}{\Delta t^2}  + \frac{|\nabla H(\nabla \varphi(t, \cdot))|^2}{h^2}\right)^{-1/2}.
+	\tau = 2\left(\frac{1}{\delta t^2}  + \frac{|\nabla H(\nabla \varphi(t, \cdot))|^2}{h^2}\right)^{-1/2}.
 \end{equation}
 
 Note that $|\nabla H(\nabla \varphi(t, \cdot))| = \left|S(\phi)\right|$,
@@ -1334,7 +1330,7 @@ this may not hold during the first iterations of \eqref{eq:weak_HJ}
 due to the initial condition.
 
 In practice, we observed that computing
-the first iterate $\varphi(\Delta t, \cdot)$
+the first iterate $\varphi(\delta t, \cdot)$
 using the explicit Euler method is sufficient to start the scheme.
 Recall that the goal of the reinitialization is to
 prevent degeneration of the level set function across iterations.
@@ -1579,6 +1575,23 @@ def bilinear_form(self, th, xi):
 	#...
 	B += 1e4*self.sb*dot(th, xi)*self.dx
 \end{lstlisting}
+
+\vspace*{0.5cm}
+\noindent \textbf{Computational setup.}
+All numerical experiments were carried out in a \code{Anaconda} environment using \code{Python~3.11.10},
+together with \code{FEniCSx~0.9.0} for the finite element computations and
+\code{Gmsh~4.12.2} for mesh generation. Other important modules are
+\code{NumPy~1.26.3}, \code{SciPy~1.12.0}, \code{Matplotlib~3.8.3}, and \code{MPI4Py~4.0.3}.
+An installation manual is provided in the \code{README} file of the \code{GitHub} repository.
+
+Most of tests were executed on a laptop; a server was used only when explicitly indicated.
+Their specifications are as follows:
+\begin{itemize}[left=0.0em]
+\item \textbf{Laptop:} Ubuntu 22.04.5 LTS, equipped with an Intel Core i9-13900H
+processor (14 physical cores, 20 threads) and 62 GB of RAM.
+\item \textbf{Server:} Debian 12 (bookworm) equipped with two AMD EPYC 9684X
+processors (192 physical cores in total, 1 thread per core) and 1.5 TB of RAM.
+\end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Numerical results}
@@ -2153,13 +2166,13 @@ A mesh with $2\,592\,000$ tetrahedra was employed.
 \label{fig:compli2}
 \end{center}
 
-\noindent\textit{Example 3.} (Cantilever with two loads)
+\noindent\textit{Example 3.} (Cantilever with two loads I)
 We consider the domain $\mathcal{D}$ as the unit square and 
 solve the problem with multiple forces $g^{\mathrm{I}} = g^{\mathrm{II}} = (0, -2)^\top$,
-applied on $\Gamma_1^{\mathrm{I}} = \{1\} \times (0,0.1)$ (right-upper side)
+applied on $\Gamma_1^{\mathrm{I}} = \{x=1\} \times (0,0.1)$ (right-upper side)
 and $\Gamma_1^{\mathrm{II}} = \{x=1\} \times (0.9,1)$ (right-bottom side),
 respectively.
-The boundary of zero displacement is $\Gamma_0 = \{0\} \times (0, 1)$,
+The boundary of zero displacement is $\Gamma_0 = \{x=0\} \times (0, 1)$,
 and the material area is constrained to $V = 0.5$.
 Thus, we minimize the cost functional \eqref{eq:compli_plus},
 which is implemented in the \code{cost} method of the \code{CompliancePlus} class.
@@ -2192,34 +2205,34 @@ reinit_step=4, reinit_pars=(16, 0.05), smooth=True
 \label{fig:compli3}
 \end{center}
 
-\noindent\textit{Example 4.} Cantilever problem with two loads (again)
-
-$\mathcal{D} = (0, 2)\times(0, 1)$
-
-$\Gamma_0 = \{x=0\} \times (0, 1)$ 
-
-$\Gamma_1^{\mathrm{I}} = (0.95,1.05) \times \{y=0\}$
-
-$\Gamma_1^{\mathrm{II}} = \{x=2\} \times (0.45,0.55)$
-
-$g^{\mathrm{I}} = (0, -2)^\top$
-$g^{\mathrm{II}} = (0, 2)^\top$
-
-$V = 1.1$
-
+\noindent\textit{Example 4.} (Cantilever problem with two loads II)
+This example also applies multiple loads.
+We consider the rectangular domain $\mathcal{D} = (0, 2)\times(0, 1)$.
+The forces $g^{\mathrm{I}} = (0, -2)^\top$ and $g^{\mathrm{II}} = (0, 2)^\top$
+are applied separately on $\Gamma_1^{\mathrm{I}} = (0.95,1.05) \times \{y=0\}$ (bottom-center side)
+and $\Gamma_1^{\mathrm{II}} = \{x=2\} \times (0.45,0.55)$ (left-center side), respectively.
+The boundary of zero displacement is $\Gamma_0 = \{x=0\} \times (0, 1)$ 
+and the area constraint is $V = 1.1$.
+The performance of data and task parallelisms are compared using the same parameter values,
+on a mesh of $52\,155$ triangles:
 \begin{lstlisting}
-mpirun -np 2 python test.py 18 # Task (44 sec)
+mpirun -np 2 python test.py 18 # Data (70 sec)
+mpirun -np 2 python test.py 19 # Task (98 sec)
 \end{lstlisting}
-
-Figure \ref{fig:compli4}
+\begin{lstlisting}
+ctrn_tol=1e-3, lgrn_tol=1e-3, dfactor=1e-1,
+reinit_step=4, reinit_pars=(20, 0.01), smooth=True
+\end{lstlisting}
+Recall that in task parallelism the number of processes must
+equal to the number of state/adjoint problems ($2$ in this example).
+See the results in Figure \ref{fig:compli4}.
 \begin{center}
 \includegraphics[width=0.48\linewidth]{compli4_0.png}
 \hfill
 \includegraphics[width=0.48\linewidth]{compli4_1.png}
 \captionof{figure}{
 	Initial and optimal domains.
-	$i=66$
-	$33\,111$ triangles
+	The both parallelism modalities spend $79$ iterations.
 }
 \label{fig:compli4}
 \end{center}
@@ -2313,11 +2326,9 @@ and red color to highlight $\Gamma_0$, where the temperature is fixed to zero.
 We apply a uniform heat $f \equiv 1$,
 with volume constraint $V = 0.25$ and $\Gamma_0 = (0.4, 0.6)\times\{y=0\}$.
 The test is carried out using data parallelism with two processes:
-%
 \begin{lstlisting}
 mpirun -np 2 python test.py 09 # Data (58 sec)
 \end{lstlisting}
-%
 See the results in Figure \ref{fig:heat1}.
 In this example, we have employed the bilinear form
 \begin{equation*}
@@ -2361,10 +2372,18 @@ Thus, the material is penalized close to the boundary.
 \captionof{figure}{
 	Initial guess and optimized design at iteration $i=172$,
 	computed on a mesh with {144\,712} triangles.
-	\tred{A: we should make a comment about the fractal structure and small disconnected components? Is it a problem? Could we remove them with a perimeter constraint?}
 }
 \label{fig:heat2}
 \end{center}
+
+\tred{A: we should make a comment about the fractal structure and small disconnected components? Is it a problem? Could we remove them with a perimeter constraint?}
+
+\tblue{J: Nao consegui resolver essa questao. Eu acho que aquelas small disconnected components sao 
+como aquelas smooth boundaries em otimizacao topologica. Poderiam ser removidas com algun filtro.
+Acho que o importante é que os resultados sao os esperados:
+Topology optimization of heat conduction problem involving design-dependent heat
+load effect, https://doi.org/10.1016/j.finel.2008.06.001.
+}
 
 \noindent\textit{Example 3.} 
 We apply a localized heat source given by the function
@@ -2508,17 +2527,19 @@ The numerical results are in Figure \ref{fig:heat5}.
 \subsection{Population dynamics}
 \label{sub:pop}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-%\tred{A: here also some references} J: I cited Murray's book. 
+% Comments:
+%\tred{A: here also some references}
+%	J: I cited Murray's book.
+%\tred{A: should we use $-\Delta$ instead of $-\nabla^2$?}
+%	J: Now we use $-\Delta$.
+%\tred{A: should explain how the PDE is solved. Newton?}
+%	J: Yes, Newton. I wrote more details about the equations (Jacobian, initial guess).
 
 We present an example in which the PDE constraint is nonlinear.
 Consider the problem of spatially distributing resources in order
-to maximize the population size of a species that consumes
-those resources.
-We assume that the dynamics of the population is 
-governed by the logistic equation with a diffusive term.
-Since the temporal derivative is absent,
-the objective is to maximize the population size in the long-time regime,
+to maximize the population size of a species that consumes those resources.
+We assume that the population growth is governed by the logistic equation with a diffusive term.
+Since the temporal derivative is absent, the objective is to maximize the population size in the long-time regime,
 when the species distribution has reached a stationary state.
 In this setting, the PDE constraint takes the form
 of a nonlinear diffusion equation \cite{MR1908418}.
@@ -2534,11 +2555,11 @@ subject to
 	\int_{\mathcal{D}} \chi_{\Omega} = V,
 \end{equation}
 where $u$ is the solution to
-%\tred{A: should we use $-\Delta$ instead of $-\nabla^2$?}
 \begin{equation}\label{eq:log_prob}
 	\begin{aligned}
-	   -\Delta u &= r u \left(1-\frac{u}{K_\Omega}\right) && \text{in } \mathcal{D}\\
-	\partial_{n} u &= 0 && \text{on } \Gamma   
+	-\Delta u &= r u \left(1-\frac{u}{K_\Omega}\right) && \text{in } \Omega \text{ and } \mathcal{D}\setminus\overline{\Omega}\\
+         (\partial_n u)^+ &= (\partial_n u)^- && \text{on } \partial\Omega \\ 
+	       \partial_{n} u &= 0 && \text{on } \Gamma   
 	\end{aligned}
 \end{equation}
 and $K_{\Omega}:\overline{\mathcal{D}} \rightarrow \mathds{R}$ is given by
@@ -2566,8 +2587,8 @@ Find $u\in H^1(\mathcal{D})$ such that
     \quad
     \forall \, v \in  H^1(\mathcal{D}).
 \end{equation}
-From the Lagrangian functional (construted as in Section \ref{sec:model_prob})
-we can obtain the adjoint equation (which is linear):
+From the Lagrangian functional, which is construted as in Section \ref{sec:model_prob},
+we can obtain the adjoint equation:
 Find $p\in H^1(\mathcal{D})$ such that
 \begin{equation*}
 	\int_{\mathcal{D}}\nabla p \cdot \nabla q +
@@ -2576,8 +2597,8 @@ Find $p\in H^1(\mathcal{D})$ such that
     \quad
     \forall \, q \in  H^1(\mathcal{D}).
 \end{equation*}
-The derivative components
-of the cost functional \eqref{eq:log_cost} and the constraint \eqref{eq:log_const} are
+Observe that although the state problem is nonlinear, the adjoint problem is always linear.
+The derivative components of the cost functional \eqref{eq:log_cost} and the constraint \eqref{eq:log_const} are
 \begin{align*}
 	S^J_0 &= \boldsymbol{0},\\
 	S^J_1 &= \left(\nabla u\cdot\nabla p-u-ru\left(1-\frac{u}{K_{\Omega}}\right)p\right)I \\
@@ -2587,36 +2608,30 @@ and
 \begin{equation*}
 	S_0^C = \boldsymbol{0}, \quad S_1^C = \frac{1}{V} \chi_{\Omega}I.
 \end{equation*}
-The bilinear form used in this problem was
+
+\noindent\textit{Example.}
+We solve problem \eqref{eq:log_cost}--\eqref{eq:log_prob} on the unit square $\mathcal{D} = (0,1)\times(0,1)$
+with a resource constraint $V=0.5$. The bilinear form used in this problem is
 \begin{equation*}
 	B(\theta, \xi) =
 	\int_{\mathcal{D}} D\theta : D\xi +
 	{10}^4 \int_{\partial \mathcal{D}}  (\theta \cdot n) (\xi \cdot n),	
 \end{equation*}
 with $\theta, \xi \in \mathbb{H}=H^1(\mathcal{D})$.
-
-%\tred{A: should explain how the PDE is solved. Newton?} J: Yes, Newton.
-\noindent\textit{Example.}
-We solve problem \eqref{eq:log_cost}--\eqref{eq:log_prob} on
-the unit square $\mathcal{D} = (0,1)\times(0,1)$, and
-subject to a resource constraint $V=0.5$,
-which correspond to half the area of the domain.
-Tests for several values of $r$ are performed; see Figure~\ref{fig:log}.
-All tests are performed using data parallelism across two processes:
-%
+Thus, we allow the resource to move freely along the boundary $\partial \mathcal{D}$.
+We perform tests with growth rates $r = 10$, $40$, and $100$, all using data parallelism across two processes:
 \begin{lstlisting}
-mpirun -np 2 python test.py 14 # Data (r=10)
-mpirun -np 2 python test.py 15 # Data (r=40)
-mpirun -np 2 python test.py 16 # Data (r=100)	 
+mpirun -np 2 python test.py 14 # r=10 (39 sec)
+mpirun -np 2 python test.py 15 # r=40 (26 sec)
+mpirun -np 2 python test.py 16 # r=100 (42 sec)	 
 \end{lstlisting}
-%
+See the optimal resource distributions in Figure~\ref{fig:log}.
+
 Newton's method was employed to solve the state equation.
-We pass to the \code{pde} method equation \eqref{eq:log_weak} in the form 
-$F(u,\cdot)=0$, its derivative $DF(u,\cdot)(\delta u)$,
-and the positive function
-$u_0(x,y) = 1 + 0.2 \sin(6\pi x)\sin(6\pi y)$
-as initial guess for $u$:
-%
+For this purpose, the \code{pde} method returns the equation \eqref{eq:log_weak} in the form $F(u)=0$,
+a empty list \code{[]} representing the absence of Dirichlet boundary contions,
+the Jacobian $DF(u)(\delta u)$, the \code{UFL} variable that represents the state $u$,
+and the positive function $u_0(x,y) = 1 + 0.2 \sin(6\pi x)\sin(6\pi y)$ as initial guess:
 \begin{lstlisting}
 def pde(self, phi):
 	
@@ -2624,33 +2639,36 @@ def pde(self, phi):
 	v = TestFunction(self.space)
 	du = TrialFunction(self.space)
 
-	F = self.d*dot(grad(u), grad(v))*self.dx
-	F -= self.L(u, phi)*u*v*self.dx
+	F = dot(grad(u), grad(v))*self.dx
+	F -= self.r*(1 - u/self.K(phi))*u*v*self.dx
 
-	DF = self.d*dot(grad(du), grad(v))*self.dx
-	DF -= self.DL(u, phi)*du*v*self.dx
+	DF = dot(grad(du), grad(v))*self.dx
+	DF -= self.r*(1 - 2*u/self.K(phi))*du*v*self.dx
 
 	return [(F, [], DF, u, self.ini_func)]
 \end{lstlisting}
-%
-The \code{ini\_func} attribute contains $u0$.
-In this case, there are no Dirichlet boundary conditions for
-the state equation, so we specify an empty list \code{[]}
-after \code{F}.
-%
+The function \code{self.ini\_func} is a callable that will be interpolated on the domain mesh.
+We provide it when a model of the \code{Logistic} class is created:
+\begin{lstlisting}
+u0 = lambda x: (
+	1+0.2*np.sin(6*np.pi*x[0])*np.sin(6*np.pi*x[1])
+)
+md = Logistic(dim,domain,space,vol,r,u0,test_path)
+\end{lstlisting}
+Our choice of $u_0$ follows from the fact that $u$ represents a population density,
+and therefore it must be positive and, moreover, bounded above by the maximum value of $K$.
+
 \begin{center}
-\includegraphics[width=0.48\linewidth]{log_0.png}
+\includegraphics[width=0.48\linewidth]{log1_0.png}
 \hfill
-\includegraphics[width=0.48\linewidth]{log_1.png}
-\includegraphics[width=0.48\linewidth]{log_2.png}
+\includegraphics[width=0.48\linewidth]{log1_1.png}
+\includegraphics[width=0.48\linewidth]{log1_2.png}
 \hfill
-\includegraphics[width=0.48\linewidth]{log_3.png}
+\includegraphics[width=0.48\linewidth]{log1_3.png}
 \captionof{figure}{
-	Initial guess (top-left) and
-	optimized designs for $r=10$ (top-right),
-	$r=40$ (bottom-left), and $r=100$ (bottom-right).
-	The stop criterion was satisfied at
-	$138$, $105$, and $83$ iterations, respectively.
+	Initial guess (top-left) and optimized designs for
+	$r=10$ (top-right), $r=40$ (bottom-left), and $r=100$ (bottom-right).
+	The stop criterion was satisfied at $147$, $107$, and $167$ iterations, respectively.
 }
 \label{fig:log}
 \end{center}
@@ -2659,8 +2677,19 @@ after \code{F}.
 \subsection{Performance investigation}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\tred{A: Here we should discuss some performance data of the code. Show that the code is extremely fast in 2D. Show what size of 3D problems we can consider using a server (also large amount of sources).
+\tred{A: Here we should discuss some performance data of the code.
+Show that the code is extremely fast in 2D.
+Show what size of 3D problems we can consider using a server (also large amount of sources).
 Also maybe show weak scalabilty tests for parallel computing, as in \cite{Jia2024}.}
+
+\tred{A: I am also thinking that we do not have a test with many
+sources or measurements, to illustrate the task and mixed parallelisms.
+Maybe we could try the elastic inverse problem with more sources
+(with small compact support maybe), like 12 sources?
+Or maybe define a sort of simplified EIT with more sources.
+I think I will try to implement this module myself. }
+
+\tblue{J : I have implemented a test with 16 measurements in Inverse Elasticity.}
 
 Performances of symmetric cantilever (see Example 1 in Section \ref{sub:compli})
 using data parallelism.
@@ -2687,18 +2716,6 @@ using data parallelism.
 \label{fig:perform2}
 \end{center}
 
-
-\tred{A: I am also thinking that we do not have a test with many sources or measurements, to illustrate the task and mixed parallelisms. Maybe we could try the elastic inverse problem with more sources (with small compact support maybe), like 12 sources? Or maybe define a sort of simplified EIT with more sources. I think I will try to implement this module myself. }
-
-Most of tests were executed on a laptop; a server was used only when explicitly indicated.
-Both machines run on a 64-bit x86\_64 architecture.
-Their specifications are as follows:
-
-\textbf{Laptop:} Ubuntu 22.04.5 LTS, equipped with an Intel Core i9-13900H
-processor (14 physical cores, 20 threads) and 62 GB of RAM.
-
-\textbf{Server:} Debian 12 (bookworm) equipped with two AMD EPYC 9684X
-processors (192 physical cores in total, 1 thread per core) and 1.5 TB of RAM.
 
 %%%%%%%%%%%%%%%%%%%%%%%
 \section{Conclusion}
