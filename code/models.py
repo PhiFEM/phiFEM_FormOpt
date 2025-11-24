@@ -21,12 +21,9 @@ from ufl import (
     cos,
     sqrt,
     nabla_div,
-    cofac,
     det,
     tr,
-    inv,
     Constant,
-    derivative,
 )
 
 """
@@ -1256,6 +1253,123 @@ class SaintVenant_Kirchhoff(Model):
         B = 0.1 * dot(th, xi) * self.dx
         B += inner(grad(th), grad(xi)) * self.dx
         B += 1e4 * dot(th, nv) * dot(xi, nv) * self.ds
+
+        for sb in self.sub:
+            B += 1e4 * sb * dot(th, xi) * self.dx
+
+        return B, False
+
+
+class SVK(Model):
+
+    def __init__(self, dim, domain, space, g, ds_g, dir_bcs, alpha, path):
+
+        self.dim = dim
+        self.domain = domain
+        self.space = space
+        self.path = path
+
+        self.dx = Measure("dx", domain=domain)
+        self.ds = Measure("ds", domain=domain)
+        self.g = as_vector(g)
+        self.ds_g = ds_g
+        self.bc = dir_bcs
+        self.alpha = alpha
+        self.ini_func = None
+        self.sub = []
+        self.u0 = lambda x: 0.0 * x[:dim]
+
+        E, nu = 1000.0, 0.3
+        lmbda = E * nu / (1.0 + nu) / (1.0 - 2.0 * nu)
+        mu = E / 2.0 / (1.0 + nu)
+
+        self.zero_vec = as_vector(dim * [0.0])
+        self.Id = Identity(dim)
+
+        self.E = lambda M: 0.5 * (M.T * M - self.Id)
+        self.dE = lambda M, N: 0.5 * (M.T * N + N.T * M)
+        self.S = lambda M: lmbda * tr(M) * self.Id + 2.0 * mu * M
+
+        self.A = lambda w: conditional(lt(w, 0.0), 1.0, 1e-2)
+        self.chi = lambda w: conditional(lt(w, 0.0), 1.0, 0.0)
+
+    def dW(self, F, dF):
+
+        return inner(F * self.S(self.E(F)), dF)
+
+    def d2W(self, F, dF1, dF2):
+
+        d = inner(dF1 * self.S(self.E(F)), dF2)
+        d += inner(F * self.S(self.dE(F, dF1)), dF2)
+
+        return d
+
+    def pde(self, phi):
+
+        u = Coefficient(self.space)
+        v = TestFunction(self.space)
+        du = TrialFunction(self.space)
+        l = Constant(self.domain)
+
+        F = self.Id + grad(u)
+        Eq = self.A(phi) * self.dW(F, grad(v)) * self.dx
+        Eq -= l * dot(self.g, v) * self.ds_g
+
+        Jac = self.A(phi) * self.d2W(F, grad(du), grad(v)) * self.dx
+
+        return [(Eq, self.bc, Jac, u, self.u0, l, (0.1, 12))]
+
+    def adjoint(self, phi, U):
+
+        u = U[0]
+        p = TrialFunction(self.space)
+        r = TestFunction(self.space)
+
+        F = self.Id + grad(u)
+        W = self.A(phi) * self.d2W(F, grad(p), grad(r)) * self.dx
+        W += dot(self.g, r) * self.ds_g
+
+        return [(W, self.bc)]
+
+    def cost(self, phi, U):
+
+        u = U[0]
+        J = dot(self.g, u) * self.ds_g + self.alpha * self.chi(phi) * self.dx
+
+        return J
+
+    def constraint(self, phi, U):
+
+        return []
+
+    def derivative(self, phi, U, P):
+
+        u = U[0]
+        p = P[0]
+
+        F = self.Id + grad(u)
+
+        Q0 = self.dW(F, grad(p)) * self.Id
+        Q1 = grad(p) * self.S(self.E(F)) * F.T
+        Q2 = grad(u) * self.S(self.E(F)) * (grad(p)).T
+        Q2 += grad(u) * self.S(self.dE(F, grad(p))) * F.T
+
+        S0_J = self.zero_vec
+        S1_J = self.A(phi) * (Q0 - Q1 - Q2) + self.alpha * self.chi(phi) * self.Id
+
+        return (S0_J, []), (S1_J, [])
+
+    def bilinear_form(self, th, xi):
+
+        nv = FacetNormal(self.domain)
+
+        B = 0.1 * dot(th, xi) * self.dx
+        B += inner(grad(th), grad(xi)) * self.dx
+        B += 1e4 * dot(th, nv) * dot(xi, nv) * self.ds
+        Jth, Jxi = grad(th), grad(xi)
+        CRth = as_vector((-Jth[0, 0] + Jth[1, 1], Jth[0, 1] + Jth[1, 0]))
+        CRxi = as_vector((-Jxi[0, 0] + Jxi[1, 1], Jxi[0, 1] + Jxi[1, 0]))
+        B += 10.0 * dot(CRth, CRxi) * self.dx
 
         for sb in self.sub:
             B += 1e4 * sb * dot(th, xi) * self.dx

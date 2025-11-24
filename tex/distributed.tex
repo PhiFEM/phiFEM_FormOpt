@@ -1890,9 +1890,8 @@ dirbc_total =
 dib.homogeneus_boundary(domain, space, dim, rank_dim)
 \end{lstlisting}
 
-
-Boundary measures are created to impose the Neumann conditions, that is,
-the forces applied along the boundary:
+Boundary measures are created to impose the Neumann conditions, i.e.,
+the forces applied along the boundary $\Gamma_1$:
 \begin{lstlisting}
 ds_parts = dib.marked_ds(
 	domain, boundary_tags,
@@ -1901,14 +1900,18 @@ ds_parts = dib.marked_ds(
 ds_forces = [ds_parts[1], ds_parts[2], ds_parts[3]] 
 ds1 = sum(ds_parts[1:], start = ds_parts[0])
 \end{lstlisting}
-The above code corresponds to the first example, where three forces are applied
-on three different parts of $\Gamma$.
-The \code{ds\_forces} list containts the boundary parts to apply each force, 
+The code above corresponds to the first example, where three forces are applied
+on three different parts of $\Gamma_1$.
+The \code{ds\_forces} list containts the boundary parts where each force is applied, 
 and \code{ds1} joints these parts.
-The marks \code{bR\_mkr} and \code{bL\_mkr} corresponds to areas where neither 
-forces and displacements are considered. In the second example these areas do not exist.
+The markers \code{bR\_mkr} and \code{bL\_mkr} correspond to segments of $\Gamma_1$ where
+no forces are applied;
+they are located at the right-bottom and left-bottom parts of $\Gamma_1$, respectively. 
+The markers \code{neu\_mkrA}, \code{neu\_mkrB}, and \code{neu\_mkrC}
+correspond to segments where the forces are applied.
+In the second example, the applied forces cover the entire bondary $\Gamma_1$.
 
-Finally, we pass all these variables to an object of the \code{InverseElasticity} class:
+Finally, we pass all these variables to an object of the \code{InverseElasticity} model:
 \begin{lstlisting}
 md = InverseElasticity(
 	dim, domain, space, forces, ds_forces, ds1,
@@ -1921,28 +1924,28 @@ For the second example, two balls of radius $0.15$ are considered as initial inc
 \begin{lstlisting}
 centers = np.array([(-0.3, 0.4), (0.3, 0.4)])
 radii = np.array([0.15, 0.15])
-md.create_initial_level(centers, radii, -1.0)
+md.create_initial_level(centers, radii, factor=-1.0)
 \end{lstlisting}
+Observed that we set \code{factor=-1.0} to have the initial domain $\Omega^0$
+as the union of the balls; see Subsection \ref{sub:other} for more details.
 
-In both examples we run the \code{runMP} method
-with the following parameter values:
-\begin{lstlisting}
-md.runMP(
-	sub_comm, niter=200, dfactor=1e-1,
-	lv_time=(1e-3, 1.0), cost_tol=1e-1
-)
-\end{lstlisting}
-
-Next, we present the numerical results of the two examples.
-The boundary with zero displacement is highlighted in red, and
-the boundary of the true inclusions is shown in green.
-In both examples we use the following bilinear form
+We now present the numerical results.
+The zero-displacement boundaries are indicated in red, and
+the true inclusion boundaries are shown in green.
+In both examples, we employ the bilinear form
 \begin{equation*}
-	B(\theta, \xi) = \int_{\mathcal{D}} {10}^{-1}\theta \cdot \xi + D\theta : D\xi
+	B(\theta, \xi) = \int_{\mathcal{D}} {10}^{-1}\theta \cdot \xi + D\theta : D\xi,
+	\quad
+	\theta, \xi \in \mathbb{H} = H_0^1(\mathcal{D})^d.
 \end{equation*}
-with $\theta, \xi \in \mathbb{H} = H_0^1(\mathcal{D})^d$.
+and the following parameter values
+\begin{lstlisting}
+	# In runDP, runTP, and runMP methods
+	niter=200, dfactor=1e-1,
+	lv_time=(1e-3, 1.0), cost_tol=1e-1
+\end{lstlisting}
 
-\noindent\textit{Example 1.}
+\noindent\textit{Example 1.} (Recovery of one inclusion)
 The data consists of three pairs of force and displacement.
 The forces are applied separately in differents parts of $\Gamma_1$,
 all them with direction to the center of the body.
@@ -1971,7 +1974,7 @@ See the numerical result in Figure \ref{fig:inv1}.
 \label{fig:inv1}
 \end{center}
 
-\noindent\textit{Example 2.}
+\noindent\textit{Example 2.} (Recovery of two inclusions)
 The data consists of eigth pairs of force and displacement.
 The forces are applied separately in differents parts of $\Gamma_1$,
 all them with direction to the center of the body,
@@ -1987,8 +1990,8 @@ mpirun -np 16 python test.py 34 # Data (146 sec)
 mpirun -np 16 python test.py 35 # Task (660 sec)
 mpirun -np 32 python test.py 36 # Mixed (43 sec)
 \end{lstlisting}
-This tests were carried out on the server.
 The number of iterations was $174$, $173$, and $174$, respectively.
+These tests were carried out on the server.
 See the recovered inclusions in Figure \ref{fig:inv2}.
 \begin{center}
 \includegraphics[width=0.48\linewidth]{inv2_0.png}

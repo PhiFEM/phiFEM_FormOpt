@@ -11,6 +11,7 @@ from models import (
     Mechanism,
     GrippingMechanism,
     SaintVenant_Kirchhoff,
+    SVK,
 )
 
 import numpy as np
@@ -4128,7 +4129,7 @@ def test_37():
         smooth=True,
     )
 
-    g = (0.0, -4.0)
+    g = (0.0, -8.0)
     area = 1.0
     md1 = SaintVenant_Kirchhoff(
         dim, domain, space, g, ds_g[0], dirichlet_bcs, area, test_path
@@ -4136,9 +4137,79 @@ def test_37():
     md1.set_initial_level(md.phi)
     dib.res_name = "results_nonlin"
     md1.runDP(
-        niter=100,
+        niter=150,
         dfactor=1e-1,
         lv_time=(0.001, 0.1),
+        lv_iter=(10, 25),
+        reinit_step=4,
+        reinit_pars=(20, 0.01),
+        smooth=True,
+    )
+
+
+def test_38():
+    test_path = Path("../results/t38/")
+    dim = 2
+    rank_dim = 2
+    mesh_size = 0.015
+
+    vertices = np.array(
+        [(0.0, 0.0), (1.0, 0.0), (1.0, 0.45), (1.0, 0.55), (1.0, 1.0), (0.0, 1.0)]
+    )
+
+    dir_idx, dir_mkr = [6], 1
+    neu_idx, neu_mkr = [3], 2
+    boundary_parts = [(dir_idx, dir_mkr, "dir"), (neu_idx, neu_mkr, "neu")]
+
+    t = np.linspace(0, 2 * np.pi, endpoint=False)
+
+    x, y = 0.08 * np.cos(t) + 0.5, 0.08 * np.sin(t) + 0.5
+    h0 = np.column_stack((x, y))
+    x, y = 0.05 * np.cos(t) + 0.35, 0.05 * np.sin(t) + 0.65
+    h1 = np.column_stack((x, y))
+    x, y = 0.05 * np.cos(t) + 0.35, 0.05 * np.sin(t) + 0.35
+    h2 = np.column_stack((x, y))
+
+    output = dib.create_domain_2d_DP(
+        vertices,
+        boundary_parts,
+        mesh_size,
+        path=test_path,
+        plot=False,
+    )
+
+    domain, nbr_tri, boundary_tags = output
+
+    space = dib.create_space(domain, "CG", rank_dim)
+
+    dirichlet_bcs = dib.homogeneous_dirichlet(
+        domain, space, boundary_tags, [dir_mkr], rank_dim
+    )
+
+    ds_g = dib.marked_ds(domain, boundary_tags, [neu_mkr])
+
+    alpha = 2.5
+    g = (0.0, -50.0)
+    md = SVK(dim, domain, space, g, ds_g[0], dirichlet_bcs, alpha, test_path)
+
+    centers = [(0.5, 0.5), (0.35, 0.65), (0.35, 0.35)]
+    centers += [(0.0, i * 0.1 + 0.2) for i in range(7)]
+    centers += [(i * 0.1 + 0.1, 0.0) for i in range(10)]
+    centers += [(i * 0.1 + 0.1, 1.0) for i in range(10)]
+    centers += [(1.0, i * 0.1) for i in range(11) if i not in [4, 5, 6]]
+    centers += [(1.0, 0.0), (1.0, 1.0)]
+    centers = np.array(centers)
+    radii = np.array(
+        [0.08, 0.05, 0.05] + 7 * [0.08] + 2 * 10 * [0.06] + 8 * [0.1] + [0.2, 0.2]
+    )
+
+    md.create_initial_level(centers, radii)
+    md.save_initial_level(comm)
+
+    md.runDP(
+        niter=20,
+        dfactor=1e-1,
+        lv_time=(0.001, 0.05),
         lv_iter=(10, 20),
         reinit_step=4,
         reinit_pars=(20, 0.01),
@@ -4177,6 +4248,7 @@ test_functions = {
     "35": test_35,
     "36": test_36,
     "37": test_37,
+    "38": test_38,
 }
 
 
