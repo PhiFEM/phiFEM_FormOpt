@@ -368,15 +368,14 @@ The strain and stress tensors are given by, respectively,
 where $\mu$ and $\lambda$ are the Lam\'e parameters.
 Let $f\in H^{1/2}(\Gamma_1)^d$ and $g\in H^{1/2}(\Gamma_1)^d$ be vector-valued functions defined on $\Gamma_1$.
 Let $\alpha$ and $\beta$ be positive weights.
-\begin{center}
 \begin{figure}[H]
+	\centering
 \includegraphics[width=0.7\linewidth]{elasticity_dom.png}
 \captionof{figure}{
 	Geometric configuration for the inverse problem in elasticity.
 }
 \label{fig:elast_dom}
 \end{figure}
-\end{center}
 We follow a Kohn-Vogelius-type approach \cite{KohnVogelius1984}, considering the shape optimization problem:
 \begin{equation} \label{eq:cost}
 	\min_{\Omega \subset \mathcal{D}}
@@ -1882,7 +1881,7 @@ Set \code{plot=False} to hide the mesh plotted by \code{Gmsh}.
 
 In both examples, there is only one subset of $\Gamma$ where
 we impose zero displacement. In addition, it is necessary to consider the 
-boundary condition of problem \eqref{eq:w-g}.  
+boundary condition of problem~\eqref{eq:w-g}.  
 Then we create the space of functions and the Dirichlet boundary conditions
 using predefined functions from our module:
 \begin{lstlisting}
@@ -1907,13 +1906,13 @@ ds1 = sum(ds_parts[1:], start = ds_parts[0])
 The code above corresponds to the first example, where three forces are applied
 on three different parts of $\Gamma_1$.
 The \code{ds\_forces} list containts the boundary parts where each force is applied, 
-and \code{ds1} joints these parts.
+and \code{ds1} groups these parts together.
 The markers \code{bR\_mkr} and \code{bL\_mkr} correspond to segments of $\Gamma_1$ where
 no forces are applied;
 they are located at the right-bottom and left-bottom parts of $\Gamma_1$, respectively. 
 The markers \code{neu\_mkrA}, \code{neu\_mkrB}, and \code{neu\_mkrC}
 correspond to segments where the forces are applied.
-In the second example, the applied forces cover the entire bondary $\Gamma_1$.
+In the second example, the applied forces cover the entire boundary $\Gamma_1$.
 
 Finally, we pass all these variables to an object of the \code{InverseElasticity} model:
 \begin{lstlisting}
@@ -1922,21 +1921,21 @@ md = InverseElasticity(
 	dirbc_partial, dirbc_total, test_path
 )
 \end{lstlisting}
-Before run the examples, we define a level set function to set
+Before running the examples, we define a level set function to set
 the initial inclusions in $\mathcal{D}$.
-For the second example, two balls of radius $0.15$ are considered as initial inclusions:
+For the second example (see Fig. ~\ref{fig:inv2}), two balls of radius $0.15$ are considered as initial inclusions:
 \begin{lstlisting}
 centers = np.array([(-0.3, 0.4), (0.3, 0.4)])
 radii = np.array([0.15, 0.15])
 md.create_initial_level(centers, radii, factor=-1.0)
 \end{lstlisting}
-Observed that we set \code{factor=-1.0} to have the initial domain $\Omega^0$
+Notice that we set \code{factor=-1.0} to have the initial domain $\Omega^0$
 as the union of the balls; see Subsection \ref{sub:other} for more details.
 
 We now present the numerical results.
 The zero-displacement boundaries are indicated in red, and
 the true inclusion boundaries are shown in green.
-In both examples, we employ the bilinear form
+In both examples, we employ the bilinear form (see Section~\ref{sec:algo})
 \begin{equation*}
 	B(\theta, \xi) = \int_{\mathcal{D}} {10}^{-1}\theta \cdot \xi + D\theta : D\xi,
 	\quad
@@ -1949,64 +1948,65 @@ and the following parameter values
 	lv_time=(1e-3, 1.0), cost_tol=1e-1
 \end{lstlisting}
 
-\noindent\textit{Example 1.} (Recovery of one inclusion)
+\noindent\textit{Example 1.} (Recovery of a single inclusion)
 The data consists of three pairs of force and displacement.
-The forces are applied separately in differents parts of $\Gamma_1$,
-all them with direction to the center of the body.
+The forces are applied separately on different parts of $\Gamma_1$,
+all directed toward the center of the body.
 The resulting boundary displacements are measured, only in $\Gamma_1$
 since $\Gamma_0$ is fixed.
 Thus, we have six state equations and their corresponding adjoints.
-We employ data parallelism with $6$ processes,
-task parallelism with $6$ processes, and
-mixed parallelism with $12$ processes
-(arranged in $6$ groups of $2$ processes each):
+\tblue{We conducted three separate experiments: the first using data parallelism with $6$ processes, the second using task parallelism with $6$ processes, and the third using mixed parallelism with $12$ processes (organized into $6$ groups of $2$ processes each). The commands and corresponding execution times were:}
 \begin{lstlisting}
 mpirun -np 6 python test.py 06 # Data (33 sec)
 mpirun -np 6 python test.py 07 # Task (29 sec)
 mpirun -np 12 python test.py 08 # Mixed (27 sec)
 \end{lstlisting}
-The number of iterations was $124$, $114$, and $116$, respectively.
-See the numerical result in Figure \ref{fig:inv1}.
-\begin{center}
-\includegraphics[width=0.48\linewidth]{inv1_0.png}
+The number of iterations for these runs was $124$, $114$, and $116$, respectively.
+See the numerical result in Figure~\ref{fig:inv1}.
+	\begin{figure}[H]
+\centering
+		\includegraphics[width=0.48\linewidth]{inv1_0.png}
 \hfill
 \includegraphics[width=0.48\linewidth]{inv1_1.png}
-\captionof{figure}{
+\captionof{figure}{\tblue{Inverse elasticity, Example 1.}
 	Initial and recovered inclusion.
 	A mesh with $12\,713$ triangles was employed.
 }
 \label{fig:inv1}
-\end{center}
+	\end{figure}
 
 \noindent\textit{Example 2.} (Recovery of two inclusions)
-The data consists of eigth pairs of force and displacement.
+The data consists of eight pairs of force and displacement.
 The forces are applied separately in differents parts of $\Gamma_1$,
-all them with direction to the center of the body,
+all directed toward the center of the body,
 and convering the whole boundary $\Gamma_1$;
 then resulting boundary displacements are measured.
 Thus, we have sixteen state equations and their corresponding adjoints.
-We employ data parallelism with $16$ processes,
-task parallelism with $16$ processes, and
-mixed parallelism with $32$ processes
-(arranged in $16$ groups of $2$ processes each):
+\tblue{We conducted three separate experiments: the first using data parallelism with $16$ processes, the second using task parallelism with $16$ processes, and the third using mixed parallelism with $32$ processes (organized into $16$ groups of $2$ processes each). The commands and corresponding execution times were:}
+% We employ data parallelism with $16$ processes,
+% task parallelism with $16$ processes, and
+% mixed parallelism with $32$ processes
+% (arranged in $16$ groups of $2$ processes each):
 \begin{lstlisting}
 mpirun -np 16 python test.py 34 # Data (146 sec)
 mpirun -np 16 python test.py 35 # Task (660 sec)
 mpirun -np 32 python test.py 36 # Mixed (43 sec)
 \end{lstlisting}
-The number of iterations was $174$, $173$, and $174$, respectively.
+The number of iterations for these runs was $174$, $173$, and $174$, respectively.
 These tests were carried out on the server.
 See the recovered inclusions in Figure \ref{fig:inv2}.
-\begin{center}
-\includegraphics[width=0.48\linewidth]{inv2_0.png}
+	\begin{figure}[H]
+\centering
+		\includegraphics[width=0.48\linewidth]{inv2_0.png}
 \hfill
 \includegraphics[width=0.48\linewidth]{inv2_1.png}
-\captionof{figure}{
+\captionof{figure}{\tblue{Inverse elasticity, Example 2.}
 	Initial and recovered inclusions. 
 	A mesh with $13\,391$ triangles was employed.
 }
 \label{fig:inv2}
-\end{center}
+	\end{figure}
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Compliance minimization}
@@ -2038,7 +2038,7 @@ and $A_{\Omega}:\overline{\mathcal{D}} \rightarrow \mathds{R}$ is given by
 \begin{equation}\label{eq:compli_AOmega}
 	A_{\Omega} = \chi_{\Omega} + {10}^{-4}\chi_{\overline{\mathcal{D}}\setminus\Omega}.
 \end{equation}
-The corresponding strong formulation is
+The corresponding strong formulation is the following transmission problem:
 \begin{equation}\label{eq:compli_prob}
 	\begin{aligned}
 	   -\operatorname{div} A_{\Omega} \sigma(u) &= 0 && \text{in } \Omega \text{ and }\Omega\setminus\overline{\mathcal{D}}\\
@@ -2073,7 +2073,7 @@ the cost functional $J(\Omega)$ as a sum of compliances associated to each $g_k$
 where $u_k$ is the solution to \eqref{eq:compli_weak} with $g=g_k$.
 
 In the following examples, the region with zero displacement and
-the force application areas are shown in red and aqua, respectively.
+the force application areas are shown in \tblue{red and blue}, respectively.
 % \tred{A: I think we should also write the configuration that was used to run these tests, 
 % and how fast it was. It can be interesting to mention that some tests are run on the laptop,
 %  others on the server, to show that running on the laptop is fast.}
@@ -2090,7 +2090,7 @@ mpirun -np 4 python test.py 01 # Data (6 sec)
 \end{lstlisting}
 See the results in Figure \ref{fig:compli1}. 
 We have performed a reinitialization of the level set function
-every four steps, with $20$ iterations and a final time of $0.1$.
+every four steps, with $20$ iterations and a final time of $0.1$. \tred{A: should we write $T=0.1$? I'm not sure.}
 This yields a well approximated distance function.
 The other parameters passed to the \code{runDP} method (for data parallelism)
 have the following values (with default values used for all unspecified parameters): 
@@ -2112,19 +2112,21 @@ B(\theta, \xi) &= \int_{\mathcal{D}} {10}^{-1}\theta \cdot \xi + D\theta : D\xi 
 with $\theta, \xi \in \mathbb{H} = H^1(\mathcal{D})^d$ and $\Omega_0 = (1.95,2]\times (0.42, 0.58)$.
 Thus, we penalize the material around the boundary $\Gamma_1$ and
 allow only tangential displacements along the boundary $\partial \mathcal{D}$.
-\begin{center}
-\includegraphics[width=0.48\linewidth]{compli1_0.png}
+	\begin{figure}[H]
+\centering
+		\includegraphics[width=0.48\linewidth]{compli1_0.png}
 \hfill
 \includegraphics[width=0.48\linewidth]{compli1_1.png}
 \includegraphics[width=0.85\linewidth]{compli1_2.png}
-\captionof{figure}{
-(Top) Initial guess and optimized design at iteration $i=50$.
+\captionof{figure}{\tblue{Compliance minimization, Example 1.}
+(Top) Initial guess (left) and optimized design (right) at iteration $i=50$.
 (Bottom) The resulting level set function $\phi^{i}$ approximates the
 distance function associated to $\Omega^{i}$.
 The domain $\mathcal{D}$ was discretized with $20\,946$ triangles.
 }
 \label{fig:compli1}
-\end{center}
+	\end{figure}
+
 
 \noindent\textit{Example 2.} (Three-dimensional symmetric cantilever)
 We consider the rectangular box domain
@@ -2157,21 +2159,23 @@ md.runDP(
 	reinit_step=4, smooth=True
 )
 \end{lstlisting} 
-\begin{center}
-\includegraphics[width=0.48\linewidth]{compli2_0.png}
+	\begin{figure}[H]
+\centering
+		\includegraphics[width=0.48\linewidth]{compli2_0.png}
 \hfill
 \includegraphics[width=0.48\linewidth]{compli2_1.png}
 \includegraphics[width=0.48\linewidth]{compli2_2.png}
 \hfill
 \includegraphics[width=0.48\linewidth]{compli2_3.png}
-\captionof{figure}{
+\captionof{figure}{\tblue{Compliance minimization, Example 2.}
 The three-dimensional cantilever at	
 $i=0$ and $i=14$ (top);
 $i=30$ and $i=81$ (bottom).
 A mesh with $2\,592\,000$ tetrahedra was employed.
 }
 \label{fig:compli2}
-\end{center}
+	\end{figure}
+
 
 \noindent\textit{Example 3.} (Cantilever with two loads I)
 We consider the domain $\mathcal{D}$ as the unit square and 
@@ -2183,10 +2187,11 @@ The boundary of zero displacement is $\Gamma_0 = \{x=0\} \times (0, 1)$,
 and the material area is constrained to $V = 0.5$.
 Thus, we minimize the cost functional \eqref{eq:compli_plus},
 which is implemented in the \code{cost} method of the \code{CompliancePlus} class.
-To compare performances, we employ data parallelism with $2$ processes,
-task parallelism with with $2$ processes, and
+\tblue{To compare performances, we conducted three experiments: the first using data parallelism with $2$ processes, the second using
+task parallelism with $2$ processes, and the third
 mixed parallelism with $4$ processes
-(arranged in $2$ groups of $2$ processes each):
+(organized into $2$ groups of $2$ processes each).
+The commands and corresponding execution times were:}
 \begin{lstlisting}
 mpirun -np 2 python test.py 03 # Data (20 sec)
 mpirun -np 2 python test.py 04 # Task (26 sec)	
@@ -2200,17 +2205,20 @@ The configuration passed to the \code{runDP}, \code{runTP}, and \code{runMP} met
 ctrn_tol=1e-3, dfactor=1e-1,
 reinit_step=4, reinit_pars=(16, 0.05), smooth=True
 \end{lstlisting}
-\begin{center}
+\begin{figure}[H]
+	\centering
 \includegraphics[width=0.48\linewidth]{compli3_0.png}
 \hfill
 \includegraphics[width=0.48\linewidth]{compli3_1.png}
-\captionof{figure}{
+\captionof{figure}{\tblue{Compliance minimization, Example 3.}
 	Initial and optimal domains.
 	A total of $70$ iterations were perfomed for the three modes of parallelism.
 	A mesh with $16\,425$ triangles was employed.
 }
 \label{fig:compli3}
-\end{center}
+\end{figure}
+
+
 
 \noindent\textit{Example 4.} (Cantilever problem with two loads II)
 This example also applies multiple loads.
@@ -2233,16 +2241,17 @@ reinit_step=4, reinit_pars=(20, 0.01), smooth=True
 Recall that in task parallelism the number of processes must
 equal to the number of state/adjoint problems ($2$ in this example).
 See the results in Figure \ref{fig:compli4}.
-\begin{center}
+\begin{figure}[H]
+	\centering
 \includegraphics[width=0.48\linewidth]{compli4_0.png}
 \hfill
 \includegraphics[width=0.48\linewidth]{compli4_1.png}
-\captionof{figure}{
+\captionof{figure}{\tblue{Compliance minimization, Example 4.}
 	Initial and optimal domains.
-	The both parallelism modalities spend $79$ iterations.
+	Both parallelism modalities require $79$ iterations.
 }
 \label{fig:compli4}
-\end{center}
+\end{figure}
 
 % \noindent\textit{Example 5.} 
 
@@ -2252,7 +2261,7 @@ See the results in Figure \ref{fig:compli4}.
 % mpirun -np 2 python test.py 20 # Data (14 sec)
 % \end{lstlisting}
 
-% \begin{center}
+% \begin{figure}[H]\centering
 % \includegraphics[width=0.48\linewidth]{compli5_0.png}
 % \hfill
 % \includegraphics[width=0.48\linewidth]{compli5_1.png}
@@ -2262,21 +2271,20 @@ See the results in Figure \ref{fig:compli4}.
 % 	$16\,304$ triangles
 % }
 % \label{fig:compli5}
-% \end{center}
+% \end{figure}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Heat conduction}
 \label{sub:heat}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Topology optimization for efficient thermal management plays a crucial role
+Shape and topology optimization play a crucial role for efficient thermal management 
 in modern applications such as battery thermal regulation \cite{Mo2021},
-heat exchangers \cite{GAO2008805},
-additive-manufactured cooling channels \cite{LamarcheGagnon2024}, and
+heat exchangers~\cite{GAO2008805},
+additive-manufactured cooling channels~\cite{LamarcheGagnon2024}, and
 temperature-sensitive components in aerospace systems.
 
-Let $\Gamma_0$ be a subset of $\Gamma$.
-Let $V$ be a prefixed volume, less than the volume of $\mathcal{D}$.
+Let $\Gamma_0\subset\Gamma$ and  $V$ be a prescribed volume, smaller than that of $\mathcal{D}$.
 Consider the minimization problem
 \begin{equation} \label{eq:heat_cost}
 	\min_{\Omega \subset \mathcal{D}}
@@ -2286,7 +2294,7 @@ subject to
 \begin{equation}
 	\int_{\mathcal{D}} \chi_{\Omega} = V,
 \end{equation}
-where $u$ is the solution to
+where $u$ is the solution to the following transmission problem
 \begin{equation} \label{eq:heat_prob}
 	\begin{aligned}
 	-\mathrm{div} A_{\Omega} \nabla u &= f && \text{in } \Omega \text{ and } \mathcal{D}\setminus\overline{\Omega}\\
@@ -2314,7 +2322,7 @@ Find $u \in  H^1_{\Gamma_0}(\mathcal{D})$ such that
 	\forall \, v \in  H^1_{\Gamma_0}(\mathcal{D}).
 \end{equation}
 In this case, the adjoint problem is the same as \eqref{eq:heat_weak}
-(excetp by a minus sign on the right-hand side), and thus $p=-u$.
+(except by a minus sign on the right-hand side), and thus $p=-u$.
 The shape derivative components are given by
 \begin{align*}
 	S^J_0 &= 2u\nabla f, \\
@@ -2344,17 +2352,19 @@ In this example, we have employed the bilinear form
 \end{equation*}
 with $\theta, \xi \in \mathbb{H} = H^1_0(\mathcal{D})^d$
 and $\Omega_0 = (0.3, 0.7)\times[0, 0.05)$, 
-in order to penalized the material around $\Gamma_0$.
-\begin{center}
+in order to penalize the material around $\Gamma_0$.
+\begin{figure}[H]
+	\centering
 \includegraphics[width=0.48\linewidth]{heat1_0.png}
 \hfill
 \includegraphics[width=0.48\linewidth]{heat1_1.png}
-\captionof{figure}{
+\captionof{figure}{\tblue{Heat conduction, Example 1.}
 	Initial guess and optimized design at iteration $i=204$,
 	computed on a mesh with {92\,582} triangles.
+	\tblue{The black-colored region $\Om$ has the highest conductivity.}
 }
 \label{fig:heat1}
-\end{center}
+\end{figure}
 
 \noindent\textit{Example 2.}
 We apply a uniform heat $f\equiv 1$, with volume constraint $V = 0.6$
@@ -2372,30 +2382,34 @@ but with $\Omega_0$ defined as
 \Omega_0 = \{x<0.1\} \cup \{x>0.9\} \cup \{y<0.1\} \cup \{y>0.9\}.
 \]
 Thus, the material is penalized close to the boundary.
-\begin{center}
+\tblue{Notice the typical fractal structure of the optimized geometry in Figures~\ref{fig:heat1} and~\ref{fig:heat2}, compare the results with those in~\cite{GAO2008805}.}
+
+\begin{figure}[H]
+	\centering
 \includegraphics[width=0.48\linewidth]{heat2_0.png}
 \hfill
 \includegraphics[width=0.48\linewidth]{heat2_1.png}
-\captionof{figure}{
+\captionof{figure}{\tblue{Heat conduction, Example 2.}
 	Initial guess and optimized design at iteration $i=172$,
 	computed on a mesh with {144\,712} triangles.
+	\tblue{The black-colored region $\Om$ has the highest conductivity.}
 }
 \label{fig:heat2}
-\end{center}
+\end{figure}
 
-\tred{A: we should make a comment about the fractal structure and small disconnected components? Is it a problem? Could we remove them with a perimeter constraint?}
+% \tred{A: we should make a comment about the fractal structure and small disconnected components? Is it a problem? Could we remove them with a perimeter constraint?}
+% \tblue{J: Nao consegui resolver essa questao. Eu acho que aquelas small disconnected components sao 
+% como aquelas smooth boundaries em otimizacao topologica. Poderiam ser removidas com algun filtro.
+% Acho que o importante é que os resultados sao os esperados:
+% Topology optimization of heat conduction problem involving design-dependent heat
+% load effect, https://doi.org/10.1016/j.finel.2008.06.001.
+% }
 
-\tblue{J: Nao consegui resolver essa questao. Eu acho que aquelas small disconnected components sao 
-como aquelas smooth boundaries em otimizacao topologica. Poderiam ser removidas com algun filtro.
-Acho que o importante é que os resultados sao os esperados:
-Topology optimization of heat conduction problem involving design-dependent heat
-load effect, https://doi.org/10.1016/j.finel.2008.06.001.
-}
 
 \noindent\textit{Example 3.} 
 We apply a localized heat source given by the function
 $f(x,y) \coloneqq \phi(\vert(x,y)-(0.5, 0.5)\vert_2)$,
-where $\phi$ is the radial function defined as
+where $\phi$ is the radial function defined as \tred{A: maybe we should use another notation? $\phi$ is already used for the level set function sometimes.}
 \begin{equation} \label{eq:rad}
 	\phi(r) \coloneqq
 	\begin{cases}
@@ -2416,16 +2430,16 @@ See the results in Figure \ref{fig:heat3}.
 The term \eqref{eq:bd_plt} is added to the bilinear form
 $B(\theta, \xi) = \int_{\mathcal{D}} D\theta : D\xi$ and
 the velocity problem is solved with $\mathbb{H} = H^1(\mathcal{D})^d$.
-\begin{center}
+\begin{figure}[H]\centering
 \includegraphics[width=0.48\linewidth]{heat3_0.png}
 \hfill
 \includegraphics[width=0.48\linewidth]{heat3_1.png}
-\captionof{figure}{
+\captionof{figure}{\tblue{Heat conduction, Example 3.}
 	Initial guess and optimized design at iteration $i=181$,
 	computed on a mesh with {23\,652} triangles.
 }
 \label{fig:heat3}
-\end{center}
+\end{figure}
 
 \noindent\textit{Example 4.}
 In this example, we perform two tests.
@@ -2454,15 +2468,15 @@ we employ task parallelism with two processes:
 \begin{lstlisting}
 mpirun -np 2 python test.py 13 # Task (106 sec)
 \end{lstlisting}
-The results are in Figure \ref{fig:heat4}.
-\begin{center}
+The results are shown in Figure \ref{fig:heat4}.
+\begin{figure}[H]\centering
 \includegraphics[width=0.48\linewidth]{heat4_0.png}
 \hfill
 \includegraphics[width=0.48\linewidth]{heat4_1.png}
 \includegraphics[width=0.48\linewidth]{heat4_2.png}
 \hfill
 \includegraphics[width=0.48\linewidth]{heat4_3.png}
-\captionof{figure}{
+\captionof{figure}{\tblue{Heat conduction, Example 4.}
 	Initial guess (top-left) and cost values (top-right),
 	along with the optimized designs of the single case (bottom-left)
 	and multiple case (bottom-right), at iteration $i=215$ and $i=199$, respectively.
@@ -2470,7 +2484,7 @@ The results are in Figure \ref{fig:heat4}.
 	approximately duplicates the one of the single sink test.
 }
 \label{fig:heat4}
-\end{center}
+\end{figure}
 
 \noindent\textit{Example 5.}
 %
@@ -2512,15 +2526,15 @@ we employ task parallelism with four processes:
 \begin{lstlisting}
 mpirun -np 4 python test.py 22 # Task (20 sec)
 \end{lstlisting}
-The numerical results are in Figure \ref{fig:heat5}.
-\begin{center}
+The numerical results are shown  in Figure \ref{fig:heat5}. \tred{A: I think these results are similar to results from another paper that you sowed me, right? Can you add this reference here and mention that we manage to reproduce their result? }
+\begin{figure}[H]\centering
 \includegraphics[width=0.48\linewidth]{heat5_0.png}
 \hfill
 \includegraphics[width=0.48\linewidth]{heat5_1.png}
 \includegraphics[width=0.48\linewidth]{heat5_2.png}
 \hfill
 \includegraphics[width=0.48\linewidth]{heat5_3.png}
-\captionof{figure}{
+\captionof{figure}{\tblue{Heat conduction, Example 5.}
 	Initial guess (top-left) and cost values (top-right),
 	along with the optimized designs of the single case (bottom-left)
 	and multiple case (bottom-right), at iteration $i=80$ and $i=63$, respectively.
@@ -2528,10 +2542,10 @@ The numerical results are in Figure \ref{fig:heat5}.
 	approximately duplicates the one of the single source test.
 }
 \label{fig:heat5}
-\end{center}
+\end{figure}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Population dynamics}
+\subsection{A nonlinear PDE arising in population dynamics}
 \label{sub:pop}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Comments:
@@ -2551,7 +2565,7 @@ when the species distribution has reached a stationary state.
 In this setting, the PDE constraint takes the form
 of a nonlinear diffusion equation \cite{MR1908418}.
 
-Let $V$ be a prefixed volume, less than the volume of $\mathcal{D}$.
+Let $V$ be a prescribed volume, smaller than the volume of~$\mathcal{D}$.
 The problem reads
 \begin{equation} \label{eq:log_cost}
 	\min_{\Omega \subset \mathcal{D}}
@@ -2594,8 +2608,8 @@ Find $u\in H^1(\mathcal{D})$ such that
     \quad
     \forall \, v \in  H^1(\mathcal{D}).
 \end{equation}
-From the Lagrangian functional, which is construted as in Section \ref{sec:model_prob},
-we can obtain the adjoint equation:
+From the Lagrangian functional, which is constructed as in Section \ref{sec:model_prob},
+we obtain the adjoint equation:
 Find $p\in H^1(\mathcal{D})$ such that
 \begin{equation*}
 	\int_{\mathcal{D}}\nabla p \cdot \nabla q +
@@ -2604,7 +2618,7 @@ Find $p\in H^1(\mathcal{D})$ such that
     \quad
     \forall \, q \in  H^1(\mathcal{D}).
 \end{equation*}
-Observe that although the state problem is nonlinear, the adjoint problem is always linear.
+Observe that although the state problem is nonlinear, the adjoint problem is linear.
 The derivative components of the cost functional \eqref{eq:log_cost} and the constraint \eqref{eq:log_const} are
 \begin{align*}
 	S^J_0 &= \boldsymbol{0},\\
@@ -2632,11 +2646,11 @@ mpirun -np 2 python test.py 14 # r=10 (39 sec)
 mpirun -np 2 python test.py 15 # r=40 (26 sec)
 mpirun -np 2 python test.py 16 # r=100 (42 sec)	 
 \end{lstlisting}
-See the optimal resource distributions in Figure~\ref{fig:log}.
+See the optimized resource distributions in Figure~\ref{fig:log}.
 
 Newton's method was employed to solve the state equation.
 For this purpose, the \code{pde} method returns the equation \eqref{eq:log_weak} in the form $F(u)=0$,
-a empty list \code{[]} representing the absence of Dirichlet boundary contions,
+an empty list \code{[]} representing the absence of Dirichlet boundary contions,
 the Jacobian $DF(u)(\delta u)$, the \code{UFL} variable that represents the state $u$,
 and the positive function $u_0(x,y) = 1 + 0.2 \sin(6\pi x)\sin(6\pi y)$ as initial guess:
 \begin{lstlisting}
@@ -2662,45 +2676,46 @@ u0 = lambda x: (
 )
 md = Logistic(dim,domain,space,vol,r,u0,test_path)
 \end{lstlisting}
-Our choice of $u_0$ follows from the fact that $u$ represents a population density,
-and therefore it must be positive and, moreover, bounded above by the maximum value of $K$.
+Our choice of $u_0$ is motivated by the fact that 
+$u$ represents a population density; hence, it must be positive and, additionally, cannot exceed the maximum value of$K$.
 
-\begin{center}
+\begin{figure}[H]
+	\centering
 \includegraphics[width=0.48\linewidth]{log1_0.png}
 \hfill
 \includegraphics[width=0.48\linewidth]{log1_1.png}
 \includegraphics[width=0.48\linewidth]{log1_2.png}
 \hfill
 \includegraphics[width=0.48\linewidth]{log1_3.png}
-\captionof{figure}{
+\captionof{figure}{\tblue{Examples of ressource allocation optimization in population dynamics.}
 	Initial guess (top-left) and optimized designs for
 	$r=10$ (top-right), $r=40$ (bottom-left), and $r=100$ (bottom-right).
-	The stop criterion was satisfied at $147$, $107$, and $167$ iterations, respectively.
+	The stopping criterion was satisfied at $147$, $107$, and $167$ iterations, respectively.
 }
 \label{fig:log}
-\end{center}
+\end{figure}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Performance investigation}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\tred{A: Here we should discuss some performance data of the code.
-Show that the code is extremely fast in 2D.
-Show what size of 3D problems we can consider using a server (also large amount of sources).
-Also maybe show weak scalabilty tests for parallel computing, as in \cite{Jia2024}.}
+% \tred{A: Here we should discuss some performance data of the code.
+% Show that the code is extremely fast in 2D.
+% Show what size of 3D problems we can consider using a server (also large amount of sources).
+% Also maybe show weak scalabilty tests for parallel computing, as in \cite{Jia2024}.}
 
-\tred{A: I am also thinking that we do not have a test with many
-sources or measurements, to illustrate the task and mixed parallelisms.
-Maybe we could try the elastic inverse problem with more sources
-(with small compact support maybe), like 12 sources?
-Or maybe define a sort of simplified EIT with more sources.
-I think I will try to implement this module myself. }
+% \tred{A: I am also thinking that we do not have a test with many
+% sources or measurements, to illustrate the task and mixed parallelisms.
+% Maybe we could try the elastic inverse problem with more sources
+% (with small compact support maybe), like 12 sources?
+% Or maybe define a sort of simplified EIT with more sources.
+% I think I will try to implement this module myself. }
 
-\tblue{J : I have implemented a test with 16 measurements in Inverse Elasticity.}
+% \tblue{J : I have implemented a test with 16 measurements in Inverse Elasticity.}
 
 Performances of symmetric cantilever (see Example 1 in Section \ref{sub:compli})
 using data parallelism.
-\begin{center}
+\begin{figure}[H]\centering
 \includegraphics[width=0.48\linewidth]{performance_1a.png}
 \hfill
 \includegraphics[width=0.48\linewidth]{performance_1b.png}
@@ -2711,9 +2726,9 @@ using data parallelism.
 	After six processes there is no improvement.
 }
 \label{fig:perform1}
-\end{center}
+\end{figure}
 
-\begin{center}
+\begin{figure}[H]\centering
 \includegraphics[width=0.48\linewidth]{performance_2.png}
 \captionof{figure}{
 	Performance results on a mesh with 
@@ -2721,18 +2736,18 @@ using data parallelism.
 	Anomalous execution times when four and five processes are used.
 }
 \label{fig:perform2}
-\end{center}
+\end{figure}
 
 
 %%%%%%%%%%%%%%%%%%%%%%%
 \section{Conclusion}
 %%%%%%%%%%%%%%%%%%%%%%%
 
-In this work, we have extended the results of \cite{MR3843884} in several directions, focusing on PDE-constrained shape optimization based on the distributed shape derivative combined with a level-set method.
+In this work, we have extended the results of \cite{MR3843884} in several directions, focusing on PDE-constrained shape optimization based on the distributed shape derivative combined with a level-set method. \tred{A: I wanted to write something a bit more general, as this works is not just an extension of \cite{MR3843884}, it is much more general. Don't have ideas now, but I can work on it later.}
 
 The \fopt toolbox introduces several notable features. It supports both two- and three-dimensional problems with flexible geometries, enabled by the finite element capabilities of \fx. The Unified Form Language (UFL) provides an intuitive way to represent weak formulations of PDEs in a notation close to the mathematical one. Another key development is the integration of parallel computing with three distinct modes, which significantly enhances efficiency and enables large-scale simulations. In addition, the toolbox includes a built-in Proximal-Perturbed Lagrangian method for handling shape constraints, particularly useful for volume and perimeter constraints, which are ubiquitous in shape optimization.
 
-Several promising extensions of this work will be pursued in future research. The extension to higher-order tensor representations of distributed shape derivatives is expected to be straightforward and will be valuable for applications, such as problems involving the bi-Laplacian \cite{LL2024}. Incorporating tensor representations that include boundary terms is another important direction, though more challenging from an implementation perspective, as it requires advanced discretization strategies such as unfitted finite element methods, including CutFEM \cite{Burman1} and XFEM \cite{belytschko2001arbitrary}. 
+Several extensions of this work will be pursued in future research. The extension to higher-order tensor representations of distributed shape derivatives is expected to be straightforward and will be valuable for applications, such as problems involving the bi-Laplacian~\cite{LL2024}. Incorporating tensor representations that include boundary terms is another important direction, though more challenging from an implementation perspective, as it requires advanced discretization strategies such as unfitted finite element methods, including CutFEM \cite{Burman1} and XFEM \cite{belytschko2001arbitrary}. 
 Other relevant extensions include the treatment of time-dependent problems, the use of topological derivatives \cite{MR4916810,Novotny2013} and the integration of automatic differentiation tools \cite{Allaire2024,BLAUTH2023101577,MR4233697,Ham2019,Paganini2021} to facilitate the computation of adjoints and shape derivatives.
 
 
