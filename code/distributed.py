@@ -2422,7 +2422,7 @@ class NonlinearSolverbySteeping:
 
         for fc in self.vals:
             self.factor.value = PETSc.ScalarType(fc)
-            r = self.solver.solve(self.u)
+            niter, converged = self.solver.solve(self.u)
             # print(f"factor:{factor}, num iterations: {r[0]}")
             # print(max(self.u.x.array), min(self.u.x.array))
 
@@ -2435,6 +2435,7 @@ def create_nonlinear_solver_with_factor(
     solver = NewtonSolver(comm, problem)
     solver.convergence_criterion = "incremental"
     solver.rtol = np.sqrt(np.finfo(default_real_type).eps) * 1e-2
+    solver.max_it = 40
 
     ksp = solver.krylov_solver
     opts = PETSc.Options()
@@ -2466,23 +2467,24 @@ def create_nonlinear_solver(comm, F, bcs, J, u, initial):
     solver = NewtonSolver(comm, problem)
     solver.convergence_criterion = "incremental"
     solver.rtol = np.sqrt(np.finfo(default_real_type).eps) * 1e-2
+    solver.max_it = 40
 
     ksp = solver.krylov_solver
     opts = PETSc.Options()
     option_prefix = ksp.getOptionsPrefix()
 
     # Higher computational cost
-    # opts[f"{option_prefix}ksp_type"] = "preonly"
-    # opts[f"{option_prefix}pc_type"] = "lu"
-    # opts[f"{option_prefix}pc_factor_mat_solver_type"] = "superlu_dist"
+    opts[f"{option_prefix}ksp_type"] = "preonly"
+    opts[f"{option_prefix}pc_type"] = "lu"
+    opts[f"{option_prefix}pc_factor_mat_solver_type"] = "superlu_dist"
 
     # Lower computational cost
-    opts[f"{option_prefix}ksp_type"] = "gmres"
-    opts[f"{option_prefix}ksp_rtol"] = 1.0e-8
-    opts[f"{option_prefix}pc_type"] = "hypre"
-    opts[f"{option_prefix}pc_hypre_type"] = "boomeramg"
-    opts[f"{option_prefix}pc_hypre_boomeramg_max_iter"] = 1
-    opts[f"{option_prefix}pc_hypre_boomeramg_cycle_type"] = "v"
+    # opts[f"{option_prefix}ksp_type"] = "gmres"
+    # opts[f"{option_prefix}ksp_rtol"] = 1.0e-8
+    # opts[f"{option_prefix}pc_type"] = "hypre"
+    # opts[f"{option_prefix}pc_hypre_type"] = "boomeramg"
+    # opts[f"{option_prefix}pc_hypre_boomeramg_max_iter"] = 1
+    # opts[f"{option_prefix}pc_hypre_boomeramg_cycle_type"] = "v"
 
     ksp.setFromOptions()
 
@@ -2701,14 +2703,31 @@ def runDP(
             print1(0, cost, nder, 0)
         tosave.add(cost, nder)
     # ====================================================
+    spaceP1 = None
+    degree_space = model.space.ufl_element().degree
+    if degree_space > 1:
+        rank_space = model.space.value_shape
+        if len(rank_space) == 1:
+            rank_space = rank_space[0]
+        spaceP1 = create_space(domain, "CG", rank=rank_space, degree=1)
 
     with XDMFFile(comm, filename, "w") as xdmf:
         xdmf.write_mesh(domain)
         xdmf.write_function(phi, 0)
-        for f in ste_fcs:
-            xdmf.write_function(f, 0)
-        for f in adj_fcs:
-            xdmf.write_function(f, 0)
+
+        if degree_space == 1:
+            for f in ste_fcs:
+                xdmf.write_function(f, 0)
+            for f in adj_fcs:
+                xdmf.write_function(f, 0)
+        else:
+            ste_fcsP1 = interpolate(ste_fcs, spaceP1, name="u")
+            adj_fcsP1 = interpolate(adj_fcs, spaceP1, name="p")
+            for f in ste_fcsP1:
+                xdmf.write_function(f, 0)
+            for f in adj_fcsP1:
+                xdmf.write_function(f, 0)
+
         xdmf.write_function(tht, 0)
 
         for iter in range(1, niter + 1):
@@ -2749,10 +2768,19 @@ def runDP(
             lset_end = comm.bcast(lset_end, root=0)
 
             xdmf.write_function(phi, iter)
-            for f in ste_fcs:
-                xdmf.write_function(f, iter)
-            for f in adj_fcs:
-                xdmf.write_function(f, iter)
+            if degree_space == 1:
+                for f in ste_fcs:
+                    xdmf.write_function(f, iter)
+                for f in adj_fcs:
+                    xdmf.write_function(f, iter)
+            else:
+                ste_fcsP1 = interpolate(ste_fcs, spaceP1, name="u")
+                adj_fcsP1 = interpolate(adj_fcs, spaceP1, name="p")
+                for f in ste_fcsP1:
+                    xdmf.write_function(f, iter)
+                for f in adj_fcsP1:
+                    xdmf.write_function(f, iter)
+
             xdmf.write_function(tht, iter)
 
             if rank == 0:

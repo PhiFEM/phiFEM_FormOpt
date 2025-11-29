@@ -4047,20 +4047,11 @@ def test_36():
 
 
 def test_37():
-    """
-    Nonlinear Elasticity (cantilever) - Data Parallelism
 
-    Run `mpirun -np <nbr of processes> python test.py 37`.
-    For instance, `mpirun -np 4 python test.py 37`.
-
-    Incomplete test.
-    """
-
-    test_name = "Nonlinear Elasticity (cantilever) - Data Parallelism"
     test_path = Path("../results/t37/")
     dim = 2
     rank_dim = 2
-    mesh_size = 0.012
+    mesh_size = 0.015
 
     vertices = np.array(
         [(0.0, 0.0), (2.0, 0.0), (2.0, 0.45), (2.0, 0.55), (2.0, 1.0), (0.0, 1.0)]
@@ -4076,12 +4067,8 @@ def test_37():
 
     domain, nbr_tri, boundary_tags = output
 
-    if rank == 0:
-        print("\n\t" + test_name + "\n")
-        print(f"> Path = {test_path}")
-        print(f"> Nbr of triangles = {nbr_tri}")
-
-    space = dib.create_space(domain, "CG", rank_dim)
+    space = dib.create_space(domain, "CG", rank_dim, 2)
+    space.ufl_element()
 
     dirichlet_bcs = dib.homogeneous_dirichlet(
         domain, space, boundary_tags, [dir_mkr], rank_dim
@@ -4089,130 +4076,23 @@ def test_37():
 
     ds_g = dib.marked_ds(domain, boundary_tags, [neu_mkr])
 
-    area = 0.8
-    g = (0.0, -2.0)
-    md = Compliance(dim, domain, space, g, ds_g[0], dirichlet_bcs, area, test_path)
+    alpha = 0.25
+    g = (0.0, -10.0)
 
-    @dib.region_of(domain)
-    def sub_domain(x):
-        # 0.42 < x[1] < 0.58
-        # 1.95 < x[0]
-        ineqs = [x[1] - 0.42, 0.58 - x[1], x[0] - 1.90]
-        return ineqs
-
-    # md.sub = [sub_domain.expression()]
-
-    centers = [(2.0, 0.35), (2.0, 0.65), (2.0, 0.0), (2.0, 1.0)]
-    centers += [(0.0, 0.25), (0.0, 0.5), (0.0, 0.75)]
-    centers += [((1 + i) * 0.25, 0.0) for i in range(8)]
-    centers += [(i * 0.25 + 0.375, 0.25) for i in range(6)]
-    centers += [((1 + i) * 0.25, 0.5) for i in range(7)]
-    centers += [(i * 0.25 + 0.375, 0.75) for i in range(6)]
-    centers += [((1 + i) * 0.25, 1.0) for i in range(8)]
-    centers += [(2.0, 0.175), (2.0, 1.0 - 0.175)]
-
-    centers = np.array(centers)
-    radii = np.repeat(0.1, centers.shape[0])
-
-    md.create_initial_level(centers, radii)
-    md.save_initial_level(comm)
-
-    md.runDP(
-        niter=200,
-        lgrn_tol=0.005,
-        ctrn_tol=0.005,
-        dfactor=1e-1,
-        lv_time=(0.001, 0.1),
-        lv_iter=(10, 20),
-        reinit_step=4,
-        reinit_pars=(20, 0.01),
-        smooth=True,
-    )
-
-    g = (0.0, -8.0)
-    area = 1.0
-    md1 = SaintVenant_Kirchhoff(
-        dim, domain, space, g, ds_g[0], dirichlet_bcs, area, test_path
-    )
-    md1.set_initial_level(md.phi)
-    dib.res_name = "results_nonlin"
-    md1.runDP(
-        niter=150,
-        dfactor=1e-1,
-        lv_time=(0.001, 0.1),
-        lv_iter=(10, 25),
-        reinit_step=4,
-        reinit_pars=(20, 0.01),
-        smooth=True,
-    )
-
-
-def test_38():
-    test_path = Path("../results/t38/")
-    dim = 2
-    rank_dim = 2
-    mesh_size = 0.015
-
-    vertices = np.array(
-        [(0.0, 0.0), (1.0, 0.0), (1.0, 0.45), (1.0, 0.55), (1.0, 1.0), (0.0, 1.0)]
-    )
-
-    dir_idx, dir_mkr = [6], 1
-    neu_idx, neu_mkr = [3], 2
-    boundary_parts = [(dir_idx, dir_mkr, "dir"), (neu_idx, neu_mkr, "neu")]
-
-    t = np.linspace(0, 2 * np.pi, endpoint=False)
-
-    x, y = 0.08 * np.cos(t) + 0.5, 0.08 * np.sin(t) + 0.5
-    h0 = np.column_stack((x, y))
-    x, y = 0.05 * np.cos(t) + 0.35, 0.05 * np.sin(t) + 0.65
-    h1 = np.column_stack((x, y))
-    x, y = 0.05 * np.cos(t) + 0.35, 0.05 * np.sin(t) + 0.35
-    h2 = np.column_stack((x, y))
-
-    output = dib.create_domain_2d_DP(
-        vertices,
-        boundary_parts,
-        mesh_size,
-        path=test_path,
-        plot=False,
-    )
-
-    domain, nbr_tri, boundary_tags = output
-
-    space = dib.create_space(domain, "CG", rank_dim)
-
-    dirichlet_bcs = dib.homogeneous_dirichlet(
-        domain, space, boundary_tags, [dir_mkr], rank_dim
-    )
-
-    ds_g = dib.marked_ds(domain, boundary_tags, [neu_mkr])
-
-    alpha = 2.5
-    g = (0.0, -50.0)
     md = SVK(dim, domain, space, g, ds_g[0], dirichlet_bcs, alpha, test_path)
+    md.bc_theta = (boundary_tags, [neu_mkr])
 
-    centers = [(0.5, 0.5), (0.35, 0.65), (0.35, 0.35)]
-    centers += [(0.0, i * 0.1 + 0.2) for i in range(7)]
-    centers += [(i * 0.1 + 0.1, 0.0) for i in range(10)]
-    centers += [(i * 0.1 + 0.1, 1.0) for i in range(10)]
-    centers += [(1.0, i * 0.1) for i in range(11) if i not in [4, 5, 6]]
-    centers += [(1.0, 0.0), (1.0, 1.0)]
-    centers = np.array(centers)
-    radii = np.array(
-        [0.08, 0.05, 0.05] + 7 * [0.08] + 2 * 10 * [0.06] + 8 * [0.1] + [0.2, 0.2]
+    ini_lvl = lambda x: (
+        -0.4 - np.sin(np.pi * 3 * (x[0] + 0.5)) * np.cos(np.pi * 6 * x[1])
     )
-
-    md.create_initial_level(centers, radii)
-    md.save_initial_level(comm)
-
+    md.set_initial_level(ini_lvl)
     md.runDP(
-        niter=20,
-        dfactor=1e-1,
-        lv_time=(0.001, 0.05),
-        lv_iter=(10, 20),
+        niter=10,
+        dfactor=0.1,
+        lv_iter=(8, 20),
+        lv_time=(0.0001, 0.001),
         reinit_step=4,
-        reinit_pars=(20, 0.01),
+        reinit_pars=(20, 0.05),
         smooth=True,
     )
 
@@ -4248,7 +4128,6 @@ test_functions = {
     "35": test_35,
     "36": test_36,
     "37": test_37,
-    "38": test_38,
 }
 
 

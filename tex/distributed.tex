@@ -1876,10 +1876,9 @@ domain, nbr_tri, boundary_tags = output
 \end{lstlisting}
 Set \code{plot=False} to hide the mesh plotted by \code{Gmsh}.
 
-In both examples, there is only one subset of $\Gamma$ where
-we impose zero displacement. In addition, it is necessary to consider the 
-boundary condition of problem \eqref{eq:w-g}.  
-Then we create the space of functions and the Dirichlet boundary conditions
+In both examples, there is only one subset of $\Gamma$ where zero displacement is imposed.
+It is also necessary to account for the boundary condition of problem \eqref{eq:w-g}.
+Accordingly, we create the function space and the Dirichlet boundary conditions
 using predefined functions from our module:
 \begin{lstlisting}
 space = dib.create_space(domain, "CG", rank_dim)
