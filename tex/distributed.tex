@@ -1193,7 +1193,7 @@ in the normal direction,  derived from the boundary expression.
 In the distributed shape derivative-based level set method,
 one rather solves a linear transport equation, as $\theta$ is available
 in $\hold$ rather than $\theta\cdot n$ on $\partial\Om$, see \cite{MR3535238}.  
-\tblue{We update the level set function by solving the following diffusion--transport problem:
+We update the level set function by solving the following diffusion--transport problem:
 \begin{equation} \label{eq:transport}
 	\begin{aligned}
 	\partial_t \phi+\theta\cdot\nabla\phi &= h^2\nabla^2\varphi && x\in \mathcal{D},\, t>0, \\
@@ -1201,15 +1201,12 @@ in $\hold$ rather than $\theta\cdot n$ on $\partial\Om$, see \cite{MR3535238}.
 							   \phi(0, x) &= \phi^{i}(x) && x\in \overline{\mathcal{D}},
 	\end{aligned}
 	\end{equation}
-	where $\theta$ is the velocity field obtained from \eqref{eq:velocity}
-	and $h$ is the mesh diameter.
-	%To mitigate this issue, 
-	Note that a diffusion term was added to
-	the linear transport equation \eqref{eq:transport}.
-		% During the shape optimization process,
-% it was observed that small artificial interfaces may remain between
-% regions that are expected to merge. 
-Indeed, during the shape optimization process, small artificial interfaces can sometimes persist between regions that are expected to merge.
+where $\theta$ is the velocity field obtained from \eqref{eq:velocity}
+and $h$ is the mesh diameter.
+Note that a diffusion term was added to
+the linear transport equation \eqref{eq:transport}.
+Indeed, during the shape optimization process, small artificial interfaces
+can sometimes persist between regions that are expected to merge.
 These thin ``ghost boundaries'' prevent the complete merging of nearby holes,
 leading to non-smooth intermediate geometries.
 The additional diffusion smooths the level set evolution
@@ -1223,7 +1220,7 @@ We recommend keeping \code{smooth=False} for heat conduction problems
 where the goal is to obtain tree-like material morphologies.
 In contrast, for compliance minimization problems,
 we suggest setting \code{smooth=True} to suppress
-the formation of spurious residual interfaces.}
+the formation of spurious residual interfaces.
 
 The mesh diameter $h$ is defined as
 \begin{equation}
@@ -1254,8 +1251,8 @@ and $\hat{\psi}=\psi+\tau \theta\cdot\nabla\psi$, with
 \begin{equation} \label{eq:tau_lv}
 	\tau = 2\left(\frac{1}{\delta t^2}  + \frac{|\theta|^2}{h^2}\right)^{-1/2}.
 \end{equation}
-We solve \eqref{eq:weak_transport} up to a final time $T$ and
-define the new level set function as $\phi^{i+1}(x) \coloneqq \phi(T,x)$.
+We solve \eqref{eq:weak_transport} up to a final time $t_{\text{end}}$ and
+define the new level set function as $\phi^{i+1}(x) \coloneqq \phi(t_{\text{end}},x)$.
 
 
 
@@ -1275,10 +1272,10 @@ as in the \code{Level} class.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \textbf{Reinitialization.} 
-\tblue{The goal of reinitialization in the standard level set method \cite{MR965860}, see also \cite{MR3843884} is to prevent the level set function from degenerating over successive iterations.
+The goal of reinitialization in the standard level set method \cite{MR965860}, see also \cite{MR3843884}, is to prevent the level set function from degenerating over successive iterations.
 This means that one strives to preserve the property $|\nabla\phi|\approx 1$, at least in the vicinity of the interface.
 We follow the same approach and regularly reinitialize of the level set function $\phi = \phi(T, \cdot)$ (obtained from \eqref{eq:transport})
-by solving the diffusive Eikonal equation with pseudo-time derivative:}
+by solving the diffusive Eikonal equation with pseudo-time derivative:
 \begin{equation} \label{eq:Eikonal}
 \begin{aligned}
     \partial_t \varphi - h^2 \nabla^2 \varphi &= S(\phi)(1 - |\nabla \varphi|)
@@ -1301,10 +1298,13 @@ as a Hamilton-Jacobi equation:
 	\partial_t \varphi + H(\nabla \varphi) =
 	S(\phi) + h^2 \nabla^2\varphi \quad x\in \mathcal{D},\, t>0,
 \end{equation}
-where $H(p) = S(\phi) |\nabla p|$ is the Hamiltonian.
+where $H(p) \coloneqq S(\phi) |p|$ is the Hamiltonian.
 Note that $H$ is homogeneous of degree $1$: $H(\lambda p) = \lambda H(p)$
 for all positive $\lambda$. By Euler's homogeneous function theorem,
-$H(p) = \nabla H (p) \cdot p$, where $\nabla H (p) = S(\phi)p/ \left|p\right|$.
+$H(p) = \nabla H (p) \cdot p$, where
+\begin{equation}\label{eq:grad_H}
+	\nabla H (p) = S(\phi)\frac{p}{|p|}.
+\end{equation}
 These observations lead us to consider again
 the Petrov-Galerkin method developed in \cite{MR1640142}. 
 Discretizing the time derivative with the two-step Adams-Bashforth method,
@@ -1320,7 +1320,8 @@ and $\hat{\psi}=\psi+\tau\nabla H(\nabla \varphi(t, \cdot)) \cdot\nabla\psi $, w
 	\tau = 2\left(\frac{1}{\delta t^2}  + \frac{|\nabla H(\nabla \varphi(t, \cdot))|^2}{h^2}\right)^{-1/2}.
 \end{equation}
 
-Note that $|\nabla H(\nabla \varphi(t, \cdot))| = \left|S(\phi)\right|$, \tred{A: I did not understand how you get this formula, maybe you can show me the calculation on paper.}
+Note that $|\nabla H(\nabla \varphi(t, \cdot))| = \left|S(\phi)\right|$ (set $p=\nabla \varphi$ in \eqref{eq:grad_H}),
+%\tred{A: I did not understand how you get this formula, maybe you can show me the calculation on paper.}
 so $\tau$ is time-independent, just as in \eqref{eq:tau_lv}.
 The Adams-Bashforth method provides an explicit scheme
 to the nonlinear equation \eqref{eq:Eikonal},
@@ -1353,6 +1354,11 @@ to configure the reinitialization:
 	Tuple with the number of iterations and the final time for \eqref{eq:weak_HJ}.
 	By default, \code{reinit\_pars=(8,1e-1)}.
 	\tred{A: why is it false by default? I thought it would be true by default.}
+	\tblue{
+		J: In some cases we do not need reinitialization: inverse elasticity and the first two examples in heat conduction.
+		Achei que o user deve estar ciente de quando a reinitialization é usada.
+		Mas posso mudar, somente deveria corrigir os parametros nesses tres exemplos e na clase mae dos modelos.
+	}
 \end{itemize}
 
 \vspace*{0.5cm}
@@ -1360,7 +1366,7 @@ to configure the reinitialization:
 The final time and the number of steps/iterations in \eqref{eq:weak_transport}
 are chosen as follows:
 \begin{align}
-    T  & = \tfrac{\code{dfactor}}{B(\theta, \theta)}\quad\text{and} \label{eq:tend} \\
+    t_{\text{end}}  & = \tfrac{\code{dfactor}}{B(\theta, \theta)}\quad\text{and} \label{eq:tend} \\
     \hat{s} & =
 	(s_{\max} - s_{\min}) \left( \tfrac{T - t_{\min}}{t_{\max} - t_{\min}} \right)^{1/6}
 	+ s_{\min}, \label{eq:steps}
@@ -1382,18 +1388,18 @@ The other parameters are user-defined:
 \end{itemize}
 These parameters are configured in \code{run<DP|TP|MP>}.
 
-Note that in \eqref{eq:tend} the final time $T$
+Note that in \eqref{eq:tend} the final time $t_{\text{end}}$
 varies inversely with the magnitude of $\theta$,
 which carries information of the shape derivative components.
 In \eqref{eq:steps}, we just apply a concave increasing function
-to $T$ to find the number of steps.
+to $t_{\text{end}}$ to find the number of steps.
 
 %\tred{A: why do we need randomness here?}
 To asses the robustness of the line search method,
 randomness can be introduced by specifying
 a seed number $N_\mathrm{seed}$ and a noise level $\vartheta$ in the argument
 $\code{random\_pars} = (N_\mathrm{seed}, \vartheta)$:
-$T$ is scaled by a random factor drawn from the uniform distribution
+$t_{\text{end}}$ is scaled by a random factor drawn from the uniform distribution
 $\mathcal{U}(1 - \vartheta, 1 + \vartheta)$
 and $\hat{s}$ is replaced by a sample drawn from the normal distribution
 $\mathcal{N}(\hat{s}, (\vartheta \hat{s})^2)$.
@@ -1401,8 +1407,8 @@ By default, \code{random\_pars=(1, 0.05)}.
 
 A lower bound is imposed on $B(\theta, \theta)$
 to prevent division by zero in \eqref{eq:tend}.
-Before returning $T$ and $\hat{s}$, we make sure that
-$t_{\min}\leq T \leq t_{\max}$, $s_{\min}\leq \hat{s} \leq s_{\max}$,
+Before returning $t_{\text{end}}$ and $\hat{s}$, we make sure that
+$t_{\min}\leq t_{\text{end}} \leq t_{\max}$, $s_{\min}\leq \hat{s} \leq s_{\max}$,
 and $\hat{s}$ is rounded to an integer.
 We recall that the \code{LineSearch} class 
 performs all these procedures.
@@ -1585,7 +1591,9 @@ All numerical experiments were carried out in an \code{Anaconda} environment usi
 together with \code{FEniCSx~0.9.0} for the finite element computations and
 \code{Gmsh~4.12.2} for mesh generation. Other important modules are
 \code{NumPy~1.26.3}, \code{SciPy~1.12.0}, \code{Matplotlib~3.8.3}, and \code{MPI4Py~4.0.3}.
-An installation manual is provided in the \code{README} file of the \code{GitHub} repository. \tred{A: here can you add the url of the repository?}
+An installation manual is provided in the \code{README} file of the \code{GitHub} repository
+(\href{https://github.com/JD26/FormOpt}{\texttt{github.com/JD26/FormOpt}}).
+% \tred{A: here can you add the url of the repository?}
 
 Most of tests were executed on a laptop; a server was used only when explicitly indicated.
 Their specifications are as follows:
@@ -1808,7 +1816,7 @@ applied forces with their corresponding displacement observations.
 Thus, there are six (resp. sixteen) state problems.
 Setting \code{nbr\_groups = 6} (resp. \code{16}),
 and considering \code{size=12} processes (resp. \code{32}),
-the number of processes \code{size} is a multiple of \code{nbr\_groups}, \tblue{and each group contains two processes.}
+the number of processes \code{size} is a multiple of \code{nbr\_groups}, and each group contains two processes.
 Then, the sub-communicator can be created:
 \begin{lstlisting}
 color = rank * nbr_groups // size
@@ -1879,16 +1887,10 @@ domain, nbr_tri, boundary_tags = output
 \end{lstlisting}
 Set \code{plot=False} to hide the mesh plotted by \code{Gmsh}.
 
-<<<<<<< HEAD
-In both examples, there is only one subset of $\Gamma$ where zero displacement is imposed.
-It is also necessary to account for the boundary condition of problem \eqref{eq:w-g}.
-Accordingly, we create the function space and the Dirichlet boundary conditions
-=======
 In both examples, there is only one subset of $\Gamma$ where
 we impose zero displacement. In addition, it is necessary to consider the 
 boundary condition of problem~\eqref{eq:w-g}.  
 Then we create the space of functions and the Dirichlet boundary conditions
->>>>>>> efe7389def482462e18f2eaf6afdba3c4fadada3
 using predefined functions from our module:
 \begin{lstlisting}
 space = dib.create_space(domain, "CG", rank_dim)
@@ -1961,7 +1963,9 @@ all directed toward the center of the body.
 The resulting boundary displacements are measured, only in $\Gamma_1$
 since $\Gamma_0$ is fixed.
 Thus, we have six state equations and their corresponding adjoints.
-\tblue{We conducted three separate experiments: the first using data parallelism with $6$ processes, the second using task parallelism with $6$ processes, and the third using mixed parallelism with $12$ processes (organized into $6$ groups of $2$ processes each). The commands and corresponding execution times were:}
+We conducted three separate experiments: the first using data parallelism with $6$ processes,
+the second using task parallelism with $6$ processes, and the third using mixed parallelism with $12$ processes
+(organized into $6$ groups of $2$ processes each). The commands and corresponding execution times were:
 \begin{lstlisting}
 mpirun -np 6 python test.py 06 # Data (33 sec)
 mpirun -np 6 python test.py 07 # Task (29 sec)
@@ -1974,7 +1978,8 @@ See the numerical result in Figure~\ref{fig:inv1}.
 		\includegraphics[width=0.48\linewidth]{inv1_0.png}
 \hfill
 \includegraphics[width=0.48\linewidth]{inv1_1.png}
-\captionof{figure}{\tblue{Inverse elasticity, Example 1.}
+\captionof{figure}{
+	Inverse elasticity, Example 1.
 	Initial and recovered inclusion.
 	A mesh with $12\,713$ triangles was employed.
 }
@@ -1988,7 +1993,11 @@ all directed toward the center of the body,
 and convering the whole boundary $\Gamma_1$;
 then resulting boundary displacements are measured.
 Thus, we have sixteen state equations and their corresponding adjoints.
-\tblue{We conducted three separate experiments: the first using data parallelism with $16$ processes, the second using task parallelism with $16$ processes, and the third using mixed parallelism with $32$ processes (organized into $16$ groups of $2$ processes each). The commands and corresponding execution times were:}
+We conducted three separate experiments: the first using data parallelism with $16$ processes,
+the second using task parallelism with $16$ processes,
+and the third using mixed parallelism with $32$ processes
+(organized into $16$ groups of $2$ processes each)
+The commands and corresponding execution times were:
 % We employ data parallelism with $16$ processes,
 % task parallelism with $16$ processes, and
 % mixed parallelism with $32$ processes
@@ -2001,17 +2010,18 @@ mpirun -np 32 python test.py 36 # Mixed (43 sec)
 The number of iterations for these runs was $174$, $173$, and $174$, respectively.
 These tests were carried out on the server.
 See the recovered inclusions in Figure \ref{fig:inv2}.
-	\begin{figure}[H]
+\begin{figure}[H]
 \centering
 		\includegraphics[width=0.48\linewidth]{inv2_0.png}
 \hfill
 \includegraphics[width=0.48\linewidth]{inv2_1.png}
-\captionof{figure}{\tblue{Inverse elasticity, Example 2.}
+\captionof{figure}{
+	Inverse elasticity, Example 2.
 	Initial and recovered inclusions. 
 	A mesh with $13\,391$ triangles was employed.
 }
 \label{fig:inv2}
-	\end{figure}
+\end{figure}
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -2079,7 +2089,7 @@ the cost functional $J(\Omega)$ as a sum of compliances associated to each $g_k$
 where $u_k$ is the solution to \eqref{eq:compli_weak} with $g=g_k$.
 
 In the following examples, the region with zero displacement and
-the force application areas are shown in \tblue{red and blue}, respectively.
+the force application areas are shown in red and blue, respectively.
 % \tred{A: I think we should also write the configuration that was used to run these tests, 
 % and how fast it was. It can be interesting to mention that some tests are run on the laptop,
 %  others on the server, to show that running on the laptop is fast.}
@@ -2096,7 +2106,16 @@ mpirun -np 4 python test.py 01 # Data (6 sec)
 \end{lstlisting}
 See the results in Figure \ref{fig:compli1}. 
 We have performed a reinitialization of the level set function
-every four steps, with $20$ iterations and a final time of $0.1$. \tred{A: should we write $T=0.1$? I'm not sure.}
+every four steps, with $20$ iterations and a final time of $0.1$.
+\tred{A: should we write $T=0.1$? I'm not sure.}
+\tblue{
+	J: we cannot use $T$ for final time 
+	because $T$ was use in the shape derivative definition.
+	We use $t_{\text{end}}$ for final time in the transport problem
+	For reinitialization we do not have notation for final time.
+	Recall that the final time is calculated for the transport problem.
+}
+
 This yields a well approximated distance function.
 The other parameters passed to the \code{runDP} method (for data parallelism)
 have the following values (with default values used for all unspecified parameters): 
@@ -2124,15 +2143,15 @@ allow only tangential displacements along the boundary $\partial \mathcal{D}$.
 \hfill
 \includegraphics[width=0.48\linewidth]{compli1_1.png}
 \includegraphics[width=0.85\linewidth]{compli1_2.png}
-\captionof{figure}{\tblue{Compliance minimization, Example 1.}
+\captionof{figure}{
+Compliance minimization, Example 1.
 (Top) Initial guess (left) and optimized design (right) at iteration $i=50$.
 (Bottom) The resulting level set function $\phi^{i}$ approximates the
 distance function associated to $\Omega^{i}$.
 The domain $\mathcal{D}$ was discretized with $20\,946$ triangles.
 }
 \label{fig:compli1}
-	\end{figure}
-
+\end{figure}
 
 \noindent\textit{Example 2.} (Three-dimensional symmetric cantilever)
 We consider the rectangular box domain
@@ -2173,14 +2192,15 @@ md.runDP(
 \includegraphics[width=0.48\linewidth]{compli2_2.png}
 \hfill
 \includegraphics[width=0.48\linewidth]{compli2_3.png}
-\captionof{figure}{\tblue{Compliance minimization, Example 2.}
+\captionof{figure}{
+Compliance minimization, Example 2.
 The three-dimensional cantilever at	
 $i=0$ and $i=14$ (top);
 $i=30$ and $i=81$ (bottom).
 A mesh with $2\,592\,000$ tetrahedra was employed.
 }
 \label{fig:compli2}
-	\end{figure}
+\end{figure}
 
 
 \noindent\textit{Example 3.} (Cantilever with two loads I)
@@ -2193,11 +2213,11 @@ The boundary of zero displacement is $\Gamma_0 = \{x=0\} \times (0, 1)$,
 and the material area is constrained to $V = 0.5$.
 Thus, we minimize the cost functional \eqref{eq:compli_plus},
 which is implemented in the \code{cost} method of the \code{CompliancePlus} class.
-\tblue{To compare performances, we conducted three experiments: the first using data parallelism with $2$ processes, the second using
+To compare performances, we conducted three experiments: the first using data parallelism with $2$ processes, the second using
 task parallelism with $2$ processes, and the third
 mixed parallelism with $4$ processes
 (organized into $2$ groups of $2$ processes each).
-The commands and corresponding execution times were:}
+The commands and corresponding execution times were:
 \begin{lstlisting}
 mpirun -np 2 python test.py 03 # Data (20 sec)
 mpirun -np 2 python test.py 04 # Task (26 sec)	
@@ -2216,15 +2236,14 @@ reinit_step=4, reinit_pars=(16, 0.05), smooth=True
 \includegraphics[width=0.48\linewidth]{compli3_0.png}
 \hfill
 \includegraphics[width=0.48\linewidth]{compli3_1.png}
-\captionof{figure}{\tblue{Compliance minimization, Example 3.}
+\captionof{figure}{
+	Compliance minimization, Example 3.
 	Initial and optimal domains.
 	A total of $70$ iterations were perfomed for the three modes of parallelism.
 	A mesh with $16\,425$ triangles was employed.
 }
 \label{fig:compli3}
 \end{figure}
-
-
 
 \noindent\textit{Example 4.} (Cantilever problem with two loads II)
 This example also applies multiple loads.
@@ -2252,32 +2271,13 @@ See the results in Figure \ref{fig:compli4}.
 \includegraphics[width=0.48\linewidth]{compli4_0.png}
 \hfill
 \includegraphics[width=0.48\linewidth]{compli4_1.png}
-\captionof{figure}{\tblue{Compliance minimization, Example 4.}
+\captionof{figure}{
+	Compliance minimization, Example 4.
 	Initial and optimal domains.
 	Both parallelism modalities require $79$ iterations.
 }
 \label{fig:compli4}
 \end{figure}
-
-% \noindent\textit{Example 5.} 
-
-% Figure \ref{fig:compli5}
-
-% \begin{lstlisting}
-% mpirun -np 2 python test.py 20 # Data (14 sec)
-% \end{lstlisting}
-
-% \begin{figure}[H]\centering
-% \includegraphics[width=0.48\linewidth]{compli5_0.png}
-% \hfill
-% \includegraphics[width=0.48\linewidth]{compli5_1.png}
-% \captionof{figure}{
-% 	Initial and optimal domains.
-% 	$i = 62$
-% 	$16\,304$ triangles
-% }
-% \label{fig:compli5}
-% \end{figure}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Heat conduction}
@@ -2364,10 +2364,11 @@ in order to penalize the material around $\Gamma_0$.
 \includegraphics[width=0.48\linewidth]{heat1_0.png}
 \hfill
 \includegraphics[width=0.48\linewidth]{heat1_1.png}
-\captionof{figure}{\tblue{Heat conduction, Example 1.}
+\captionof{figure}{
+	Heat conduction, Example 1.
 	Initial guess and optimized design at iteration $i=204$,
 	computed on a mesh with {92\,582} triangles.
-	\tblue{The black-colored region $\Om$ has the highest conductivity.}
+	The black-colored region $\Om$ has the highest conductivity.
 }
 \label{fig:heat1}
 \end{figure}
@@ -2388,17 +2389,20 @@ but with $\Omega_0$ defined as
 \Omega_0 = \{x<0.1\} \cup \{x>0.9\} \cup \{y<0.1\} \cup \{y>0.9\}.
 \]
 Thus, the material is penalized close to the boundary.
-\tblue{Notice the typical fractal structure of the optimized geometry in Figures~\ref{fig:heat1} and~\ref{fig:heat2}, compare the results with those in~\cite{GAO2008805}.}
+Notice the typical fractal structure of the optimized geometry
+in Figures~\ref{fig:heat1} and~\ref{fig:heat2},
+compare the results with those in~\cite{GAO2008805}.
 
 \begin{figure}[H]
 	\centering
 \includegraphics[width=0.48\linewidth]{heat2_0.png}
 \hfill
 \includegraphics[width=0.48\linewidth]{heat2_1.png}
-\captionof{figure}{\tblue{Heat conduction, Example 2.}
+\captionof{figure}{
+	Heat conduction, Example 2.
 	Initial guess and optimized design at iteration $i=172$,
 	computed on a mesh with {144\,712} triangles.
-	\tblue{The black-colored region $\Om$ has the highest conductivity.}
+	The black-colored region $\Om$ has the highest conductivity.
 }
 \label{fig:heat2}
 \end{figure}
@@ -2414,10 +2418,11 @@ Thus, the material is penalized close to the boundary.
 
 \noindent\textit{Example 3.} 
 We apply a localized heat source given by the function
-$f(x,y) \coloneqq \phi(\vert(x,y)-(0.5, 0.5)\vert_2)$,
-where $\phi$ is the radial function defined as \tred{A: maybe we should use another notation? $\phi$ is already used for the level set function sometimes.}
+$f(x,y) \coloneqq \omega(\vert(x,y)-(0.5, 0.5)\vert_2)$,
+where $\omega$ is the radial function defined as
+% \tred{A: maybe we should use another notation? $\phi$ is already used for the level set function sometimes.}
 \begin{equation} \label{eq:rad}
-	\phi(r) \coloneqq
+	\omega(r) \coloneqq
 	\begin{cases}
 	25(1 + \cos(10 \pi r )) & \text{if } r < 0.1, \\
 	0  & \text{otherwise}.
@@ -2440,7 +2445,8 @@ the velocity problem is solved with $\mathbb{H} = H^1(\mathcal{D})^d$.
 \includegraphics[width=0.48\linewidth]{heat3_0.png}
 \hfill
 \includegraphics[width=0.48\linewidth]{heat3_1.png}
-\captionof{figure}{\tblue{Heat conduction, Example 3.}
+\captionof{figure}{
+	Heat conduction, Example 3.
 	Initial guess and optimized design at iteration $i=181$,
 	computed on a mesh with {23\,652} triangles.
 }
@@ -2482,7 +2488,8 @@ The results are shown in Figure \ref{fig:heat4}.
 \includegraphics[width=0.48\linewidth]{heat4_2.png}
 \hfill
 \includegraphics[width=0.48\linewidth]{heat4_3.png}
-\captionof{figure}{\tblue{Heat conduction, Example 4.}
+\captionof{figure}{
+	Heat conduction, Example 4.
 	Initial guess (top-left) and cost values (top-right),
 	along with the optimized designs of the single case (bottom-left)
 	and multiple case (bottom-right), at iteration $i=215$ and $i=199$, respectively.
@@ -2500,18 +2507,18 @@ In the single case test, we apply one heat source
 $f = f^\mathrm{I} + f^\mathrm{II} + f^\mathrm{III} + f^\mathrm{IV}$,
 where
 \[
-	f^\mathrm{I}(x,y) \coloneqq \phi(\vert(x,y)-(0.5, 0.25)\vert_2),
+	f^\mathrm{I}(x,y) \coloneqq \omega(\vert(x,y)-(0.5, 0.25)\vert_2),
 \]
 \[
-	f^\mathrm{II}(x,y) \coloneqq \phi(\vert(x,y)-(0.75, 0.5)\vert_2),
+	f^\mathrm{II}(x,y) \coloneqq \omega(\vert(x,y)-(0.75, 0.5)\vert_2),
 \]
 \[
-	f^\mathrm{III}(x,y) \coloneqq \phi(\vert(x,y)-(0.5, 0.75)\vert_2),
+	f^\mathrm{III}(x,y) \coloneqq \omega(\vert(x,y)-(0.5, 0.75)\vert_2),
 \]
 \[
-	f^\mathrm{IV}(x,y) \coloneqq \phi(\vert(x,y)-(0.25, 0.5)\vert_2).
+	f^\mathrm{IV}(x,y) \coloneqq \omega(\vert(x,y)-(0.25, 0.5)\vert_2).
 \]
-The function $\phi$ was defined in \eqref{eq:rad}.
+The function $\omega$ was defined in \eqref{eq:rad}.
 In the multiple case, we consider four heat sources 
 $f=f^\mathrm{I}$, $f=f^\mathrm{II}$, $f=f^\mathrm{III}$, and $f=f^\mathrm{IV}$,
 along with the cost functional
@@ -2532,7 +2539,9 @@ we employ task parallelism with four processes:
 \begin{lstlisting}
 mpirun -np 4 python test.py 22 # Task (20 sec)
 \end{lstlisting}
-The numerical results are shown  in Figure \ref{fig:heat5}. \tred{A: I think these results are similar to results from another paper that you sowed me, right? Can you add this reference here and mention that we manage to reproduce their result? }
+The numerical results are shown in Figure~\ref{fig:heat5}.
+They agree with the results reported in \cite{MR2278190}, which we are able to reproduce within our framework.
+% \tred{A: I think these results are similar to results from another paper that you sowed me, right? Can you add this reference here and mention that we manage to reproduce their result? }
 \begin{figure}[H]\centering
 \includegraphics[width=0.48\linewidth]{heat5_0.png}
 \hfill
@@ -2540,7 +2549,8 @@ The numerical results are shown  in Figure \ref{fig:heat5}. \tred{A: I think the
 \includegraphics[width=0.48\linewidth]{heat5_2.png}
 \hfill
 \includegraphics[width=0.48\linewidth]{heat5_3.png}
-\captionof{figure}{\tblue{Heat conduction, Example 5.}
+\captionof{figure}{
+	Heat conduction, Example 5.
 	Initial guess (top-left) and cost values (top-right),
 	along with the optimized designs of the single case (bottom-left)
 	and multiple case (bottom-right), at iteration $i=80$ and $i=63$, respectively.
@@ -2693,7 +2703,8 @@ $u$ represents a population density; hence, it must be positive and, additionall
 \includegraphics[width=0.48\linewidth]{log1_2.png}
 \hfill
 \includegraphics[width=0.48\linewidth]{log1_3.png}
-\captionof{figure}{\tblue{Examples of ressource allocation optimization in population dynamics.}
+\captionof{figure}{
+	Examples of resource allocation optimization in population dynamics.
 	Initial guess (top-left) and optimized designs for
 	$r=10$ (top-right), $r=40$ (bottom-left), and $r=100$ (bottom-right).
 	The stopping criterion was satisfied at $147$, $107$, and $167$ iterations, respectively.
@@ -2719,27 +2730,49 @@ $u$ represents a population density; hence, it must be positive and, additionall
 
 % \tblue{J : I have implemented a test with 16 measurements in Inverse Elasticity.}
 
-Performances of symmetric cantilever (see Example 1 in Section \ref{sub:compli})
-using data parallelism.
+
+Here we present two performance tests for parallelism.
+We consider the symmetric cantilevers from \textit{Example~1} and \textit{Example~3} in Section \ref{sub:compli},
+with a some changes in the initial conditions in order to obtain results different from those in the previous section.
+Both tests were carry on the server with a substantial increase in the number of finite elements (more than $200$\%).
+This increase allows for more and smaller holes compared with the initial conditions used in Section \ref{sub:compli}.
+The exectution time decreaced as the number of processes increased, up to $12$ processes,
+with a larger rate of decrease in the initial stages.
+Moreover, different optimized designs were obtained, with thinner structural parts.
+See Figures \ref{fig:perform1} and \ref{fig:perform2} for the results.
+
 \begin{figure}[H]\centering
-\includegraphics[width=0.48\linewidth]{performance_1a.png}
-\hfill
-\includegraphics[width=0.48\linewidth]{performance_1b.png}
+\begin{minipage}{0.48\linewidth}
+	\centering
+	\includegraphics[width=\linewidth]{performance_cant1.png}
+\end{minipage}\hfill
+\begin{minipage}{0.48\linewidth}
+	\centering
+	\includegraphics[width=0.9\linewidth]{perf_cant1_1.png}
+\end{minipage}
 \captionof{figure}{
-	Performance results on meshes with 
-	$20\,946$ (left) and $42\,035$ (right) triangles,
-	executed in a laptop.
-	After six processes there is no improvement.
+	Cantilever with one load. 
+	Performance results on a mesh with $52\,085$ triangles.
+	Number of processes versus execution times in seconds (right)
+	and optimized design at iteration $i=45$ (left).
 }
 \label{fig:perform1}
 \end{figure}
 
 \begin{figure}[H]\centering
-\includegraphics[width=0.48\linewidth]{performance_2.png}
+\begin{minipage}{0.48\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{performance_cant2.png}
+\end{minipage}\hfill
+\begin{minipage}{0.48\linewidth}
+    \centering
+    \includegraphics[width=0.8\linewidth]{perf_cant2_1.png}
+\end{minipage}
 \captionof{figure}{
-	Performance results on a mesh with 
-	$52\,085$ triangles, executed in a server.
-	Anomalous execution times when four and five processes are used.
+	Cantilever with two loads.
+	Performance results on a mesh with $36\,375$ triangles.
+	Number of processes versus execution times in seconds (right)
+	and optimized design at iteration $i=61$ (left).
 }
 \label{fig:perform2}
 \end{figure}
@@ -2750,6 +2783,19 @@ using data parallelism.
 %%%%%%%%%%%%%%%%%%%%%%%
 
 In this work, we have extended the results of \cite{MR3843884} in several directions, focusing on PDE-constrained shape optimization based on the distributed shape derivative combined with a level-set method. \tred{A: I wanted to write something a bit more general, as this works is not just an extension of \cite{MR3843884}, it is much more general. Don't have ideas now, but I can work on it later.}
+
+\tblue{J:
+Some ideas that could help:
+Our module encapsulates the numerical methods in classes
+(level set, velocity problem, reinitialization),
+which can be modified independently,
+leaving the user with the task of writing the problem equations
+(weak formulations, cost function, constraints, derivative components)
+in UFL format, friendly and modern compared to FreeFEM, that is,
+in a symbolic way, which FreeFEM does not support.
+This approach allows the mesh,
+finite elements, and boundary conditions to be defined separately from the equations.
+}
 
 The \fopt toolbox introduces several notable features. It supports both two- and three-dimensional problems with flexible geometries, enabled by the finite element capabilities of \fx. The Unified Form Language (UFL) provides an intuitive way to represent weak formulations of PDEs in a notation close to the mathematical one. Another key development is the integration of parallel computing with three distinct modes, which significantly enhances efficiency and enables large-scale simulations. In addition, the toolbox includes a built-in Proximal-Perturbed Lagrangian method for handling shape constraints, particularly useful for volume and perimeter constraints, which are ubiquitous in shape optimization.
 

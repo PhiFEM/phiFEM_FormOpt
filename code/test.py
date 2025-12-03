@@ -10,7 +10,6 @@ from models import (
     HeatPlus,
     Mechanism,
     GrippingMechanism,
-    SaintVenant_Kirchhoff,
     SVK,
 )
 
@@ -49,7 +48,7 @@ test_19 : Cantilever with two loads II - Task Parallelism
 test_20 : Symmetric Cantilever 2D (non-rectangular domain) - Data Parallelism
 test_21 : Heat conduction with four sources (single) - Data Parallelism
 test_22 : Heat conduction with four sources (multiple) - Task Parallelism
-test_22 : Heat conduction with four sources (multiple) - Mixed Parallelism
+test_23 : Heat conduction with four sources (multiple) - Mixed Parallelism
 test_31 : Mechanism (Antoine - in progress) 
 test_32 : Execution times
 test_33 : Gripping Mechanism 2D - Data Parallelism
@@ -69,95 +68,6 @@ def test_01():
 
     To save the output, append `> ../results/t01/out.txt`.
     To delete the images, enter `rm ../results/t01/*.png`.
-
-    Execution times (mesh_size = 0.015, 20 946 triangles):
-    - 1 process (56 iterations):
-        > Assembly time = 7.155405611000106 s
-        > Resolution time = 27.33817017199999 s
-    - 2 processes (58 iterations):
-        > Assembly time = 7.186339323000084 s
-        > Resolution time = 13.547148835999906 s
-    - 3 processes (56 iterations):
-        > Assembly time = 16.091977639000106 s
-        > Resolution time = 9.593779027999972 s
-    - 4 processes (58 iterations):
-        > Assembly time = 16.073128902999997 s
-        > Resolution time = 7.400951124999665 s
-    - 5 processes (53 iterations):
-        > Assembly time = 16.22902983599988 s
-        > Resolution time = 5.773146577999796 s
-    - 6 processes (58 iterations):
-        > Assembly time = 16.401714292999714 s
-        > Resolution time = 5.587280580999959 s
-    - 7 processes (61 iterations):
-        > Assembly time = 18.191244063 s
-        > Resolution time = 9.354751103000012 s
-    - 8 processes (51 iterations):
-        > Assembly time = 21.920513003999986 s
-        > Resolution time = 6.425889066999957 s
-    - 9 processes (53 iterations):
-        > Assembly time = 20.0180276210001 s
-        > Resolution time = 6.792038920999971 s
-    - 10 processes (58 iterations):
-        > Assembly time = 12.087853934999998 s
-        > Resolution time = 7.094126409999944 s
-
-    resolution_times = [
-        27.33817017199999,
-        13.547148835999906,
-        9.593779027999972,
-        7.400951124999665,
-        5.773146577999796,
-        5.587280580999959,
-        9.354751103000012,
-        6.425889066999957,
-        6.792038920999971,
-        7.094126409999944
-    ]
-
-    Execution times (mesh_size = 0.0106, 42 035 triangles)
-    - 1 process (48 iterations):
-        > Assembly time = 13.443338451000045 s
-        > Resolution time = 40.41690818799998 s
-    - 2 processes (47 iterations):
-        > Assembly time = 15.514351726000086 s
-        > Resolution time = 20.677432958999816 s
-    - 3 processes (46 iterations):
-        > Assembly time = 7.284180616999947 s
-        > Resolution time = 14.434316678999949 s
-    - 4 processes (46 iterations):
-        > Assembly time = 15.922204741999849 s
-        > Resolution time = 11.582552148000104 s
-    - 5 processes (48 iterations):
-        > Assembly time = 16.057948435999833 s
-        > Resolution time = 10.01717478400019 s
-    - 6 processes (47 iterations):
-        > Assembly time = 7.912114128000212 s
-        > Resolution time = 8.236337578999837 s
-    - 7 processes (49 iterations):
-        > Assembly time = 11.057659164000142 s
-        > Resolution time = 14.209770140999808 s
-    - 8 processes (47 iterations):
-        > Assembly time = 11.494021365000208 s
-        > Resolution time = 11.625784706000104 s
-    - 9 processes (47 iterations):
-        > Assembly time = 11.499640653999904 s
-        > Resolution time = 11.156894338999791 s
-    - 10 processes (47 iterations):
-        > Assembly time = 12.399143296000148 s
-        > Resolution time = 10.104777174999981 s
-    resolution_times = [
-        40.41690818799998,
-        20.677432958999816,
-        14.434316678999949,
-        11.582552148000104,
-        10.01717478400019,
-        8.236337578999837,
-        14.209770140999808,
-        11.625784706000104,
-        11.156894338999791,
-        10.104777174999981
-    ]
     """
 
     test_name = "Symmetric Cantilever 2D - Data Parallelism"
@@ -379,51 +289,6 @@ def test_03():
     """
     Run: mpirun -np <nbr of processes> python test.py 03
     For instance: mpirun -np 2 python test.py 03
-
-    Execution times:
-    - 1 process (69 iterations):
-        > Assembly time = 5.740588151999873 s
-        > Resolution time = 35.07935065799984 s
-    - 2 process (69 iterations):
-        > Assembly time = 13.698360341000352 s
-        > Resolution time = 20.099389327000154 s
-    - 3 process (71 iterations):
-        > Assembly time = 17.14925673200014 s
-        > Resolution time = 14.756963701000132 s
-    - 4 process (71 iterations):
-        > Assembly time = 17.429617789000076 s
-        > Resolution time = 11.853981776999717 s
-    - 5 process (70 iterations):
-        > Assembly time = 17.483467802000177 s
-        > Resolution time = 10.23874729499994 s
-    - 6 process (54 iterations):
-        > Assembly time = 17.655754719000015 s
-        > Resolution time = 6.934067974999834 s
-    - 7 process (70 iterations):
-        > Assembly time = 20.666583876999994 s
-        > Resolution time = 12.757291769999938 s
-    - 8 process (69 iterations):
-        > Assembly time = 24.34390402600002 s
-        > Resolution time = 12.813011035000272 s
-    - 9 process (70 iterations):
-        > Assembly time = 23.268276027999946 s
-        > Resolution time = 12.131966675000058 s
-    - 10 process (69 iterations):
-        > Assembly time = 25.65132305399993 s
-        > Resolution time = 11.061559490000036 s
-
-    resolution_times = [
-        35.07935065799984,
-        20.099389327000154,
-        14.756963701000132,
-        11.853981776999717,
-        10.23874729499994,
-        6.934067974999834,
-        12.757291769999938,
-        12.813011035000272,
-        12.131966675000058,
-        11.061559490000036
-    ]
     """
 
     test_name = "Multiple load cases - Data Parallelism"
@@ -2654,7 +2519,7 @@ def test_23():
     test_path = Path("../results/t23/")
     dim = 2
     rank_dim = 1
-    mesh_size = 1e-2
+    mesh_size = 0.005
 
     vertices = np.array(
         [
@@ -2736,8 +2601,10 @@ def test_23():
     ]
 
     # Diagonal balls
-    centers += [(0.2 + i * 0.12, 0.2 + i * 0.12) for i in range(6)]
-    centers += [(0.8 - i * 0.12, 0.2 + i * 0.12) for i in range(6)]
+    yy = 0.2
+    h = (1.0 - 2.0 * yy) / 5.0
+    centers += [(yy + i * h, yy + i * h) for i in range(6)]
+    centers += [((1 - yy) - i * h, yy + i * h) for i in range(6)]
 
     # Boundary balls
     centers += [(0.1 + i * 0.1, 0.0) for i in range(9)]
@@ -2745,10 +2612,11 @@ def test_23():
     centers += [(0.0, 0.1 + i * 0.1) for i in range(9)]
     centers += [(1.0, 0.1 + i * 0.1) for i in range(9)]
 
-    centers += [(0.2, 0.32), (0.32, 0.2)]
-    centers += [(0.8, 0.32), (0.68, 0.2)]
-    centers += [(0.8, 0.68), (0.68, 0.8)]
-    centers += [(0.2, 0.68), (0.32, 0.8)]
+    centers += [(0.18, 0.34), (0.34, 0.18)]
+    centers += [(0.82, 0.34), (0.66, 0.18)]
+    centers += [(0.82, 0.66), (0.66, 0.82)]
+    centers += [(0.18, 0.66), (0.34, 0.82)]
+    centers += [(0.5, 0.5)]
 
     centers = np.array(centers)
     radii = np.repeat(0.05, centers.shape[0])
@@ -2758,12 +2626,15 @@ def test_23():
         md.save_initial_level(sub_comm)
 
     md.runMP(
+        niter=70,
         sub_comm=sub_comm,
         dfactor=0.1,
+        lv_iter=(8, 25),
+        lv_time=(0.001, 0.05),
         ctrn_tol=1e-3,
         smooth=True,
         reinit_step=4,
-        reinit_pars=(12, 0.01),
+        reinit_pars=(20, 0.01),
     )
 
 
@@ -4068,7 +3939,6 @@ def test_37():
     domain, nbr_tri, boundary_tags = output
 
     space = dib.create_space(domain, "CG", rank_dim, 2)
-    space.ufl_element()
 
     dirichlet_bcs = dib.homogeneous_dirichlet(
         domain, space, boundary_tags, [dir_mkr], rank_dim
@@ -4081,16 +3951,17 @@ def test_37():
 
     md = SVK(dim, domain, space, g, ds_g[0], dirichlet_bcs, alpha, test_path)
     md.bc_theta = (boundary_tags, [neu_mkr])
+    md.ds_theta = dib.marked_ds(domain, boundary_tags, [dir_mkr])[0]
 
     ini_lvl = lambda x: (
         -0.4 - np.sin(np.pi * 3 * (x[0] + 0.5)) * np.cos(np.pi * 6 * x[1])
     )
     md.set_initial_level(ini_lvl)
     md.runDP(
-        niter=10,
-        dfactor=0.1,
-        lv_iter=(8, 20),
-        lv_time=(0.0001, 0.001),
+        niter=20,
+        dfactor=0.001,
+        lv_iter=(8, 25),
+        lv_time=(0.0001, 0.01),
         reinit_step=4,
         reinit_pars=(20, 0.05),
         smooth=True,
