@@ -1,11 +1,63 @@
 # FormOpt: A FEniCSx toolbox for level set-based shape and topology optimization supporting parallel computing
 
+`FormOpt` is a toolbox for two- and three-dimensional shape with parallel computing capabilities,
+built on the `FEniCSx` software framework. 
+The numerical shape modeling relies on a level set method, whose evolution is driven by a descent direction computed from the shape derivative.
+Geometric constraints are treated accurately through a Proximal-Perturbed Lagrangian approach.
+`FormOpt` leverages the powerful features of `FEniCSx`, particularly its support for weak formulations of partial differential equations, diverse finite element types, and scalable parallelism.
+The implementation supports three different parallel computing modes: data parallelism, task parallelism, and a mixed mode. Data parallelism exploits `FEniCSx`'s mesh partitioning features, and we implement a task parallelism mode which is useful for problems governed by a set of partial differential equations with varying parameters. The mixed mode conveniently combines both strategies to achieve efficient utilization of computational resources.
+
+API reference: 
+
+Toolbox paper: 
+
+## Contact:
+If you have any questions, suggestions, or need assistance with this project, feel free to reach out:
+- **Josué:** josue.diazavalos@uni-due.de  
+- **Antoine:** antoine.laurain@uni-due.de
+
 ## Repository structure
 
 ```
-├── code/       # Python scripts and numerical tests
-├── tex/        # LaTeX source files of the article and poster
-├── results/    # Directory structure for numerical results
-├── docs/       # Markdown documentation files
-└── site/       # Web site
+├── code/       		# Python scripts and numerical tests
+│ 	├── formopt.py		# Classes and functions
+│ 	├── models.py		# model problems
+│ 	├── test.py			# several tests
+│ 	├── load.py			# load and show numerical results
+│ 	├── plots.py		# functions for plotting
+│ 	├── Examples.ipynb	# Examples for manuscript
+│	└── Tutorial.ipynb	# Examples with detailed explanations
+├── tex/        		# LaTeX source files of the article
+├── results/    		# Directory structure for numerical results
+├── docs/       		# Markdown documentation files
+└── site/       		# API Reference site
 ```
+## Installation
+
+Currently, `FormOpt` runs under FEniCSx 0.9 (we are working in a version for FEniCSx 0.10).
+
+1. Download and install [Anaconda](https://www.anaconda.com/) for Windows, Linux, or macOS.
+2. Create a Anaconda environment and install some basic packages:
+	```bash
+	conda create -n fenicsx09
+	```
+	```bash
+	conda activate fenicsx09
+	```
+	```bash
+	conda install -c conda-forge python=3.11.10 numpy=1.26.3 scipy=1.12.0 matplotlib=3.8.3
+	```
+3. Install FEniCSx and its core dependencies:
+	```bash
+	conda install -c conda-forge fenics-dolfinx=0.9.0
+	```
+	```bash
+	conda install mpich=4.3.0
+	```
+	```bash
+	conda install pyvista=0.45.2
+	```
+4. Install additional packages (for mesh generation and working with HDF5 files):
+	```bash
+	conda install -c conda-forge pygmsh=7.1.17 h5py=3.10.0
+	```
