@@ -3970,11 +3970,14 @@ def test_37():
     # md.create_initial_level(centers, radii)
 
     md.runDP(
-        niter=30,
-        dfactor=0.01,
+        niter=20,
+        dfactor=0.001,
         lv_iter=(8, 25),
         lv_time=(0.0001, 0.01),
         smooth=True,
+        start_to_check=10,
+        reinit_step=2,
+        reinit_pars=(15, 0.001),
     )
 
 
