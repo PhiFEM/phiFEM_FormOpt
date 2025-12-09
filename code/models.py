@@ -21,10 +21,7 @@ from ufl import (
     cos,
     sqrt,
     nabla_div,
-    det,
-    tr,
     Constant,
-    div,
 )
 
 """
@@ -34,8 +31,10 @@ Models:
     InverseElasticity
     Heat
     HeatPlus
-    HeatMultiple
     Logistic
+    Mechanism
+    Gripping
+    SVK
 """
 
 
@@ -864,7 +863,7 @@ class Mechanism(Model):
         return B, False
 
 
-class GrippingMechanism(Model):
+class Gripping(Model):
 
     def __init__(self, dim, domain, space, g, ds_g, k, dir_bcs, bc_theta, vol, path):
 

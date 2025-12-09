@@ -9,7 +9,7 @@ The implementation supports three different parallel computing modes: data paral
 
 API reference: 
 
-Toolbox paper: 
+Toolbox paper: [preprint](https://arxiv.org/abs/xxxx.xxxxx)
 
 ## Contact:
 If you have any questions, suggestions, or need assistance with this project, feel free to reach out:
@@ -61,3 +61,16 @@ Currently, `FormOpt` runs under FEniCSx 0.9 (we are working in a version for FEn
 	```bash
 	conda install -c conda-forge pygmsh=7.1.17 h5py=3.10.0
 	```
+
+## Example: Heat conduction
+
+![Initial distribution](tex/heat1_0.png)
+
+![Optimal distribution](tex/heat1_1.png)
+
+## Example: Inverse elasticity
+
+![Initial guess](tex/inv2_0.png)
+
+![Recovered inclusions](tex/inv2_1.png)
+

@@ -9,7 +9,7 @@ from models import (
     Heat,
     HeatPlus,
     Mechanism,
-    GrippingMechanism,
+    Gripping,
     SVK,
 )
 
@@ -2852,7 +2852,7 @@ def test_33():
     g = [(0.0, -ff * 10.0), (0.0, ff * 10.0), (0.0, ff * 1.0), (0.0, -ff * 1.0)]
     k = [(0.0, -gg * 1.0), (0.0, gg * 1.0), (0.0, gg * 2.0), (0.0, -gg * 2.0)]
     # Create the model
-    md = GrippingMechanism(
+    md = Gripping(
         dim, domain, space, g, ds_g, k, dirichlet_bcs, bc_theta, area, test_path
     )
 
@@ -3970,8 +3970,8 @@ def test_37():
     # md.create_initial_level(centers, radii)
 
     md.runDP(
-        niter=80,
-        dfactor=0.001,
+        niter=30,
+        dfactor=0.01,
         lv_iter=(8, 25),
         lv_time=(0.0001, 0.01),
         smooth=True,

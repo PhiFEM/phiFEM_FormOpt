@@ -99,7 +99,7 @@
 \maketitle
 
 \begin{abstract}
-	This article presents the toolbox \fopt for two- and three-dimensional shape and topology optimization with parallel computing capabilities, built on the \fx\,  software framework. 
+	This article presents the toolbox \fopt for two- and three-dimensional shape optimization with parallel computing capabilities, built on the \fx\,  software framework. 
 	We introduce fundamental concepts of shape sensitivity analysis and their numerical applications, mainly for educational purposes, while also emphasizing computational efficiency via parallelism for practitioners.
 	We adopt an optimize-then-discretize strategy based on the distributed shape derivative and its tensor representation, following the approach of \cite{MR3843884} and extending it in several directions.
 The numerical shape modeling relies on  a level set method, whose evolution is driven by a descent direction computed from the shape derivative.
@@ -351,7 +351,7 @@ Throughout the paper, we will use the following notation for the shape derivativ
 In order to illustrate a concrete example of the calculation of a tensor representation \eqref{ea:volume_form2}, we consider a standard inverse problem in linear elasticity, where the objective is to reconstruct the shape of an inclusion with different elastic material parameters, from boundary and/or domain measurements.
 The uniqueness and stability of identifying a rigid inclusion in an elastic body from a boundary measurement have been investigated in \cite{Morassi2009}, while the case of cavities was addressed in \cite{MR1772729}.
 Shape sensitivity analysis for a related problem was studied in \cite{MEFTAHI20151554}, but with a different cost functional and using strong, rather than weak, formulations of the PDEs. The emphasis in \cite{MEFTAHI20151554} is on the Hadamard form \eqref{eq:general_boundary_exp} of the shape derivative, rather than on the distributed formulation \eqref{ea:volume_form2}.
-\rood{A: in fact there are several issues in \cite{MEFTAHI20151554}, for instance they use strong formulations in the variational formulations but they do not have enough regularity for that. We won't discuss that here, as this is beyond the scope.}
+%\rood{A: in fact there are several issues in \cite{MEFTAHI20151554}, for instance they use strong formulations in the variational formulations but they do not have enough regularity for that. We won't discuss that here, as this is beyond the scope.}
 Further examples of tensor representation of the shape derivative for other PDEs are provided in Section~\ref{sec:results}.
 
 \textbf{Inverse problem.}
@@ -562,26 +562,26 @@ Using \eqref{eq:general_boundary_exp} and using the fact that the jump of $|u-v-
 			  & \quad - A_{\Omega} \left({Dv}^{\top}\sigma(q) + {Dq}^{\top}\sigma(v+g)\right)n\cdot n \text{ on }\partial\Om.
 \end{align*}
 
-\rood{A: we can simplify as follows, but we don't need to write this formula in the paper as this is too detailed. We have
-\begin{align*}
-	& A_{\Omega}\sigma(u):\epsilon(p)= A_{\Omega}\sigma(u): Dp\\
-& = A_{\Omega}\sigma(u)n \cdot Dp n + A_{\Omega}\sigma(u)(I-n\otimes n):Dp(I-n\otimes n) 
-\end{align*}
-This yields the simplification:
-\begin{align*}
-	%%%%
-	\mathfrak{G} & := A_{\Omega}\sigma(u)(I-n\otimes n) : Dp(I-n\otimes n)\\
-	&\quad + A_{\Omega}\sigma(v+g)(I-n\otimes n) : Dq(I-n\otimes n) \\ 
-			  & \quad - A_{\Omega} \sigma(p) n\cdot {Du} n\\
-			  & \quad - A_{\Omega} \sigma(q)n\cdot Dv n \text{ on }\partial\Om.
-\end{align*}
-This is a splitting in normal and tangential components, as $A_{\Omega}\sigma(u)(I-n\otimes n)$ and $Dp(I-n\otimes n)$ are tangential for instance.
-Then, when taking the jump of $\mathfrak{G}$ accross $\partial\Om$, there are a few simplifications, using the transmission conditions, and
-\begin{align*}
-& 	[[A_{\Omega}\sigma(u)(I-n\otimes n) : Dp(I-n\otimes n) ]] \\
-& =  [[A_{\Omega}]]\sigma(u)(I-n\otimes n) : Dp(I-n\otimes n)  
-\end{align*}
-}
+% \rood{A: we can simplify as follows, but we don't need to write this formula in the paper as this is too detailed. We have
+% \begin{align*}
+% 	& A_{\Omega}\sigma(u):\epsilon(p)= A_{\Omega}\sigma(u): Dp\\
+% & = A_{\Omega}\sigma(u)n \cdot Dp n + A_{\Omega}\sigma(u)(I-n\otimes n):Dp(I-n\otimes n) 
+% \end{align*}
+% This yields the simplification:
+% \begin{align*}
+% 	%%%%
+% 	\mathfrak{G} & := A_{\Omega}\sigma(u)(I-n\otimes n) : Dp(I-n\otimes n)\\
+% 	&\quad + A_{\Omega}\sigma(v+g)(I-n\otimes n) : Dq(I-n\otimes n) \\ 
+% 			  & \quad - A_{\Omega} \sigma(p) n\cdot {Du} n\\
+% 			  & \quad - A_{\Omega} \sigma(q)n\cdot Dv n \text{ on }\partial\Om.
+% \end{align*}
+% This is a splitting in normal and tangential components, as $A_{\Omega}\sigma(u)(I-n\otimes n)$ and $Dp(I-n\otimes n)$ are tangential for instance.
+% Then, when taking the jump of $\mathfrak{G}$ accross $\partial\Om$, there are a few simplifications, using the transmission conditions, and
+% \begin{align*}
+% & 	[[A_{\Omega}\sigma(u)(I-n\otimes n) : Dp(I-n\otimes n) ]] \\
+% & =  [[A_{\Omega}]]\sigma(u)(I-n\otimes n) : Dp(I-n\otimes n)  
+% \end{align*}
+% }
 
 % \textbf{Bilinear form.}
 % In addition to the state/adjoint problems and the derivative components,
