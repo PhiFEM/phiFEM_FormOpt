@@ -3922,7 +3922,7 @@ def test_37():
     test_path = Path("../results/t37/")
     dim = 2
     rank_dim = 2
-    mesh_size = 0.015
+    mesh_size = 0.012
 
     vertices = np.array(
         [(0.0, 0.0), (2.0, 0.0), (2.0, 0.45), (2.0, 0.55), (2.0, 1.0), (0.0, 1.0)]
@@ -3957,13 +3957,23 @@ def test_37():
         -0.4 - np.sin(np.pi * 3 * (x[0] + 0.5)) * np.cos(np.pi * 6 * x[1])
     )
     md.set_initial_level(ini_lvl)
+
+    # centers = [(2.0, 0.35), (2.0, 0.65), (2.0, 0.0), (2.0, 1.0)]
+    # centers += [(0.0, 0.25), (0.0, 0.5), (0.0, 0.75)]
+    # centers += [(0.3 + i * 0.7, 0.0) for i in range(3)]
+    # centers += [(0.65 + i * 0.7, 0.25) for i in range(2)]
+    # centers += [(0.3 + i * 0.7, 0.5) for i in range(3)]
+    # centers += [(0.65 + i * 0.7, 0.75) for i in range(2)]
+    # centers += [(0.3 + i * 0.7, 1.0) for i in range(3)]
+    # centers = np.array(centers)
+    # radii = np.repeat(0.1, centers.shape[0])
+    # md.create_initial_level(centers, radii)
+
     md.runDP(
-        niter=20,
+        niter=80,
         dfactor=0.001,
         lv_iter=(8, 25),
         lv_time=(0.0001, 0.01),
-        reinit_step=4,
-        reinit_pars=(20, 0.05),
         smooth=True,
     )
 

@@ -1005,12 +1005,6 @@ class SVK(Model):
         self.A = lambda w: conditional(lt(w, 0.0), 1.0, 1e-2)
         self.chi = lambda w: conditional(lt(w, 0.0), 1.0, 0.0)
 
-    def dW(self, F, dF):
-        return inner(F * self.S(self.E(F)), dF)
-
-    def d2W(self, F, dF1, dF2):
-        return inner(dF2 * self.S(self.E(F)) + F * self.S(sym(F.T * dF2)), dF1)
-
     def pde(self, phi):
 
         u = Coefficient(self.space)
@@ -1019,9 +1013,13 @@ class SVK(Model):
         l = Constant(self.domain)
 
         F = self.Id + grad(u)
-        Eq = self.A(phi) * self.dW(F, grad(v)) * self.dx
+        S = self.S(self.E(F))
+
+        Eq = self.A(phi) * inner(F * S, grad(v)) * self.dx
         Eq -= dot(self.g, v) * self.ds_g
-        Jac = self.A(phi) * self.d2W(F, grad(du), grad(v)) * self.dx
+
+        arg = grad(du) * S + F * self.S(sym(F.T * grad(du)))
+        Jac = self.A(phi) * inner(arg, grad(v)) * self.dx
 
         return [(Eq, self.bc, Jac, u, self.u0)]
 
@@ -1032,9 +1030,10 @@ class SVK(Model):
         q = TestFunction(self.space)
 
         F = self.Id + grad(u)
+        S = self.S(self.E(F))
 
-        W = self.A(phi) * self.d2W(F, grad(p), grad(q)) * self.dx
-        W += 2.0 * self.A(phi) * self.dW(F, grad(q)) * self.dx
+        arg = grad(p) * S + F * self.S(sym(F.T * grad(p))) + 2.0 * F * S
+        W = self.A(phi) * inner(arg, grad(q)) * self.dx
 
         return [(W, self.bc)]
 
@@ -1043,7 +1042,10 @@ class SVK(Model):
         u = U[0]
 
         F = self.Id + grad(u)
-        J = self.A(phi) * inner(self.S(self.E(F)), self.E(F)) * self.dx
+        E = self.E(F)
+        S = self.S(E)
+
+        J = self.A(phi) * inner(S, E) * self.dx
         J += self.alpha * self.chi(phi) * self.dx
 
         return J
@@ -1061,16 +1063,14 @@ class SVK(Model):
         E = self.E(F)
         S = self.S(E)
 
-        Q0 = inner(S, E) * self.Id - 2.0 * grad(u).T * F * S
-
-        Q1 = self.dW(F, grad(p)) * self.Id
-
-        Q1 -= grad(u).T * grad(p) * S
-        Q1 -= grad(p).T * F * S
-        Q1 -= grad(u).T * F * self.S(sym(F.T * grad(p)))
+        S1 = inner(S, E) * self.Id - 2.0 * grad(u).T * F * S
+        S1 += inner(F * S, grad(p)) * self.Id
+        S1 -= grad(u).T * grad(p) * S
+        S1 -= grad(p).T * F * S
+        S1 -= grad(u).T * F * self.S(sym(F.T * grad(p)))
 
         S0_J = self.zero_vec
-        S1_J = self.A(phi) * (Q0 + Q1) + self.alpha * self.chi(phi) * self.Id
+        S1_J = self.A(phi) * S1 + self.alpha * self.chi(phi) * self.Id
 
         return (S0_J, []), (S1_J, [])
 
