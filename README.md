@@ -1,4 +1,4 @@
-# FormOpt: A FEniCSx toolbox for level set-based shape and topology optimization supporting parallel computing
+# FormOpt: A FEniCSx toolbox for level set-based shape optimization supporting parallel computing
 
 `FormOpt` is a toolbox for two- and three-dimensional shape with parallel computing capabilities,
 built on the `FEniCSx` software framework. 
