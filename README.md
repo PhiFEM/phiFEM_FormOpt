@@ -21,10 +21,10 @@ If you have any questions, suggestions, or need assistance with this project, fe
 ```
 ├── code/       		# Python scripts and numerical tests
 │ 	├── formopt.py		# Classes and functions
-│ 	├── models.py		# model problems
-│ 	├── test.py			# several tests
-│ 	├── load.py			# load and show numerical results
-│ 	├── plots.py		# functions for plotting
+│ 	├── models.py		# Model problems
+│ 	├── test.py			# Several tests
+│ 	├── load.py			# Load and show numerical results
+│ 	├── plots.py		# Functions for plotting
 │ 	├── Examples.ipynb	# Examples for manuscript
 │	└── Tutorial.ipynb	# Examples with detailed explanations
 ├── tex/        		# LaTeX source files of the article

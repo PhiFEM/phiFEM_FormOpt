@@ -3938,7 +3938,7 @@ def test_37():
 
     domain, nbr_tri, boundary_tags = output
 
-    space = dib.create_space(domain, "CG", rank_dim, 2)
+    space = dib.create_space(domain, "CG", rank_dim)
 
     dirichlet_bcs = dib.homogeneous_dirichlet(
         domain, space, boundary_tags, [dir_mkr], rank_dim
@@ -3953,31 +3953,31 @@ def test_37():
     md.bc_theta = (boundary_tags, [neu_mkr])
     md.ds_theta = dib.marked_ds(domain, boundary_tags, [dir_mkr])[0]
 
-    ini_lvl = lambda x: (
-        -0.4 - np.sin(np.pi * 3 * (x[0] + 0.5)) * np.cos(np.pi * 6 * x[1])
-    )
-    md.set_initial_level(ini_lvl)
+    # ini_lvl = lambda x: (
+    #     -0.4 - np.sin(np.pi * 3 * (x[0] + 0.5)) * np.cos(np.pi * 6 * x[1])
+    # )
+    # md.set_initial_level(ini_lvl)
 
-    # centers = [(2.0, 0.35), (2.0, 0.65), (2.0, 0.0), (2.0, 1.0)]
-    # centers += [(0.0, 0.25), (0.0, 0.5), (0.0, 0.75)]
-    # centers += [(0.3 + i * 0.7, 0.0) for i in range(3)]
-    # centers += [(0.65 + i * 0.7, 0.25) for i in range(2)]
-    # centers += [(0.3 + i * 0.7, 0.5) for i in range(3)]
-    # centers += [(0.65 + i * 0.7, 0.75) for i in range(2)]
-    # centers += [(0.3 + i * 0.7, 1.0) for i in range(3)]
-    # centers = np.array(centers)
-    # radii = np.repeat(0.1, centers.shape[0])
-    # md.create_initial_level(centers, radii)
+    centers = [(2.0, 0.35), (2.0, 0.65), (2.0, 0.0), (2.0, 1.0)]
+    centers += [(0.0, 0.25), (0.0, 0.5), (0.0, 0.75)]
+    centers += [(0.3 + i * 0.7, 0.0) for i in range(3)]
+    centers += [(0.65 + i * 0.7, 0.25) for i in range(2)]
+    centers += [(0.3 + i * 0.7, 0.5) for i in range(3)]
+    centers += [(0.65 + i * 0.7, 0.75) for i in range(2)]
+    centers += [(0.3 + i * 0.7, 1.0) for i in range(3)]
+    centers = np.array(centers)
+    radii = np.repeat(0.07, centers.shape[0])
+    md.create_initial_level(centers, radii)
 
     md.runDP(
-        niter=20,
+        niter=150,
         dfactor=0.001,
         lv_iter=(8, 25),
         lv_time=(0.0001, 0.01),
+        cost_tol=0.001,
         smooth=True,
-        start_to_check=10,
-        reinit_step=2,
-        reinit_pars=(15, 0.001),
+        reinit_step=4,
+        reinit_pars=(4, 0.01),
     )
 
 
