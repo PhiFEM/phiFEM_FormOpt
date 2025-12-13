@@ -1,4 +1,4 @@
-import distributed as dib
+import formopt as fop
 
 # Pre-existing models
 from models import (
@@ -85,7 +85,7 @@ def test_01():
     boundary_parts = [(dir_idx, dir_mkr, "dir"), (neu_idx, neu_mkr, "neu")]
 
     # Create gmsh domain for Data Parallelism
-    output = dib.create_domain_2d_DP(
+    output = fop.create_domain_2d_DP(
         vertices, boundary_parts, mesh_size, path=test_path, plot=False
     )
 
@@ -97,22 +97,22 @@ def test_01():
         print(f"> Nbr of triangles = {nbr_tri}")
 
     # Space for the PDE solution
-    space = dib.create_space(domain, "CG", rank_dim)
+    space = fop.create_space(domain, "CG", rank_dim)
 
     # Dirichlet condition
-    dirichlet_bcs = dib.homogeneous_dirichlet(
+    dirichlet_bcs = fop.homogeneous_dirichlet(
         domain, space, boundary_tags, [dir_mkr], rank_dim
     )
 
     # Boundary to force application
-    ds_g = dib.marked_ds(domain, boundary_tags, [neu_mkr])
+    ds_g = fop.marked_ds(domain, boundary_tags, [neu_mkr])
 
     area = 1.0
     g = (0.0, -2.0)
     # Create the model
     md = Compliance(dim, domain, space, g, ds_g[0], dirichlet_bcs, area, test_path)
 
-    @dib.region_of(domain)
+    @fop.region_of(domain)
     def sub_domain(x):
         # 0.42 < x[1] < 0.58
         # 1.95 < x[0]
@@ -180,11 +180,11 @@ def test_02():
         comm, [[0.0, 0.0, 0.0], [2.0, 1.0, 1.0]], [2 * mesh_size, mesh_size, mesh_size]
     )
 
-    dib.all_connectivities(domain)
-    dib.save_domain(comm, domain, test_path / "domain.xdmf")
+    fop.all_connectivities(domain)
+    fop.save_domain(comm, domain, test_path / "domain.xdmf")
 
     # Space
-    space = dib.create_space(domain, "CG", rank_dim)
+    space = fop.create_space(domain, "CG", rank_dim)
 
     # marker functions
     def boundary_dirichlet(x):
@@ -196,16 +196,16 @@ def test_02():
         return in_plane & in_square
 
     # Dirichlet conditions
-    dirichlet_bcs = dib.homogeneous_dirichlet_fun(
+    dirichlet_bcs = fop.homogeneous_dirichlet_fun(
         domain, space, [boundary_dirichlet], rank_dim
     )
     # Boundary to force application
-    ds_g = dib.fun_ds(domain, [boundary_neumann])
+    ds_g = fop.fun_ds(domain, [boundary_neumann])
     volume, g = 1.0, [0.0, 0.0, -4.0]
     # Create the model
     md = Compliance(dim, domain, space, g, ds_g[0], dirichlet_bcs, volume, test_path)
 
-    @dib.region_of(domain)
+    @fop.region_of(domain)
     def sub_domain(x):
         ineqs = [x[1] - 0.35, 0.65 - x[1], x[2] - 0.35, 0.65 - x[2], x[0] - 1.90]
         return ineqs
@@ -312,7 +312,7 @@ def test_03():
     ]
 
     # Create gmsh domain for Data Parallelism
-    output = dib.create_domain_2d_DP(
+    output = fop.create_domain_2d_DP(
         vertices, boundary_parts, mesh_size, path=test_path, plot=False
     )
 
@@ -324,13 +324,13 @@ def test_03():
         print(f"> Nbr of triangles = {nbr_tri}")
 
     # Space
-    space = dib.create_space(domain, "CG", rank_dim)
+    space = fop.create_space(domain, "CG", rank_dim)
     # Dirichlet conditions
-    dirichlet_bcs = dib.homogeneous_dirichlet(
+    dirichlet_bcs = fop.homogeneous_dirichlet(
         domain, space, boundary_tags, [dir_mkr], rank_dim
     )
     # Boundary to force application
-    ds_g = dib.marked_ds(domain, boundary_tags, [neu_mkr_bot, neu_mkr_top])
+    ds_g = fop.marked_ds(domain, boundary_tags, [neu_mkr_bot, neu_mkr_top])
     area = 0.5
     g = [(0.0, -2.0), (0.0, -2.0)]
     # Create the model
@@ -391,7 +391,7 @@ def test_04():
     ]
 
     # Create gmsh domain for Task Parallelism
-    output = dib.create_domain_2d_TP(
+    output = fop.create_domain_2d_TP(
         vertices, boundary_parts, mesh_size, path=test_path, plot=True
     )
 
@@ -403,13 +403,13 @@ def test_04():
         print(f"> Nbr of triangles = {nbr_tri}")
 
     # Space
-    space = dib.create_space(domain, "CG", rank_dim)
+    space = fop.create_space(domain, "CG", rank_dim)
     # Dirichlet conditions
-    dirichlet_bcs = dib.homogeneous_dirichlet(
+    dirichlet_bcs = fop.homogeneous_dirichlet(
         domain, space, boundary_tags, [dir_mkr], rank_dim
     )
     # Boundary to force application
-    ds_g = dib.marked_ds(domain, boundary_tags, [neu_mkr_bot, neu_mkr_top])
+    ds_g = fop.marked_ds(domain, boundary_tags, [neu_mkr_bot, neu_mkr_top])
     area = 0.5
     g = [(0.0, -2.0), (0.0, -2.0)]
     # Create the model
@@ -499,7 +499,7 @@ def test_05():
     ]
 
     # Create gmsh domain for Mix Parallelism
-    output = dib.create_domain_2d_MP(
+    output = fop.create_domain_2d_MP(
         sub_comm, color, vertices, boundary_parts, mesh_size, path=test_path, plot=False
     )
 
@@ -511,13 +511,13 @@ def test_05():
         print(f"> Nbr of triangles = {nbr_tri}")
 
     # Space
-    space = dib.create_space(domain, "CG", rank_dim)
+    space = fop.create_space(domain, "CG", rank_dim)
     # Dirichlet conditions
-    dirichlet_bcs = dib.homogeneous_dirichlet(
+    dirichlet_bcs = fop.homogeneous_dirichlet(
         domain, space, boundary_tags, [dir_mkr], rank_dim
     )
     # Boundary to force application
-    ds_g = dib.marked_ds(domain, boundary_tags, [neu_mkr_bot, neu_mkr_top])
+    ds_g = fop.marked_ds(domain, boundary_tags, [neu_mkr_bot, neu_mkr_top])
     area = 0.5
     g = [(0.0, -2.0), (0.0, -2.0)]
     # Create the model
@@ -624,7 +624,7 @@ def test_06():
     filename = test_path / "domain0.msh"
 
     # Create the gmsh domain0.msh
-    nbr_tri0 = dib.build_gmsh_model_2d(
+    nbr_tri0 = fop.build_gmsh_model_2d(
         vertices,
         boundary_parts,
         0.6 * mesh_size,
@@ -634,27 +634,27 @@ def test_06():
     )
 
     # Read the domain0
-    output = dib.read_gmsh(filename, comm, dim=2)
+    output = fop.read_gmsh(filename, comm, dim=2)
 
     domain0, _, boundary_tags = output
 
     # Set all connectivities on domain0
-    dib.all_connectivities(domain0)
+    fop.all_connectivities(domain0)
 
     # Space for data generation
-    space0 = dib.create_space(domain0, "CG", rank_dim)
+    space0 = fop.create_space(domain0, "CG", rank_dim)
     # Forces
     forces = [(-1.0, -1.0), (0.0, -1.0), (1.0, -1.0)]
 
     # Dirichlet boundary conditions
-    dirbc_partial = dib.homogeneous_dirichlet(
+    dirbc_partial = fop.homogeneous_dirichlet(
         domain0, space0, boundary_tags, [dir_mkr], rank_dim
     )
 
-    dirbc_total = dib.homogeneus_boundary(domain0, space0, dim, rank_dim)
+    dirbc_total = fop.homogeneus_boundary(domain0, space0, dim, rank_dim)
 
     # Create measures to apply Neumman condition
-    ds_parts = dib.marked_ds(
+    ds_parts = fop.marked_ds(
         domain0, boundary_tags, [bR_mkr, neu_mkrA, neu_mkrB, neu_mkrC, bL_mkr]
     )
 
@@ -701,7 +701,7 @@ def test_06():
         return np.log(25.0 * values + 1.0)
 
     # Dirichlet extensions
-    extensions = dib.dir_extension_from(
+    extensions = fop.dir_extension_from(
         comm, domain0, space0, md0.pde0, beam_equation, test_path
     )
 
@@ -727,7 +727,7 @@ def test_06():
     ]
 
     # Create gmsh domain for Data Parallelism
-    output = dib.create_domain_2d_DP(
+    output = fop.create_domain_2d_DP(
         vertices, boundary_parts, mesh_size, path=test_path, plot=False
     )
 
@@ -740,14 +740,14 @@ def test_06():
         print(f"> Nbr of triangles for data generation = {nbr_tri0}")
 
     # Space
-    space = dib.create_space(domain, "CG", rank_dim)
+    space = fop.create_space(domain, "CG", rank_dim)
     # Dirichlet boundary conditions
-    dirbc_partial = dib.homogeneous_dirichlet(
+    dirbc_partial = fop.homogeneous_dirichlet(
         domain, space, boundary_tags, [dir_mkr], rank_dim
     )
-    dirbc_total = dib.homogeneus_boundary(domain, space, dim, rank_dim)
+    dirbc_total = fop.homogeneus_boundary(domain, space, dim, rank_dim)
     # Boundary to apply Neumann conditions
-    ds_parts = dib.marked_ds(
+    ds_parts = fop.marked_ds(
         domain, boundary_tags, [bR_mkr, neu_mkrA, neu_mkrB, neu_mkrC, bL_mkr]
     )
 
@@ -768,17 +768,17 @@ def test_06():
     )
 
     # Space for interpolation (degree = 2)
-    g_space = dib.create_space(domain, "CG", rank_dim, degree=2)
+    g_space = fop.create_space(domain, "CG", rank_dim, degree=2)
     # Interpolation between different spaces
     # from different domains
-    g_funcs = dib.space_interpolation(
+    g_funcs = fop.space_interpolation(
         from_space=space0, funcs=extensions, to_space=g_space
     )
 
     # To save as P1 functions
-    g_space_1 = dib.create_space(domain, "CG", rank_dim)
-    g_funcs_1 = dib.interpolate(funcs=g_funcs, to_space=g_space_1, name="g")
-    dib.save_functions(comm, domain, g_funcs_1, test_path / "gP1.xdmf")
+    g_space_1 = fop.create_space(domain, "CG", rank_dim)
+    g_funcs_1 = fop.interpolate(funcs=g_funcs, to_space=g_space_1, name="g")
+    fop.save_functions(comm, domain, g_funcs_1, test_path / "gP1.xdmf")
 
     md.gs = g_funcs
 
@@ -883,7 +883,7 @@ def test_07():
 
     filename = test_path / "domain0.msh"
 
-    nbr_tri0 = dib.build_gmsh_model_2d(
+    nbr_tri0 = fop.build_gmsh_model_2d(
         vertices,
         boundary_parts,
         0.6 * mesh_size,
@@ -894,25 +894,25 @@ def test_07():
 
     if rank == 0:
         # Read the domain0 in rank = 0
-        output = dib.read_gmsh(filename, comm_self, 2)
+        output = fop.read_gmsh(filename, comm_self, 2)
 
         domain0, _, boundary_tags = output
-        dib.all_connectivities(domain0)
+        fop.all_connectivities(domain0)
 
         # Space defined in rank = 0
-        space0 = dib.create_space(domain0, "CG", rank_dim)
+        space0 = fop.create_space(domain0, "CG", rank_dim)
         # three forces
         forces = [(-1.0, -1.0), (0.0, -1.0), (1.0, -1.0)]
 
         # Dirichlet boundary conditions
-        dirbc_partial = dib.homogeneous_dirichlet(
+        dirbc_partial = fop.homogeneous_dirichlet(
             domain0, space0, boundary_tags, [dir_mkr], rank_dim
         )
 
-        dirbc_total = dib.homogeneus_boundary(domain0, space0, dim, rank_dim)
+        dirbc_total = fop.homogeneus_boundary(domain0, space0, dim, rank_dim)
 
         # Measures
-        ds_parts = dib.marked_ds(
+        ds_parts = fop.marked_ds(
             domain0, boundary_tags, [bR_mkr, neu_mkrA, neu_mkrB, neu_mkrC, bL_mkr]
         )
 
@@ -948,7 +948,7 @@ def test_07():
             vals = (x_irot**2 + y_irot**2) ** 2 - ampl * (x_irot**3 + y_irot**3)
             return np.log(25 * vals + 1.0)
 
-        extensions = dib.dir_extension_from(
+        extensions = fop.dir_extension_from(
             comm_self, domain0, space0, md0.pde0, beam_equation, test_path
         )
 
@@ -974,7 +974,7 @@ def test_07():
     ]
 
     # Create gmsh domain for Task Parallelism
-    output = dib.create_domain_2d_TP(
+    output = fop.create_domain_2d_TP(
         vertices, boundary_parts, mesh_size, path=test_path, plot=False
     )
 
@@ -987,14 +987,14 @@ def test_07():
         print(f"> Nbr of triangles for data generation = {nbr_tri0}")
 
     # Space
-    space = dib.create_space(domain, "CG", rank_dim)
+    space = fop.create_space(domain, "CG", rank_dim)
     # Dirichlet boundary conditions
-    dirbc_partial = dib.homogeneous_dirichlet(
+    dirbc_partial = fop.homogeneous_dirichlet(
         domain, space, boundary_tags, [dir_mkr], rank_dim
     )
-    dirbc_total = dib.homogeneus_boundary(domain, space, dim, rank_dim)
+    dirbc_total = fop.homogeneus_boundary(domain, space, dim, rank_dim)
     # Boundary to force application
-    ds_parts = dib.marked_ds(
+    ds_parts = fop.marked_ds(
         domain, boundary_tags, [bR_mkr, neu_mkrA, neu_mkrB, neu_mkrC, bL_mkr]
     )
 
@@ -1015,17 +1015,17 @@ def test_07():
         test_path,
     )
 
-    g_space = dib.create_space(domain, "CG", rank_dim, degree=2)
+    g_space = fop.create_space(domain, "CG", rank_dim, degree=2)
     if rank == 0:
         # Interpolation
-        g_funcs = dib.space_interpolation(
+        g_funcs = fop.space_interpolation(
             from_space=space0, funcs=extensions, to_space=g_space
         )
 
         # Save
-        g_space_1 = dib.create_space(domain, "CG", rank_dim)
-        g_funcs_1 = dib.interpolate(funcs=g_funcs, to_space=g_space_1, name="g")
-        dib.save_functions(comm_self, domain, g_funcs_1, test_path / "gP1.xdmf")
+        g_space_1 = fop.create_space(domain, "CG", rank_dim)
+        g_funcs_1 = fop.interpolate(funcs=g_funcs, to_space=g_space_1, name="g")
+        fop.save_functions(comm_self, domain, g_funcs_1, test_path / "gP1.xdmf")
 
         g_values = np.vstack([g.x.array[:] for g in g_funcs])
 
@@ -1034,7 +1034,7 @@ def test_07():
 
     g_values = comm.bcast(g_values, root=0)
 
-    md.gs = dib.get_funcs_from(g_space, g_values)
+    md.gs = fop.get_funcs_from(g_space, g_values)
 
     # Initial guess: centers and radii
     centers = np.array([(0.0, 0.4)])
@@ -1135,7 +1135,7 @@ def test_08():
 
     filename = test_path / "domain0.msh"
 
-    nbr_tri0 = dib.build_gmsh_model_2d(
+    nbr_tri0 = fop.build_gmsh_model_2d(
         vertices,
         boundary_parts,
         0.6 * mesh_size,
@@ -1146,25 +1146,25 @@ def test_08():
 
     if color == 0:
         # Read the domain0 in rank = 0
-        output = dib.read_gmsh(filename, sub_comm, 2)
+        output = fop.read_gmsh(filename, sub_comm, 2)
 
         domain0, _, boundary_tags = output
-        dib.all_connectivities(domain0)
+        fop.all_connectivities(domain0)
 
         # Space defined in rank = 0
-        space0 = dib.create_space(domain0, "CG", rank_dim)
+        space0 = fop.create_space(domain0, "CG", rank_dim)
         # three forces
         forces = [(-1.0, -1.0), (0.0, -1.0), (1.0, -1.0)]
 
         # Dirichlet boundary conditions
-        dirbc_partial = dib.homogeneous_dirichlet(
+        dirbc_partial = fop.homogeneous_dirichlet(
             domain0, space0, boundary_tags, [dir_mkr], rank_dim
         )
 
-        dirbc_total = dib.homogeneus_boundary(domain0, space0, dim, rank_dim)
+        dirbc_total = fop.homogeneus_boundary(domain0, space0, dim, rank_dim)
 
         # Measures
-        ds_parts = dib.marked_ds(
+        ds_parts = fop.marked_ds(
             domain0, boundary_tags, [bR_mkr, neu_mkrA, neu_mkrB, neu_mkrC, bL_mkr]
         )
 
@@ -1202,7 +1202,7 @@ def test_08():
             values = left_part - right_part
             return np.log(25.0 * values + 1.0)
 
-        extensions = dib.dir_extension_from(
+        extensions = fop.dir_extension_from(
             sub_comm, domain0, space0, md0.pde0, beam_equation, test_path
         )
 
@@ -1228,7 +1228,7 @@ def test_08():
     ]
 
     # Create gmsh domain for Mix Parallelism
-    output = dib.create_domain_2d_MP(
+    output = fop.create_domain_2d_MP(
         sub_comm, color, vertices, boundary_parts, mesh_size, path=test_path, plot=False
     )
     domain, nbr_tri, boundary_tags = output
@@ -1240,15 +1240,15 @@ def test_08():
         print(f"> Nbr of triangles for data generation = {nbr_tri0}")
 
     # Space
-    space = dib.create_space(domain, "CG", rank_dim)
+    space = fop.create_space(domain, "CG", rank_dim)
     # Dirichlet boundary conditions
-    dirbc_partial = dib.homogeneous_dirichlet(
+    dirbc_partial = fop.homogeneous_dirichlet(
         domain, space, boundary_tags, [dir_mkr], rank_dim
     )
-    dirbc_total = dib.homogeneus_boundary(domain, space, dim, rank_dim)
+    dirbc_total = fop.homogeneus_boundary(domain, space, dim, rank_dim)
 
     # Boundary to force application
-    ds_parts = dib.marked_ds(
+    ds_parts = fop.marked_ds(
         domain, boundary_tags, [bR_mkr, neu_mkrA, neu_mkrB, neu_mkrC, bL_mkr]
     )
 
@@ -1268,18 +1268,18 @@ def test_08():
         test_path,
     )
 
-    g_space = dib.create_space(domain, "CG", rank_dim, degree=2)
+    g_space = fop.create_space(domain, "CG", rank_dim, degree=2)
 
     if color == 0:
         # Interpolation
-        g_funcs = dib.space_interpolation(
+        g_funcs = fop.space_interpolation(
             from_space=space0, funcs=extensions, to_space=g_space
         )
 
         # Save
-        g_space_1 = dib.create_space(domain, "CG", rank_dim)
-        g_funcs_1 = dib.interpolate(funcs=g_funcs, to_space=g_space_1, name="g")
-        dib.save_functions(sub_comm, domain, g_funcs_1, test_path / "gP1.xdmf")
+        g_space_1 = fop.create_space(domain, "CG", rank_dim)
+        g_funcs_1 = fop.interpolate(funcs=g_funcs, to_space=g_space_1, name="g")
+        fop.save_functions(sub_comm, domain, g_funcs_1, test_path / "gP1.xdmf")
 
         g_values_loc = np.vstack([g.x.array[:] for g in g_funcs])
 
@@ -1288,7 +1288,7 @@ def test_08():
 
     g_values = comm.allgather(g_values_loc)
 
-    md.gs = dib.get_funcs_from(g_space, g_values[sub_comm.rank])
+    md.gs = fop.get_funcs_from(g_space, g_values[sub_comm.rank])
 
     # Initial guess: centers and radii
     centers = np.array([(0.0, 0.4)])
@@ -1328,7 +1328,7 @@ def test_09():
     boundary_parts = [(dir_idx, dir_mkr, "dir")]
 
     # Create gmsh domain for Data Parallelism
-    output = dib.create_domain_2d_DP(
+    output = fop.create_domain_2d_DP(
         vertices, boundary_parts, mesh_size, path=test_path, plot=False
     )
 
@@ -1340,16 +1340,16 @@ def test_09():
         print(f"> Nbr of triangles = {nbr_tri}")
 
     # Space
-    space = dib.create_space(domain, "CG", rank_dim)
+    space = fop.create_space(domain, "CG", rank_dim)
     # Dirichlet conditions
-    dirichlet_bcs = dib.homogeneous_dirichlet(
+    dirichlet_bcs = fop.homogeneous_dirichlet(
         domain, space, boundary_tags, [dir_mkr], rank_dim
     )
     area = 0.25
     # Create the model
     md = Heat(dim, domain, space, dirichlet_bcs, area, test_path)
 
-    @dib.region_of(domain)
+    @fop.region_of(domain)
     def sub_domain(x):
         ineqs = [x[0] - 0.3, 0.7 - x[0], 0.05 - x[1]]
         return ineqs
@@ -1408,7 +1408,7 @@ def test_10():
     ]
 
     # Create gmsh domain for Data Parallelism
-    output = dib.create_domain_2d_DP(
+    output = fop.create_domain_2d_DP(
         vertices, boundary_parts, mesh_size, path=test_path, plot=False
     )
 
@@ -1420,26 +1420,26 @@ def test_10():
         print(f"> Nbr of triangles = {nbr_tri}")
 
     # Space
-    space = dib.create_space(domain, "CG", rank_dim)
+    space = fop.create_space(domain, "CG", rank_dim)
     # Dirichlet conditions
-    dirichlet_bcs = dib.homogeneus_boundary(domain, space, dim, rank_dim)
+    dirichlet_bcs = fop.homogeneus_boundary(domain, space, dim, rank_dim)
     area = 0.6
     # Create the model
     md = Heat(dim, domain, space, dirichlet_bcs, area, test_path)
 
-    @dib.region_of(domain)
+    @fop.region_of(domain)
     def sub_domain1(x):
         return [0.1 - x[1]]
 
-    @dib.region_of(domain)
+    @fop.region_of(domain)
     def sub_domain2(x):
         return [x[0] - 0.9]
 
-    @dib.region_of(domain)
+    @fop.region_of(domain)
     def sub_domain3(x):
         return [x[1] - 0.9]
 
-    @dib.region_of(domain)
+    @fop.region_of(domain)
     def sub_domain4(x):
         return [0.1 - x[0]]
 
@@ -1499,7 +1499,7 @@ def test_11():
     ]
 
     # Create gmsh domain for Data Parallelism
-    output = dib.create_domain_2d_DP(
+    output = fop.create_domain_2d_DP(
         vertices, boundary_parts, mesh_size, path=test_path, plot=False
     )
 
@@ -1511,9 +1511,9 @@ def test_11():
         print(f"> Nbr of triangles = {nbr_tri}")
 
     # Space
-    space = dib.create_space(domain, "CG", rank_dim)
+    space = fop.create_space(domain, "CG", rank_dim)
     # Dirichlet conditions
-    dirichlet_bcs = dib.homogeneus_boundary(domain, space, dim, rank_dim)
+    dirichlet_bcs = fop.homogeneus_boundary(domain, space, dim, rank_dim)
     area = 0.5
     # Create the model
     md = Heat(dim, domain, space, dirichlet_bcs, area, test_path, "1Load")
@@ -1584,7 +1584,7 @@ def test_12():
     boundary_parts = [(dir1_idx, dir1_mkr, "dir1"), (dir2_idx, dir2_mkr, "dir2")]
 
     # Create gmsh domain for Data Parallelism
-    output = dib.create_domain_2d_DP(
+    output = fop.create_domain_2d_DP(
         vertices, boundary_parts, mesh_size, path=test_path, plot=False
     )
 
@@ -1596,9 +1596,9 @@ def test_12():
         print(f"> Nbr of triangles = {nbr_tri}")
 
     # Space
-    space = dib.create_space(domain, "CG", rank_dim)
+    space = fop.create_space(domain, "CG", rank_dim)
     # Dirichlet conditions
-    dirichlet_bcs = dib.homogeneous_dirichlet(
+    dirichlet_bcs = fop.homogeneous_dirichlet(
         domain, space, boundary_tags, [dir1_mkr, dir2_mkr], rank_dim
     )
 
@@ -1606,14 +1606,14 @@ def test_12():
     # Create the model
     md = Heat(dim, domain, space, dirichlet_bcs, area, test_path)
 
-    @dib.region_of(domain)
+    @fop.region_of(domain)
     def sub_domain1(x):
         # 0.3 < x < 0.7
         # y < 0.05
         ineqs = (x[0] - 0.3, 0.7 - x[0], 0.05 - x[1])
         return ineqs
 
-    @dib.region_of(domain)
+    @fop.region_of(domain)
     def sub_domain2(x):
         # 0.95 < x
         # 0.3 < y < 0.7
@@ -1705,7 +1705,7 @@ def test_13():
     boundary_parts = [(dir1_idx, dir1_mkr, "dir1"), (dir2_idx, dir2_mkr, "dir2")]
 
     # Create gmsh domain for Data Parallelism
-    output = dib.create_domain_2d_TP(
+    output = fop.create_domain_2d_TP(
         vertices, boundary_parts, mesh_size, path=test_path, plot=False
     )
 
@@ -1717,9 +1717,9 @@ def test_13():
         print(f"> Nbr of triangles = {nbr_tri}")
 
     # Space
-    space = dib.create_space(domain, "CG", rank_dim)
+    space = fop.create_space(domain, "CG", rank_dim)
     # Dirichlet conditions
-    dirichlet_bcs = dib.homogeneous_dirichlet(
+    dirichlet_bcs = fop.homogeneous_dirichlet(
         domain, space, boundary_tags, [dir1_mkr, dir2_mkr], rank_dim
     )
 
@@ -1729,14 +1729,14 @@ def test_13():
     # Create the model
     md = HeatPlus(dim, domain, space, dir_bcs, area, test_path)
 
-    @dib.region_of(domain)
+    @fop.region_of(domain)
     def sub_domain1(x):
         # 0.3 < x < 0.7
         # y < 0.05
         ineqs = (x[0] - 0.3, 0.7 - x[0], 0.05 - x[1])
         return ineqs
 
-    @dib.region_of(domain)
+    @fop.region_of(domain)
     def sub_domain2(x):
         # 0.95 < x
         # 0.3 < y < 0.7
@@ -1803,14 +1803,14 @@ def test_14(test_path=Path("../results/t14/"), r=10.0):
     rank_dim = 1
     mesh_size = 0.012
     vertices = np.array([(0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)])
-    output = dib.create_domain_2d_DP(
+    output = fop.create_domain_2d_DP(
         vertices, [], mesh_size, path=test_path, plot=False
     )
 
     domain, nbr_tri, boundary_tags = output
 
     # Space for the PDE solution
-    space = dib.create_space(domain, "CG", rank_dim)
+    space = fop.create_space(domain, "CG", rank_dim)
     vol = 0.5
     # Initial guess for Newton
     u0 = lambda x: (1 + 0.2 * np.sin(6 * np.pi * x[0]) * np.sin(6 * np.pi * x[1]))
@@ -1868,14 +1868,14 @@ def test_17(test_path=Path("../results/t17/"), vol=0.3):
 
     vertices = np.array([(0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)])
 
-    output = dib.create_domain_2d_DP(
+    output = fop.create_domain_2d_DP(
         vertices, [], mesh_size, path=test_path, plot=False
     )
 
     domain, nbr_tri, boundary_tags = output
 
     # Space for the PDE solution
-    space = dib.create_space(domain, "CG", rank_dim)
+    space = fop.create_space(domain, "CG", rank_dim)
 
     # Create the model
     md = Logistic(dim, domain, space, test_path)
@@ -1952,7 +1952,7 @@ def test_18():
     ]
 
     # Create gmsh domain for Task Parallelism
-    output = dib.create_domain_2d_DP(
+    output = fop.create_domain_2d_DP(
         vertices, boundary_parts, mesh_size, path=test_path, plot=False
     )
 
@@ -1964,26 +1964,26 @@ def test_18():
         print(f"> Nbr of triangles = {nbr_tri}")
 
     # Space
-    space = dib.create_space(domain, "CG", rank_dim)
+    space = fop.create_space(domain, "CG", rank_dim)
     # Dirichlet conditions
-    dirichlet_bcs = dib.homogeneous_dirichlet(
+    dirichlet_bcs = fop.homogeneous_dirichlet(
         domain, space, boundary_tags, [dir_mkr], rank_dim
     )
     # Boundary to force application
-    ds_g = dib.marked_ds(domain, boundary_tags, [neu_mkr_bot, neu_mkr_right])
+    ds_g = fop.marked_ds(domain, boundary_tags, [neu_mkr_bot, neu_mkr_right])
     area = 1.1
     g = [(0.0, -2.0), (0.0, 2.0)]
     # Create the model
     md = CompliancePlus(dim, domain, space, g, ds_g, dirichlet_bcs, area, test_path)
 
-    @dib.region_of(domain)
+    @fop.region_of(domain)
     def sub_domain_right(x):
         # 0.42 < x[1] < 0.58
         # 1.95 < x[0]
         ineqs = [x[1] - 0.42, 0.58 - x[1], x[0] - 1.95]
         return ineqs
 
-    @dib.region_of(domain)
+    @fop.region_of(domain)
     def sub_domain_bottom(x):
         # 0.94 < x[0] < 1.06
         # x[1] < 0.05
@@ -2063,7 +2063,7 @@ def test_19():
     ]
 
     # Create gmsh domain for Task Parallelism
-    output = dib.create_domain_2d_TP(
+    output = fop.create_domain_2d_TP(
         vertices, boundary_parts, mesh_size, path=test_path, plot=False
     )
 
@@ -2075,26 +2075,26 @@ def test_19():
         print(f"> Nbr of triangles = {nbr_tri}")
 
     # Space
-    space = dib.create_space(domain, "CG", rank_dim)
+    space = fop.create_space(domain, "CG", rank_dim)
     # Dirichlet conditions
-    dirichlet_bcs = dib.homogeneous_dirichlet(
+    dirichlet_bcs = fop.homogeneous_dirichlet(
         domain, space, boundary_tags, [dir_mkr], rank_dim
     )
     # Boundary to force application
-    ds_g = dib.marked_ds(domain, boundary_tags, [neu_mkr_bot, neu_mkr_right])
+    ds_g = fop.marked_ds(domain, boundary_tags, [neu_mkr_bot, neu_mkr_right])
     area = 1.1
     g = [(0.0, -2.0), (0.0, 2.0)]
     # Create the model
     md = CompliancePlus(dim, domain, space, g, ds_g, dirichlet_bcs, area, test_path)
 
-    @dib.region_of(domain)
+    @fop.region_of(domain)
     def sub_domain_right(x):
         # 0.42 < x[1] < 0.58
         # 1.95 < x[0]
         ineqs = [x[1] - 0.42, 0.58 - x[1], x[0] - 1.95]
         return ineqs
 
-    @dib.region_of(domain)
+    @fop.region_of(domain)
     def sub_domain_bottom(x):
         # 0.94 < x[0] < 1.06
         # x[1] < 0.05
@@ -2158,7 +2158,7 @@ def test_20():
     boundary_parts = [(dir_idx, dir_mkr, "dir"), (neu_idx, neu_mkr, "neu")]
 
     # Create gmsh domain for Data Parallelism
-    output = dib.create_domain_2d_DP(
+    output = fop.create_domain_2d_DP(
         vertices, boundary_parts, mesh_size, path=test_path, plot=False
     )
 
@@ -2170,15 +2170,15 @@ def test_20():
         print(f"> Nbr of triangles = {nbr_tri}")
 
     # Space for the PDE solution
-    space = dib.create_space(domain, "CG", rank_dim)
+    space = fop.create_space(domain, "CG", rank_dim)
 
     # Dirichlet condition
-    dirichlet_bcs = dib.homogeneous_dirichlet(
+    dirichlet_bcs = fop.homogeneous_dirichlet(
         domain, space, boundary_tags, [dir_mkr], rank_dim
     )
 
     # Boundary to force application
-    ds_g = dib.marked_ds(domain, boundary_tags, [neu_mkr])
+    ds_g = fop.marked_ds(domain, boundary_tags, [neu_mkr])
 
     area = 1.0
     g = (0.0, -2.0)
@@ -2306,7 +2306,7 @@ def test_21():
     ]
 
     # Create gmsh domain for Data Parallelism
-    output = dib.create_domain_2d_DP(
+    output = fop.create_domain_2d_DP(
         vertices, boundary_parts, mesh_size, path=test_path, plot=False
     )
 
@@ -2318,9 +2318,9 @@ def test_21():
         print(f"> Nbr of triangles = {nbr_tri}")
 
     # Space
-    space = dib.create_space(domain, "CG", rank_dim)
+    space = fop.create_space(domain, "CG", rank_dim)
     # Dirichlet conditions
-    dirichlet_bcs = dib.homogeneous_dirichlet(
+    dirichlet_bcs = fop.homogeneous_dirichlet(
         domain, space, boundary_tags, [dir1_mkr, dir2_mkr, dir3_mkr, dir4_mkr], rank_dim
     )
 
@@ -2410,7 +2410,7 @@ def test_22():
     ]
 
     # Create gmsh domain for Task Parallelism
-    output = dib.create_domain_2d_TP(
+    output = fop.create_domain_2d_TP(
         vertices, boundary_parts, mesh_size, path=test_path, plot=False
     )
 
@@ -2422,9 +2422,9 @@ def test_22():
         print(f"> Nbr of triangles = {nbr_tri}")
 
     # Space
-    space = dib.create_space(domain, "CG", rank_dim)
+    space = fop.create_space(domain, "CG", rank_dim)
     # Dirichlet conditions
-    dirichlet_bcs = dib.homogeneous_dirichlet(
+    dirichlet_bcs = fop.homogeneous_dirichlet(
         domain, space, boundary_tags, [dir1_mkr, dir2_mkr, dir3_mkr, dir4_mkr], rank_dim
     )
     dir_bcs = 4 * [dirichlet_bcs]
@@ -2441,19 +2441,19 @@ def test_22():
     md.wt = [0.25, 0.25, 0.25, 0.25]
     centers = []
 
-    @dib.region_of(domain)
+    @fop.region_of(domain)
     def sub_domain1(x):
         return [0.12**2 - (x[0] - 0.5) ** 2 - (x[1] - 0.25) ** 2]
 
-    @dib.region_of(domain)
+    @fop.region_of(domain)
     def sub_domain2(x):
         return [0.12**2 - (x[0] - 0.75) ** 2 - (x[1] - 0.5) ** 2]
 
-    @dib.region_of(domain)
+    @fop.region_of(domain)
     def sub_domain3(x):
         return [0.12**2 - (x[0] - 0.5) ** 2 - (x[1] - 0.75) ** 2]
 
-    @dib.region_of(domain)
+    @fop.region_of(domain)
     def sub_domain4(x):
         return [0.12**2 - (x[0] - 0.25) ** 2 - (x[1] - 0.5) ** 2]
 
@@ -2546,7 +2546,7 @@ def test_23():
         (dir4_idx, dir4_mkr, "dir4"),
     ]
 
-    output = dib.create_domain_2d_MP(
+    output = fop.create_domain_2d_MP(
         sub_comm, color, vertices, boundary_parts, mesh_size, path=test_path, plot=False
     )
 
@@ -2558,9 +2558,9 @@ def test_23():
         print(f"> Nbr of triangles = {nbr_tri}")
 
     # Space
-    space = dib.create_space(domain, "CG", rank_dim)
+    space = fop.create_space(domain, "CG", rank_dim)
     # Dirichlet conditions
-    dirichlet_bcs = dib.homogeneous_dirichlet(
+    dirichlet_bcs = fop.homogeneous_dirichlet(
         domain, space, boundary_tags, [dir1_mkr, dir2_mkr, dir3_mkr, dir4_mkr], rank_dim
     )
     dir_bcs = 4 * [dirichlet_bcs]
@@ -2577,19 +2577,19 @@ def test_23():
     md.wt = [0.25, 0.25, 0.25, 0.25]
     centers = []
 
-    @dib.region_of(domain)
+    @fop.region_of(domain)
     def sub_domain1(x):
         return [0.12**2 - (x[0] - 0.5) ** 2 - (x[1] - 0.25) ** 2]
 
-    @dib.region_of(domain)
+    @fop.region_of(domain)
     def sub_domain2(x):
         return [0.12**2 - (x[0] - 0.75) ** 2 - (x[1] - 0.5) ** 2]
 
-    @dib.region_of(domain)
+    @fop.region_of(domain)
     def sub_domain3(x):
         return [0.12**2 - (x[0] - 0.5) ** 2 - (x[1] - 0.75) ** 2]
 
-    @dib.region_of(domain)
+    @fop.region_of(domain)
     def sub_domain4(x):
         return [0.12**2 - (x[0] - 0.25) ** 2 - (x[1] - 0.5) ** 2]
 
@@ -2680,7 +2680,7 @@ def test_31():
     ]
 
     # Create gmsh domain for Data Parallelism
-    output = dib.create_domain_2d_DP(
+    output = fop.create_domain_2d_DP(
         vertices, boundary_parts, mesh_size, path=test_path, plot=False
     )
 
@@ -2692,29 +2692,29 @@ def test_31():
         print(f"> Nbr of triangles = {nbr_tri}")
 
     # Space for the PDE solution
-    space = dib.create_space(domain, "CG", rank_dim)
+    space = fop.create_space(domain, "CG", rank_dim)
 
     # Dirichlet condition
-    dirichlet_bcs = dib.homogeneous_dirichlet(
+    dirichlet_bcs = fop.homogeneous_dirichlet(
         domain, space, boundary_tags, [dir_mkr, dir_mkr2], rank_dim
     )
 
     # Boundary to force application
-    ds_g = dib.marked_ds(domain, boundary_tags, [rob_mkr, neu_mkr])
+    ds_g = fop.marked_ds(domain, boundary_tags, [rob_mkr, neu_mkr])
 
     area = 0.2
     g = (0.5, 0.0)
     # Create the model
     md = Mechanism(dim, domain, space, g, ds_g, dirichlet_bcs, area, test_path)
 
-    @dib.region_of(domain)
+    @fop.region_of(domain)
     def sub_domain1(x):
         # 0.42 < x[1] < 0.58
         # 0.90 < x[0]
         ineqs = [x[1] - 0.46, 0.54 - x[1], x[0] - 0.90]
         return ineqs
 
-    @dib.region_of(domain)
+    @fop.region_of(domain)
     def sub_domain2(x):
         # 0.42 < x[1] < 0.58
         # x[0] < 0.1
@@ -2820,7 +2820,7 @@ def test_33():
     ]
 
     # Create gmsh domain for Data Parallelism
-    output = dib.create_domain_2d_DP(
+    output = fop.create_domain_2d_DP(
         vertices, boundary_parts, mesh_size, path=test_path, plot=False
     )
 
@@ -2832,15 +2832,15 @@ def test_33():
         print(f"> Nbr of triangles = {nbr_tri}")
 
     # Space for the PDE solution
-    space = dib.create_space(domain, "CG", rank_dim)
+    space = fop.create_space(domain, "CG", rank_dim)
 
     # Dirichlet condition
-    dirichlet_bcs = dib.homogeneous_dirichlet(
+    dirichlet_bcs = fop.homogeneous_dirichlet(
         domain, space, boundary_tags, [dirR_mkr, dirL_mkr], rank_dim
     )
 
     # Boundary to force application
-    ds_g = dib.marked_ds(
+    ds_g = fop.marked_ds(
         domain, boundary_tags, [neuRT_mkr, neuRB_mkr, neuLT_mkr, neuLB_mkr]
     )
 
@@ -2856,35 +2856,35 @@ def test_33():
         dim, domain, space, g, ds_g, k, dirichlet_bcs, bc_theta, area, test_path
     )
 
-    @dib.region_of(domain)
+    @fop.region_of(domain)
     def sub_domain1(x):
         # 0.9 < x[0] < 1.0
         # 0.95 < x[1]
         ineqs = [x[0] - 0.9, 1.0 - x[0], x[1] - 0.95]
         return ineqs
 
-    @dib.region_of(domain)
+    @fop.region_of(domain)
     def sub_domain2(x):
         # 0.9 < x[0] < 1.0
         # x[1] < 0.05
         ineqs = [x[0] - 0.9, 1.0 - x[0], 0.05 - x[1]]
         return ineqs
 
-    @dib.region_of(domain)
+    @fop.region_of(domain)
     def sub_domain3(x):
         # 0.0 < x[0] < 0.1
         # 0.35 < x[1] < 0.5
         ineqs = [x[0], 0.1 - x[0], x[1] - 0.35, 0.5 - x[1]]
         return ineqs
 
-    @dib.region_of(domain)
+    @fop.region_of(domain)
     def sub_domain4(x):
         # 0.0 < x[0] < 0.1
         # 0.65 > x[1] > 0.5
         ineqs = [x[0], 0.1 - x[0], 0.65 - x[1], x[1] - 0.5]
         return ineqs
 
-    @dib.region_of(domain)
+    @fop.region_of(domain)
     def sub_domain5(x):
         # 0.2 < x[0] < 0.9
         # 0.2 < x[1] < 0.8
@@ -3015,7 +3015,7 @@ def test_34():
     filename = test_path / "domain0.msh"
 
     # Create the gmsh domain0.msh
-    nbr_tri0 = dib.build_gmsh_model_2d(
+    nbr_tri0 = fop.build_gmsh_model_2d(
         vertices,
         boundary_parts,
         0.6 * mesh_size,
@@ -3025,15 +3025,15 @@ def test_34():
     )
 
     # Read the domain0
-    output = dib.read_gmsh(filename, comm, dim=2)
+    output = fop.read_gmsh(filename, comm, dim=2)
 
     domain0, _, boundary_tags = output
 
     # Set all connectivities on domain0
-    dib.all_connectivities(domain0)
+    fop.all_connectivities(domain0)
 
     # Space for data generation
-    space0 = dib.create_space(domain0, "CG", rank_dim)
+    space0 = fop.create_space(domain0, "CG", rank_dim)
     # Forces
     forces = [
         (np.cos(np.pi / 16), np.sin(np.pi / 16)),
@@ -3047,14 +3047,14 @@ def test_34():
     ]
 
     # Dirichlet boundary conditions
-    dirbc_partial = dib.homogeneous_dirichlet(
+    dirbc_partial = fop.homogeneous_dirichlet(
         domain0, space0, boundary_tags, [dir_mkr], rank_dim
     )
 
-    dirbc_total = dib.homogeneus_boundary(domain0, space0, dim, rank_dim)
+    dirbc_total = fop.homogeneus_boundary(domain0, space0, dim, rank_dim)
 
     # Create measures to apply Neumman condition
-    ds_parts = dib.marked_ds(
+    ds_parts = fop.marked_ds(
         domain0,
         boundary_tags,
         [
@@ -3122,7 +3122,7 @@ def test_34():
         return np.minimum(SubDomain1_eq(x), SubDomain2_eq(x))
 
     # Dirichlet extensions
-    extensions = dib.dir_extension_from(
+    extensions = fop.dir_extension_from(
         comm, domain0, space0, md0.pde0, SubDomain_combined, test_path
     )
 
@@ -3156,7 +3156,7 @@ def test_34():
     ]
 
     # Create gmsh domain for Data Parallelism
-    output = dib.create_domain_2d_DP(
+    output = fop.create_domain_2d_DP(
         vertices, boundary_parts, mesh_size, path=test_path, plot=False
     )
 
@@ -3169,14 +3169,14 @@ def test_34():
         print(f"> Nbr of triangles for data generation = {nbr_tri0}")
 
     # Space
-    space = dib.create_space(domain, "CG", rank_dim)
+    space = fop.create_space(domain, "CG", rank_dim)
     # Dirichlet boundary conditions
-    dirbc_partial = dib.homogeneous_dirichlet(
+    dirbc_partial = fop.homogeneous_dirichlet(
         domain, space, boundary_tags, [dir_mkr], rank_dim
     )
-    dirbc_total = dib.homogeneus_boundary(domain, space, dim, rank_dim)
+    dirbc_total = fop.homogeneus_boundary(domain, space, dim, rank_dim)
     # Boundary to apply Neumann conditions
-    ds_parts = dib.marked_ds(
+    ds_parts = fop.marked_ds(
         domain,
         boundary_tags,
         [
@@ -3218,17 +3218,17 @@ def test_34():
     )
 
     # Space for interpolation (degree = 2)
-    g_space = dib.create_space(domain, "CG", rank_dim, degree=2)
+    g_space = fop.create_space(domain, "CG", rank_dim, degree=2)
     # Interpolation between different spaces
     # from different domains
-    g_funcs = dib.space_interpolation(
+    g_funcs = fop.space_interpolation(
         from_space=space0, funcs=extensions, to_space=g_space
     )
 
     # To save as P1 functions
-    g_space_1 = dib.create_space(domain, "CG", rank_dim)
-    g_funcs_1 = dib.interpolate(funcs=g_funcs, to_space=g_space_1, name="g")
-    dib.save_functions(comm, domain, g_funcs_1, test_path / "gP1.xdmf")
+    g_space_1 = fop.create_space(domain, "CG", rank_dim)
+    g_funcs_1 = fop.interpolate(funcs=g_funcs, to_space=g_space_1, name="g")
+    fop.save_functions(comm, domain, g_funcs_1, test_path / "gP1.xdmf")
 
     md.gs = g_funcs
 
@@ -3340,7 +3340,7 @@ def test_35():
     filename = test_path / "domain0.msh"
 
     # Create the gmsh domain0.msh
-    nbr_tri0 = dib.build_gmsh_model_2d(
+    nbr_tri0 = fop.build_gmsh_model_2d(
         vertices,
         boundary_parts,
         0.6 * mesh_size,
@@ -3351,15 +3351,15 @@ def test_35():
 
     if rank == 0:
         # Read the domain0
-        output = dib.read_gmsh(filename, comm_self, dim=2)
+        output = fop.read_gmsh(filename, comm_self, dim=2)
 
         domain0, _, boundary_tags = output
 
         # Set all connectivities on domain0
-        dib.all_connectivities(domain0)
+        fop.all_connectivities(domain0)
 
         # Space for data generation
-        space0 = dib.create_space(domain0, "CG", rank_dim)
+        space0 = fop.create_space(domain0, "CG", rank_dim)
         # Forces
         forces = [
             (np.cos(np.pi / 16), np.sin(np.pi / 16)),
@@ -3373,14 +3373,14 @@ def test_35():
         ]
 
         # Dirichlet boundary conditions
-        dirbc_partial = dib.homogeneous_dirichlet(
+        dirbc_partial = fop.homogeneous_dirichlet(
             domain0, space0, boundary_tags, [dir_mkr], rank_dim
         )
 
-        dirbc_total = dib.homogeneus_boundary(domain0, space0, dim, rank_dim)
+        dirbc_total = fop.homogeneus_boundary(domain0, space0, dim, rank_dim)
 
         # Create measures to apply Neumman condition
-        ds_parts = dib.marked_ds(
+        ds_parts = fop.marked_ds(
             domain0,
             boundary_tags,
             [
@@ -3448,7 +3448,7 @@ def test_35():
             return np.minimum(SubDomain1_eq(x), SubDomain2_eq(x))
 
         # Dirichlet extensions
-        extensions = dib.dir_extension_from(
+        extensions = fop.dir_extension_from(
             comm_self, domain0, space0, md0.pde0, SubDomain_combined, test_path
         )
 
@@ -3482,7 +3482,7 @@ def test_35():
     ]
 
     # Create gmsh domain for Task Parallelism
-    output = dib.create_domain_2d_TP(
+    output = fop.create_domain_2d_TP(
         vertices, boundary_parts, mesh_size, path=test_path, plot=False
     )
 
@@ -3495,14 +3495,14 @@ def test_35():
         print(f"> Nbr of triangles for data generation = {nbr_tri0}")
 
     # Space
-    space = dib.create_space(domain, "CG", rank_dim)
+    space = fop.create_space(domain, "CG", rank_dim)
     # Dirichlet boundary conditions
-    dirbc_partial = dib.homogeneous_dirichlet(
+    dirbc_partial = fop.homogeneous_dirichlet(
         domain, space, boundary_tags, [dir_mkr], rank_dim
     )
-    dirbc_total = dib.homogeneus_boundary(domain, space, dim, rank_dim)
+    dirbc_total = fop.homogeneus_boundary(domain, space, dim, rank_dim)
     # Boundary to apply Neumann conditions
-    ds_parts = dib.marked_ds(
+    ds_parts = fop.marked_ds(
         domain,
         boundary_tags,
         [
@@ -3544,18 +3544,18 @@ def test_35():
     )
 
     # Space for interpolation (degree = 2)
-    g_space = dib.create_space(domain, "CG", rank_dim, degree=2)
+    g_space = fop.create_space(domain, "CG", rank_dim, degree=2)
     if rank == 0:
         # Interpolation between different spaces
         # from different domains
-        g_funcs = dib.space_interpolation(
+        g_funcs = fop.space_interpolation(
             from_space=space0, funcs=extensions, to_space=g_space
         )
 
         # To save as P1 functions
-        g_space_1 = dib.create_space(domain, "CG", rank_dim)
-        g_funcs_1 = dib.interpolate(funcs=g_funcs, to_space=g_space_1, name="g")
-        dib.save_functions(comm_self, domain, g_funcs_1, test_path / "gP1.xdmf")
+        g_space_1 = fop.create_space(domain, "CG", rank_dim)
+        g_funcs_1 = fop.interpolate(funcs=g_funcs, to_space=g_space_1, name="g")
+        fop.save_functions(comm_self, domain, g_funcs_1, test_path / "gP1.xdmf")
 
         g_values = np.vstack([g.x.array[:] for g in g_funcs])
 
@@ -3564,7 +3564,7 @@ def test_35():
 
     g_values = comm.bcast(g_values, root=0)
 
-    md.gs = dib.get_funcs_from(g_space, g_values)
+    md.gs = fop.get_funcs_from(g_space, g_values)
 
     # Initial guess: centers and radii
     centers = np.array([(-0.3, 0.4), (0.3, 0.4)])
@@ -3678,7 +3678,7 @@ def test_36():
     filename = test_path / "domain0.msh"
 
     # Create the gmsh domain0.msh
-    nbr_tri0 = dib.build_gmsh_model_2d(
+    nbr_tri0 = fop.build_gmsh_model_2d(
         vertices,
         boundary_parts,
         0.6 * mesh_size,
@@ -3689,15 +3689,15 @@ def test_36():
 
     if color == 0:
         # Read the domain0
-        output = dib.read_gmsh(filename, sub_comm, dim=2)
+        output = fop.read_gmsh(filename, sub_comm, dim=2)
 
         domain0, _, boundary_tags = output
 
         # Set all connectivities on domain0
-        dib.all_connectivities(domain0)
+        fop.all_connectivities(domain0)
 
         # Space for data generation
-        space0 = dib.create_space(domain0, "CG", rank_dim)
+        space0 = fop.create_space(domain0, "CG", rank_dim)
         # Forces
         forces = [
             (np.cos(np.pi / 16), np.sin(np.pi / 16)),
@@ -3711,14 +3711,14 @@ def test_36():
         ]
 
         # Dirichlet boundary conditions
-        dirbc_partial = dib.homogeneous_dirichlet(
+        dirbc_partial = fop.homogeneous_dirichlet(
             domain0, space0, boundary_tags, [dir_mkr], rank_dim
         )
 
-        dirbc_total = dib.homogeneus_boundary(domain0, space0, dim, rank_dim)
+        dirbc_total = fop.homogeneus_boundary(domain0, space0, dim, rank_dim)
 
         # Create measures to apply Neumman condition
-        ds_parts = dib.marked_ds(
+        ds_parts = fop.marked_ds(
             domain0,
             boundary_tags,
             [
@@ -3786,7 +3786,7 @@ def test_36():
             return np.minimum(SubDomain1_eq(x), SubDomain2_eq(x))
 
         # Dirichlet extensions
-        extensions = dib.dir_extension_from(
+        extensions = fop.dir_extension_from(
             sub_comm, domain0, space0, md0.pde0, SubDomain_combined, test_path
         )
 
@@ -3820,7 +3820,7 @@ def test_36():
     ]
 
     # Create gmsh domain for Data Parallelism
-    output = dib.create_domain_2d_MP(
+    output = fop.create_domain_2d_MP(
         sub_comm, color, vertices, boundary_parts, mesh_size, path=test_path, plot=False
     )
 
@@ -3833,14 +3833,14 @@ def test_36():
         print(f"> Nbr of triangles for data generation = {nbr_tri0}")
 
     # Space
-    space = dib.create_space(domain, "CG", rank_dim)
+    space = fop.create_space(domain, "CG", rank_dim)
     # Dirichlet boundary conditions
-    dirbc_partial = dib.homogeneous_dirichlet(
+    dirbc_partial = fop.homogeneous_dirichlet(
         domain, space, boundary_tags, [dir_mkr], rank_dim
     )
-    dirbc_total = dib.homogeneus_boundary(domain, space, dim, rank_dim)
+    dirbc_total = fop.homogeneus_boundary(domain, space, dim, rank_dim)
     # Boundary to apply Neumann conditions
-    ds_parts = dib.marked_ds(
+    ds_parts = fop.marked_ds(
         domain,
         boundary_tags,
         [
@@ -3882,19 +3882,19 @@ def test_36():
     )
 
     # Space for interpolation (degree = 2)
-    g_space = dib.create_space(domain, "CG", rank_dim, degree=2)
+    g_space = fop.create_space(domain, "CG", rank_dim, degree=2)
 
     if color == 0:
         # Interpolation between different spaces
         # from different domains
-        g_funcs = dib.space_interpolation(
+        g_funcs = fop.space_interpolation(
             from_space=space0, funcs=extensions, to_space=g_space
         )
 
         # To save as P1 functions
-        g_space_1 = dib.create_space(domain, "CG", rank_dim)
-        g_funcs_1 = dib.interpolate(funcs=g_funcs, to_space=g_space_1, name="g")
-        dib.save_functions(sub_comm, domain, g_funcs_1, test_path / "gP1.xdmf")
+        g_space_1 = fop.create_space(domain, "CG", rank_dim)
+        g_funcs_1 = fop.interpolate(funcs=g_funcs, to_space=g_space_1, name="g")
+        fop.save_functions(sub_comm, domain, g_funcs_1, test_path / "gP1.xdmf")
 
         g_values_loc = np.vstack([g.x.array[:] for g in g_funcs])
 
@@ -3903,7 +3903,7 @@ def test_36():
 
     g_values = comm.allgather(g_values_loc)
 
-    md.gs = dib.get_funcs_from(g_space, g_values[sub_comm.rank])
+    md.gs = fop.get_funcs_from(g_space, g_values[sub_comm.rank])
 
     # Initial guess: centers and radii
     centers = np.array([(-0.3, 0.4), (0.3, 0.4)])
@@ -3932,26 +3932,26 @@ def test_37():
     neu_idx, neu_mkr = [3], 2
     boundary_parts = [(dir_idx, dir_mkr, "dir"), (neu_idx, neu_mkr, "neu")]
 
-    output = dib.create_domain_2d_DP(
+    output = fop.create_domain_2d_DP(
         vertices, boundary_parts, mesh_size, path=test_path, plot=False
     )
 
     domain, nbr_tri, boundary_tags = output
 
-    space = dib.create_space(domain, "CG", rank_dim)
+    space = fop.create_space(domain, "CG", rank_dim)
 
-    dirichlet_bcs = dib.homogeneous_dirichlet(
+    dirichlet_bcs = fop.homogeneous_dirichlet(
         domain, space, boundary_tags, [dir_mkr], rank_dim
     )
 
-    ds_g = dib.marked_ds(domain, boundary_tags, [neu_mkr])
+    ds_g = fop.marked_ds(domain, boundary_tags, [neu_mkr])
 
     alpha = 0.25
     g = (0.0, -10.0)
 
     md = SVK(dim, domain, space, g, ds_g[0], dirichlet_bcs, alpha, test_path)
     md.bc_theta = (boundary_tags, [neu_mkr])
-    md.ds_theta = dib.marked_ds(domain, boundary_tags, [dir_mkr])[0]
+    md.ds_theta = fop.marked_ds(domain, boundary_tags, [dir_mkr])[0]
 
     # ini_lvl = lambda x: (
     #     -0.4 - np.sin(np.pi * 3 * (x[0] + 0.5)) * np.cos(np.pi * 6 * x[1])
@@ -3966,14 +3966,25 @@ def test_37():
     centers += [(0.65 + i * 0.7, 0.75) for i in range(2)]
     centers += [(0.3 + i * 0.7, 1.0) for i in range(3)]
     centers = np.array(centers)
-    radii = np.repeat(0.07, centers.shape[0])
+    radii = np.repeat(0.08, centers.shape[0])
     md.create_initial_level(centers, radii)
 
+    # md.runDP(
+    #     niter=150,
+    #     dfactor=0.001,
+    #     lv_iter=(8, 25),
+    #     lv_time=(0.0001, 0.01),
+    #     cost_tol=0.001,
+    #     smooth=True,
+    #     reinit_step=4,
+    #     reinit_pars=(4, 0.01),
+    # )
+
     md.runDP(
-        niter=150,
-        dfactor=0.001,
-        lv_iter=(8, 25),
-        lv_time=(0.0001, 0.01),
+        niter=50,
+        dfactor=0.01,
+        lv_iter=(10, 25),
+        lv_time=(0.01, 0.1),
         cost_tol=0.001,
         smooth=True,
         reinit_step=4,

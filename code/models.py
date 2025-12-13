@@ -1,4 +1,4 @@
-from distributed import Model
+from formopt import Model
 
 from ufl import (
     TrialFunction,
@@ -1001,7 +1001,7 @@ class SVK(Model):
         self.E = lambda M: 0.5 * (M.T * M - self.Id)
         self.S = lambda M: lmbda * inner(M, self.Id) * self.Id + 2.0 * mu * M
 
-        self.A = lambda w: conditional(lt(w, 0.0), 1.0, 1e-2)
+        self.A = lambda w: conditional(lt(w, 0.0), 1.0, 1e-3)
         self.chi = lambda w: conditional(lt(w, 0.0), 1.0, 0.0)
 
     def pde(self, phi):
@@ -1015,12 +1015,12 @@ class SVK(Model):
         S = self.S(self.E(F))
 
         Eq = self.A(phi) * inner(F * S, grad(v)) * self.dx
-        Eq -= dot(self.g, v) * self.ds_g
+        Eq -= l * dot(self.g, v) * self.ds_g
 
         arg = grad(du) * S + F * self.S(sym(F.T * grad(du)))
         Jac = self.A(phi) * inner(arg, grad(v)) * self.dx
 
-        return [(Eq, self.bc, Jac, u, self.u0)]
+        return [(Eq, self.bc, Jac, u, self.u0, l, (0.1, 4))]
 
     def adjoint(self, phi, U):
 
@@ -1076,10 +1076,16 @@ class SVK(Model):
     def bilinear_form(self, th, xi):
 
         nv = FacetNormal(self.domain)
-        difussion = 5e-05
-        B = dot(th, xi) * self.dx
-        B += difussion * inner(grad(th), self.Id) * inner(grad(xi), self.Id) * self.dx
-        B += 2.0 * difussion * inner(sym(grad(th)), sym(grad(xi))) * self.dx
-        B += 1e20 * dot(th, nv) * dot(xi, nv) * self.ds_theta
+        # difussion = 5e-05
+        # B = dot(th, xi) * self.dx
+        # B += difussion * inner(grad(th), self.Id) * inner(grad(xi), self.Id) * self.dx
+        # B += 2.0 * difussion * inner(sym(grad(th)), sym(grad(xi))) * self.dx
+        # B += 1e20 * dot(th, nv) * dot(xi, nv) * self.ds_theta
 
-        return B, self.bc_theta
+        # return B, self.bc_theta
+
+        B = dot(th, xi) * self.dx
+        B += 0.1 * inner(grad(th), grad(xi)) * self.dx
+        B += 1e4 * dot(th, nv) * dot(xi, nv) * self.ds
+
+        return B, False

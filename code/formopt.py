@@ -1,5 +1,4 @@
 from pathlib import Path
-import types
 
 import gmsh
 from mpi4py import MPI
@@ -42,8 +41,6 @@ from dolfinx.fem import (
     form,
     functionspace,
     dirichletbc,
-    compile_form,
-    create_form,
 )
 
 from ufl import (
@@ -1815,6 +1812,12 @@ class Level:
 
         u = TrialFunction(space)
         v = TestFunction(space)
+
+        # # ----
+        # sign_phi = conditional(
+        #     lt(phi, -0.25), -0.25, conditional(gt(phi, 0.25), 0.25, phi)
+        # )
+        # # ----
 
         # Petrov-Galerkin test function
         tau = 2.0 * sqrt(1.0 / self.dt**2 + dot(tht, tht) / diam2)
