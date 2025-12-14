@@ -3953,10 +3953,14 @@ def test_37():
     md.bc_theta = (boundary_tags, [neu_mkr])
     md.ds_theta = fop.marked_ds(domain, boundary_tags, [dir_mkr])[0]
 
-    # ini_lvl = lambda x: (
-    #     -0.4 - np.sin(np.pi * 3 * (x[0] + 0.5)) * np.cos(np.pi * 6 * x[1])
-    # )
-    # md.set_initial_level(ini_lvl)
+    @fop.region_of(domain)
+    def sub_domain(x):
+        # 0.42 < x[1] < 0.58
+        # 1.95 < x[0]
+        ineqs = [x[1] - 0.42, 0.58 - x[1], x[0] - 1.90]
+        return ineqs
+
+    md.sub = [sub_domain.expression()]
 
     centers = [(2.0, 0.35), (2.0, 0.65), (2.0, 0.0), (2.0, 1.0)]
     centers += [(0.0, 0.25), (0.0, 0.5), (0.0, 0.75)]
@@ -3969,26 +3973,15 @@ def test_37():
     radii = np.repeat(0.08, centers.shape[0])
     md.create_initial_level(centers, radii)
 
-    # md.runDP(
-    #     niter=150,
-    #     dfactor=0.001,
-    #     lv_iter=(8, 25),
-    #     lv_time=(0.0001, 0.01),
-    #     cost_tol=0.001,
-    #     smooth=True,
-    #     reinit_step=4,
-    #     reinit_pars=(4, 0.01),
-    # )
-
     md.runDP(
-        niter=50,
+        niter=120,
         dfactor=0.01,
         lv_iter=(10, 25),
         lv_time=(0.01, 0.1),
-        cost_tol=0.001,
+        cost_tol=0.0025,
         smooth=True,
         reinit_step=4,
-        reinit_pars=(4, 0.01),
+        reinit_pars=(6, 0.01),
     )
 
 
