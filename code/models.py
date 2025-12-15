@@ -1015,12 +1015,12 @@ class SVK(Model):
         S = self.S(self.E(F))
 
         Eq = self.A(phi) * inner(F * S, grad(v)) * self.dx
-        Eq -= dot(self.g, v) * self.ds_g
+        Eq -= l * dot(self.g, v) * self.ds_g
 
         arg = grad(du) * S + F * self.S(sym(F.T * grad(du)))
         Jac = self.A(phi) * inner(arg, grad(v)) * self.dx
         # l, (0.1, 4)
-        return [(Eq, self.bc, Jac, u, self.u0)]
+        return [(Eq, self.bc, Jac, u, self.u0, l, (0.1, 4))]
 
     def adjoint(self, phi, U):
 

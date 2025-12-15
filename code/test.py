@@ -55,7 +55,7 @@ test_33 : Gripping Mechanism 2D - Data Parallelism
 test_34 : Elasticity Inverse Problem (two inclusions) - Data Parallelism
 test_35 : Elasticity Inverse Problem (two inclusions) - Task Parallelism
 test_36 : Elasticity Inverse Problem (two inclusions) - Mixed Parallelism
-test_37 : Nonlinear Elasticity (cantilever) - Data Parallelism
+test_37 : Symmetric Cantilever 2D (SVK)
 """
 
 
@@ -3918,6 +3918,15 @@ def test_36():
 
 
 def test_37():
+    """
+    Symmetric Cantilever 2D (SVK)
+
+    Run `mpirun -np <nbr of processes> python test.py 37`.
+    For instance, `mpirun -np 2 python test.py 37`.
+
+    To save the output, append `> ../results/t37/out.txt`.
+    To delete the images, enter `rm ../results/t37/*.png`.
+    """
 
     test_path = Path("../results/t37/")
     dim = 2
@@ -3974,11 +3983,11 @@ def test_37():
     md.create_initial_level(centers, radii)
 
     md.runDP(
-        niter=120,
+        niter=150,
         dfactor=0.01,
         lv_iter=(10, 25),
         lv_time=(0.01, 0.1),
-        cost_tol=0.0025,
+        cost_tol=1e-3,
         smooth=True,
         reinit_step=4,
         reinit_pars=(6, 0.01),
