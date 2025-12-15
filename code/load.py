@@ -504,6 +504,11 @@ def test_22():
     )
 
 
+def test_37():
+    test_path = Path("../results/t37/")
+    plot_basic(test_path)
+
+
 def test_32():
     """
     Performance of test 01 (mesh_size = 0.015, 20 946 triangles)
@@ -628,6 +633,7 @@ test_functions = {
     "21": test_21,
     "22": test_22,
     "32": test_32,
+    "37": test_37,
 }
 
 

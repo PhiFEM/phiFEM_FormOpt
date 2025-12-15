@@ -1256,8 +1256,8 @@ and $\hat{\psi}=\psi+\tau \theta\cdot\nabla\psi$, with
 \end{equation}
 This choice of $\tau$ is motivated by standard practice for conservation laws,
 where $\tau$ serves as a stabilization parameter that controls numerical dissipation along characteristic directions.
-\tred{A: it looks like $\tau$ depends on $x$ because of $|\theta|$. Is it really the case? Or maybe you mean the max of $|\theta|$ here?}
-\tblue{J: Yes, it depends on $x$ through $|\theta(x)|$. Obrigado por ver isso, pois corrigi um erro na minha versao anterior (2 $\to$ 1/2 ).}
+%\tred{A: it looks like $\tau$ depends on $x$ because of $|\theta|$. Is it really the case? Or maybe you mean the max of $|\theta|$ here?}
+%\tblue{J: Yes, it depends on $x$ through $|\theta(x)|$. Obrigado por ver isso, pois corrigi um erro na minha versao anterior (2 $\to$ 1/2 ).}
 We solve \eqref{eq:weak_transport} up to a final time $t_{\text{end}}$ and
 define the new level set function as $\phi^{i+1}(x) \coloneqq \phi(t_{\text{end}},x)$.
 
@@ -1369,8 +1369,8 @@ to configure the reinitialization:
 \end{itemize}
 
 \vspace*{0.5cm}
-\noindent\textbf{Line search method.} 
-\tred{A: I am not sure why this is called "line search", we should discuss that. If it is really about iterations for \eqref{eq:weak_transport}, it is more about solving the transport equation. Is there some backtracking here?}
+\noindent\textbf{Adaptive time-stepping.} 
+%\tred{A: I am not sure why this is called "line search", we should discuss that. If it is really about iterations for \eqref{eq:weak_transport}, it is more about solving the transport equation. Is there some backtracking here?}
 The final time and the number of steps/iterations in \eqref{eq:weak_transport}
 are chosen as follows:
 \begin{align}
@@ -1863,7 +1863,7 @@ by applying forces on $\Gamma_1$ and recording the corresponding displacements.
 Each $g_k$ is then extended to the entire domain by solving \eqref{eq:dir}.
 This procedure is performed at the beginning of the example codes
 (see the \code{test\_6} and \code{test\_34} functions in \code{test.py}).
-\tred{A: I am not sure what you mean in this paragraph. Do you mean you generate synthetic data? What do you mean by "This is done in the same location as in the example codes"? You could try to rewrite this paragraph to explain better.}
+%\tred{A: I am not sure what you mean in this paragraph. Do you mean you generate synthetic data? What do you mean by "This is done in the same location as in the example codes"? You could try to rewrite this paragraph to explain better.}
 
 In both examples, the domain $\mathcal{D}$ is a semi-ellipse truncated at the bottom.
 Below we define the vertices and the boundary parts of $\mathcal{D}$ for the second example:
@@ -1977,7 +1977,8 @@ niter=200,dfactor=0.1,lv_time=(1e-3,1.0),cost_tol=0.1
 \end{lstlisting}
 
 \noindent\textit{Example 1.} (Recovery of a single inclusion)
-The data consists of three pairs of force and displacement. \tred{A: so the pairs of forces are $f_k,g_k$ and the displacements are $u_k,y_k$, right? One should write that. We should also write that we sum over $k$ in the cost function $J(\Om)$ defined in \eqref{eq:cost}.}
+The data consists of three pairs of force $f_k$ and displacement $g_k$.
+%\tred{A: so the pairs of forces are $f_k,g_k$ and the displacements are $u_k,y_k$, right? One should write that. We should also write that we sum over $k$ in the cost function $J(\Om)$ defined in \eqref{eq:cost}.}
 The forces are applied separately on different parts of $\Gamma_1$,
 all directed toward the center of the body.
 The resulting boundary displacements are measured, only in $\Gamma_1$
@@ -2008,7 +2009,7 @@ See the numerical result in Figure~\ref{fig:inv1}.
 	\end{figure}
 
 \noindent\textit{Example 2.} (Recovery of two inclusions)
-The data consists of eight pairs of force and displacement.
+The data consists of eight pairs of force $f_k$ and displacement $g_k$.
 The forces are applied separately on differents parts of $\Gamma_1$,
 all directed toward the center of the body,
 and covering the whole boundary $\Gamma_1$;
@@ -2127,14 +2128,15 @@ mpirun -np 4 python test.py 01 # Data (6 sec)
 \end{lstlisting}
 See the results in Figure \ref{fig:compli1}. 
 We have performed a reinitialization of the level set function
-every four steps, with $20$ iterations and a final time of $0.1$. \tred{final time seria $t_{end}$?}
+every four steps, with $20$ iterations and a final time of $0.1$.
+%\tred{final time seria $t_{end}$?}
 % \tred{A: should we write $T=0.1$? I'm not sure.}
-\tblue{
-	J: We use $t_{\text{end}}$ for final time in the transport problem
-	For reinitialization we do not have notation for final time.
-	Recall that the final time is calculated for the transport problem,
-	while for the reinitialization it is imposed.
-}
+% \tblue{
+% 	J: We use $t_{\text{end}}$ for final time in the transport problem
+% 	For reinitialization we do not have notation for final time.
+% 	Recall that the final time is calculated for the transport problem,
+% 	while for the reinitialization it is imposed.
+% }
 This yields a well approximated distance function.
 The other parameters passed to the \code{runDP} method
 have the following values (with default values used for all unspecified parameters): 

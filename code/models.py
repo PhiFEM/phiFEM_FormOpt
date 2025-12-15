@@ -22,6 +22,9 @@ from ufl import (
     sqrt,
     nabla_div,
     Constant,
+    det,
+    inv,
+    tr,
 )
 
 """
@@ -1081,6 +1084,187 @@ class SVK(Model):
         B += 0.1 * inner(grad(th), grad(xi)) * self.dx
         B += 1e4 * dot(th, nv) * dot(xi, nv) * self.ds
 
+        for sb in self.sub:
+            B += 1e4 * sb * dot(th, xi) * self.dx
+
+        return B, False
+
+
+class NHK(Model):
+
+    def __init__(self, dim, domain, space, g, ds_g, dir_bcs, alpha, path):
+
+        self.dim = dim
+        self.domain = domain
+        self.space = space
+        self.path = path
+
+        self.dx = Measure("dx", domain=domain)
+        self.ds = Measure("ds", domain=domain)
+        self.g = as_vector(g)
+        self.ds_g = ds_g
+        self.bc = dir_bcs
+        self.alpha = alpha
+        self.ini_func = None
+        self.sub = []
+        self.u0 = lambda x: 0.0 * x[:dim]
+
+        # Material parameters
+        E, nu = 200.0, 0.3
+        self.lmbda = E * nu / (1.0 + nu) / (1.0 - 2.0 * nu)
+        self.mu = E / 2.0 / (1.0 + nu)
+
+        self.zero_vec = as_vector(dim * [0.0])
+        self.Id = Identity(dim)
+
+        # SVK strain and stress, other kinematic helpers
+        self.C = lambda M: M.T * M
+        self.J = lambda M: det(M)
+
+        self.A = lambda w: conditional(lt(w, 0.0), 1.0, 1e-2)
+        self.chi = lambda w: conditional(lt(w, 0.0), 1.0, 0.0)
+
+    def S(self, F):
+
+        J = det(F)
+        a = self.lmbda * 0.5 * (J**2 - 1) - self.mu
+
+        S = a * inv(self.C(F))
+        S += self.mu * self.Id
+
+        return S
+
+    def dS(self, F, dF):
+
+        J = det(F)
+        a = self.lmbda * 0.5 * (J**2 - 1) - self.mu
+
+        dS = a * -1.0 * inv(self.C(F)) * (F.T * dF + dF.T * F) * inv(self.C(F))
+        dS += self.lmbda * J * J * tr(inv(F) * dF) * inv(self.C(F))
+
+        return dS
+
+    def E(self, F):
+
+        E = 0.5 * (F.T * F - self.Id)
+
+        return E
+
+    def dE(self, F, dF):
+
+        dE = 0.5 * (F.T * dF + dF.T * F)
+
+        return dE
+
+    def dW(self, F, dF):
+
+        return inner(F * self.S(F), dF)
+
+    def d2W(self, F, dF1, dF2):
+
+        return inner((dF2 * self.S(F) + F * self.dS(F, dF2)), dF1)
+
+    def pde(self, phi):
+
+        u = Coefficient(self.space)
+        v = TestFunction(self.space)
+        du = TrialFunction(self.space)
+        l = Constant(self.domain)
+
+        F = self.Id + grad(u)
+        S = self.S(F)
+
+        Eq = self.A(phi) * inner(F * S, grad(v)) * self.dx
+        Eq -= l * dot(self.g, v) * self.ds_g
+
+        arg = grad(du) * S + F * self.dS(F, grad(du))
+        Jac = self.A(phi) * inner(arg, grad(v)) * self.dx
+
+        return [(Eq, self.bc, Jac, u, self.u0, l, (0.1, 4))]
+
+    def adjoint(self, phi, U):
+
+        u = U[0]
+        p = TrialFunction(self.space)
+        q = TestFunction(self.space)
+
+        F = self.Id + grad(u)
+        J = det(F)
+        E = self.E(F)
+        S = self.S(F)
+        Cinv = inv(self.C(F))
+        Finv = inv(F)
+
+        # Some kinematic helpers
+        a = self.mu - self.lmbda * 0.5 * (J**2 - 1)
+        M = Cinv * E * Cinv
+
+        # Variational
+        arg = grad(p) * S + F * self.dS(F, grad(p))
+
+        # Cost functional
+        arg += F * S
+        arg += 2.0 * a * F * M
+        arg += self.lmbda * J**2 * inner(Cinv, E) * Finv.T
+
+        W = self.A(phi) * inner(arg, grad(q)) * self.dx
+
+        return [(W, self.bc)]
+
+    def cost(self, phi, U):
+
+        u = U[0]
+
+        F = self.Id + grad(u)
+        E = self.E(F)
+        S = self.S(F)
+
+        J = self.A(phi) * inner(S, E) * self.dx
+        J += self.alpha * self.chi(phi) * self.dx
+
+        return J
+
+    def constraint(self, phi, U):
+
+        return []
+
+    def derivative(self, phi, U, P):
+
+        u = U[0]
+        p = P[0]
+        F = self.Id + grad(u)
+        J = det(F)
+        E = self.E(F)
+        S = self.S(F)
+        Cinv = inv(self.C(F))
+        Finv = inv(F)
+
+        # Some kinematic helpers
+        a = self.mu - self.lmbda * 0.5 * (J**2 - 1)
+        M = Cinv * E * Cinv
+
+        # Cost functional
+        S1 = inner(S, E) * self.Id - 1.0 * grad(u).T * F * S
+        S1 -= grad(u).T * 2.0 * a * F * M
+        S1 -= grad(u).T * self.lmbda * J**2 * inner(Cinv, E) * Finv.T
+
+        # Variational
+        S1 += inner(F * S, grad(p)) * self.Id
+        S1 -= grad(p).T * F * S
+        S1 -= grad(u).T * grad(p) * S
+        S1 -= grad(u).T * F * self.dS(F, grad(p))
+
+        S0_J = self.zero_vec
+        S1_J = self.A(phi) * S1 + self.alpha * self.chi(phi) * self.Id
+
+        return (S0_J, []), (S1_J, [])
+
+    def bilinear_form(self, th, xi):
+
+        nv = FacetNormal(self.domain)
+        B = dot(th, xi) * self.dx
+        B += 0.1 * inner(grad(th), grad(xi)) * self.dx
+        B += 1e4 * dot(th, nv) * dot(xi, nv) * self.ds
         for sb in self.sub:
             B += 1e4 * sb * dot(th, xi) * self.dx
 
