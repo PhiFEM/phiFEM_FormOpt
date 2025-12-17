@@ -57,6 +57,9 @@ test_34 : Elasticity Inverse Problem (two inclusions) - Data Parallelism
 test_35 : Elasticity Inverse Problem (two inclusions) - Task Parallelism
 test_36 : Elasticity Inverse Problem (two inclusions) - Mixed Parallelism
 test_37 : Symmetric Cantilever 2D (SVK)
+test_42 : Symmetric cantilever 3D - Data Parallelism (1 process)
+test_43 : Symmetric cantilever 3D - Data Parallelism (2 process)
+test_44 : Symmetric cantilever 3D - Data Parallelism (4 process)
 """
 
 
@@ -165,7 +168,7 @@ def test_02():
     """
 
     test_name = "Symmetric cantilever 3D (Data Parallelism)"
-    test_path = Path("../results/t02/")
+    test_path = Path("../results/t44/")
     dim = 3
     rank_dim = 3
     mesh_size = 60
@@ -283,7 +286,9 @@ def test_02():
     md.save_initial_level(comm)
 
     # Run data parallelism
-    md.runDP(ctrn_tol=1e-3, dfactor=1e-1, reinit_step=4, smooth=True)
+    md.runDP(
+        ctrn_tol=1e-3, dfactor=1e-1, reinit_step=4, reinit_pars=(4, 0.01), smooth=True
+    )
 
 
 def test_03():
@@ -4063,6 +4068,387 @@ def test_38():
     )
 
 
+def test_42():
+    """
+    Symmetric cantilever 3D - Data Parallelism (1 process)
+
+    Run: `mpirun -np 1 python test.py 42`
+    This test is part of the set (executed laptop):
+        test_42 with 1 process,
+        test_43 with 2 process, and
+        test_44 with 4 process.
+    See the output with the time execution in
+    the `out.txt` file of the corresponding folder.
+    """
+
+    test_name = "Symmetric cantilever 3D - Data Parallelism (1 process)"
+    test_path = Path("../results/t42/")
+    dim = 3
+    rank_dim = 3
+    mesh_size = 60
+
+    if rank == 0:
+        print("\n\t" + test_name + "\n")
+        print(f"> Path = {test_path}")
+
+    from dolfinx.mesh import create_box
+
+    domain = create_box(
+        comm, [[0.0, 0.0, 0.0], [2.0, 1.0, 1.0]], [2 * mesh_size, mesh_size, mesh_size]
+    )
+    fop.all_connectivities(domain)
+    fop.save_domain(comm, domain, test_path / "domain.xdmf")
+
+    space = fop.create_space(domain, "CG", rank_dim)
+
+    def boundary_dirichlet(x):
+        return np.isclose(x[0], 0.0)
+
+    def boundary_neumann(x):
+        in_plane = np.isclose(x[0], 2.0)
+        in_square = np.maximum(np.abs(x[1] - 0.5), np.abs(x[2] - 0.5)) <= 0.1
+        return in_plane & in_square
+
+    dirichlet_bcs = fop.homogeneous_dirichlet_fun(
+        domain, space, [boundary_dirichlet], rank_dim
+    )
+    ds_g = fop.fun_ds(domain, [boundary_neumann])
+    volume, g = 1.0, [0.0, 0.0, -4.0]
+    md = Compliance(dim, domain, space, g, ds_g[0], dirichlet_bcs, volume, test_path)
+
+    @fop.region_of(domain)
+    def sub_domain(x):
+        ineqs = [x[1] - 0.35, 0.65 - x[1], x[2] - 0.35, 0.65 - x[2], x[0] - 1.90]
+        return ineqs
+
+    md.sub = [sub_domain.expression()]
+
+    centers = np.array(
+        [
+            (2.0, 0.7, 0.3),
+            (2.0, 0.7, 0.7),
+            (2.0, 0.3, 0.3),
+            (2.0, 0.3, 0.7),
+            (2.0, 0.0, 0.0),
+            (2.0, 0.0, 1.0),
+            (2.0, 1.0, 0.0),
+            (2.0, 1.0, 1.0),
+            (2.0, 0.5, 0.0),
+            (2.0, 0.5, 1.0),
+            (2.0, 0.0, 0.5),
+            (2.0, 1.0, 0.5),
+            (1.7, 0.0, 0.0),
+            (1.7, 0.0, 1.0),
+            (1.7, 1.0, 0.0),
+            (1.7, 1.0, 1.0),
+            (1.7, 0.5, 0.5),
+            (1.7, 0, 0.5),
+            (1.7, 1.0, 0.5),
+            (1.7, 0.5, 0.0),
+            (1.7, 0.5, 1.0),
+            (1.35, 0.25, 0.25),
+            (1.35, 0.75, 0.25),
+            (1.35, 0.25, 0.75),
+            (1.35, 0.75, 0.75),
+            (1.0, 0.0, 0.0),
+            (1.0, 0.0, 1.0),
+            (1.0, 1.0, 0.0),
+            (1.0, 1.0, 1.0),
+            (1.0, 0.5, 0.5),
+            (1.0, 0, 0.5),
+            (1.0, 1.0, 0.5),
+            (1.0, 0.5, 0.0),
+            (1.0, 0.5, 1.0),
+            (0.65, 0.25, 0.25),
+            (0.65, 0.75, 0.25),
+            (0.65, 0.25, 0.75),
+            (0.65, 0.75, 0.75),
+            (0.3, 0.0, 0.0),
+            (0.3, 0.0, 1.0),
+            (0.3, 1.0, 0.0),
+            (0.3, 1.0, 1.0),
+            (0.3, 0.5, 0.5),
+            (0.3, 0, 0.5),
+            (0.3, 1.0, 0.5),
+            (0.3, 0.5, 0.0),
+            (0.3, 0.5, 1.0),
+            (0.0, 0.5, 0.0),
+            (0.0, 0.5, 1.0),
+            (0.0, 0.0, 0.5),
+            (0.0, 1.0, 0.5),
+            (0.0, 0.5, 0.5),
+            (0.0, 0.25, 0.25),
+            (0.0, 0.75, 0.25),
+            (0.0, 0.25, 0.75),
+            (0.0, 0.75, 0.75),
+            (2.0, 0.5, 0.3),
+            (2.0, 0.5, 0.7),
+            (2.0, 0.3, 0.5),
+            (2.0, 0.7, 0.5),
+        ]
+    )
+    radii = np.repeat(0.1, centers.shape[0])
+    md.create_initial_level(centers, radii, ord=np.inf)
+    md.save_initial_level(comm)
+    md.runDP(
+        ctrn_tol=1e-3, dfactor=1e-1, reinit_step=4, reinit_pars=(4, 0.01), smooth=True
+    )
+
+
+def test_43():
+    """
+    Symmetric cantilever 3D - Data Parallelism (2 process)
+
+    Run: `mpirun -np 2 python test.py 43`
+    This test is part of the set (executed laptop):
+        test_42 with 1 process,
+        test_43 with 2 process, and
+        test_44 with 4 process.
+    See the output with the time execution in
+    the `out.txt` file of the corresponding folder.
+    """
+
+    test_name = "Symmetric cantilever 3D - Data Parallelism (2 process)"
+    test_path = Path("../results/t43/")
+    dim = 3
+    rank_dim = 3
+    mesh_size = 60
+
+    if rank == 0:
+        print("\n\t" + test_name + "\n")
+        print(f"> Path = {test_path}")
+
+    from dolfinx.mesh import create_box
+
+    domain = create_box(
+        comm, [[0.0, 0.0, 0.0], [2.0, 1.0, 1.0]], [2 * mesh_size, mesh_size, mesh_size]
+    )
+    fop.all_connectivities(domain)
+    fop.save_domain(comm, domain, test_path / "domain.xdmf")
+
+    space = fop.create_space(domain, "CG", rank_dim)
+
+    def boundary_dirichlet(x):
+        return np.isclose(x[0], 0.0)
+
+    def boundary_neumann(x):
+        in_plane = np.isclose(x[0], 2.0)
+        in_square = np.maximum(np.abs(x[1] - 0.5), np.abs(x[2] - 0.5)) <= 0.1
+        return in_plane & in_square
+
+    dirichlet_bcs = fop.homogeneous_dirichlet_fun(
+        domain, space, [boundary_dirichlet], rank_dim
+    )
+    ds_g = fop.fun_ds(domain, [boundary_neumann])
+    volume, g = 1.0, [0.0, 0.0, -4.0]
+    md = Compliance(dim, domain, space, g, ds_g[0], dirichlet_bcs, volume, test_path)
+
+    @fop.region_of(domain)
+    def sub_domain(x):
+        ineqs = [x[1] - 0.35, 0.65 - x[1], x[2] - 0.35, 0.65 - x[2], x[0] - 1.90]
+        return ineqs
+
+    md.sub = [sub_domain.expression()]
+
+    centers = np.array(
+        [
+            (2.0, 0.7, 0.3),
+            (2.0, 0.7, 0.7),
+            (2.0, 0.3, 0.3),
+            (2.0, 0.3, 0.7),
+            (2.0, 0.0, 0.0),
+            (2.0, 0.0, 1.0),
+            (2.0, 1.0, 0.0),
+            (2.0, 1.0, 1.0),
+            (2.0, 0.5, 0.0),
+            (2.0, 0.5, 1.0),
+            (2.0, 0.0, 0.5),
+            (2.0, 1.0, 0.5),
+            (1.7, 0.0, 0.0),
+            (1.7, 0.0, 1.0),
+            (1.7, 1.0, 0.0),
+            (1.7, 1.0, 1.0),
+            (1.7, 0.5, 0.5),
+            (1.7, 0, 0.5),
+            (1.7, 1.0, 0.5),
+            (1.7, 0.5, 0.0),
+            (1.7, 0.5, 1.0),
+            (1.35, 0.25, 0.25),
+            (1.35, 0.75, 0.25),
+            (1.35, 0.25, 0.75),
+            (1.35, 0.75, 0.75),
+            (1.0, 0.0, 0.0),
+            (1.0, 0.0, 1.0),
+            (1.0, 1.0, 0.0),
+            (1.0, 1.0, 1.0),
+            (1.0, 0.5, 0.5),
+            (1.0, 0, 0.5),
+            (1.0, 1.0, 0.5),
+            (1.0, 0.5, 0.0),
+            (1.0, 0.5, 1.0),
+            (0.65, 0.25, 0.25),
+            (0.65, 0.75, 0.25),
+            (0.65, 0.25, 0.75),
+            (0.65, 0.75, 0.75),
+            (0.3, 0.0, 0.0),
+            (0.3, 0.0, 1.0),
+            (0.3, 1.0, 0.0),
+            (0.3, 1.0, 1.0),
+            (0.3, 0.5, 0.5),
+            (0.3, 0, 0.5),
+            (0.3, 1.0, 0.5),
+            (0.3, 0.5, 0.0),
+            (0.3, 0.5, 1.0),
+            (0.0, 0.5, 0.0),
+            (0.0, 0.5, 1.0),
+            (0.0, 0.0, 0.5),
+            (0.0, 1.0, 0.5),
+            (0.0, 0.5, 0.5),
+            (0.0, 0.25, 0.25),
+            (0.0, 0.75, 0.25),
+            (0.0, 0.25, 0.75),
+            (0.0, 0.75, 0.75),
+            (2.0, 0.5, 0.3),
+            (2.0, 0.5, 0.7),
+            (2.0, 0.3, 0.5),
+            (2.0, 0.7, 0.5),
+        ]
+    )
+    radii = np.repeat(0.1, centers.shape[0])
+    md.create_initial_level(centers, radii, ord=np.inf)
+    md.save_initial_level(comm)
+    md.runDP(
+        ctrn_tol=1e-3, dfactor=1e-1, reinit_step=4, reinit_pars=(4, 0.01), smooth=True
+    )
+
+
+def test_44():
+    """
+    Symmetric cantilever 3D - Data Parallelism (4 process)
+
+    Run: `mpirun -np 4 python test.py 44`
+    This test is part of the set (executed laptop):
+        test_42 with 1 process,
+        test_43 with 2 process, and
+        test_44 with 4 process.
+    See the output with the time execution in
+    the `out.txt` file of the corresponding folder.
+    """
+
+    test_name = "Symmetric cantilever 3D - Data Parallelism (4 process)"
+    test_path = Path("../results/t44/")
+    dim = 3
+    rank_dim = 3
+    mesh_size = 60
+
+    if rank == 0:
+        print("\n\t" + test_name + "\n")
+        print(f"> Path = {test_path}")
+
+    from dolfinx.mesh import create_box
+
+    domain = create_box(
+        comm, [[0.0, 0.0, 0.0], [2.0, 1.0, 1.0]], [2 * mesh_size, mesh_size, mesh_size]
+    )
+    fop.all_connectivities(domain)
+    fop.save_domain(comm, domain, test_path / "domain.xdmf")
+
+    space = fop.create_space(domain, "CG", rank_dim)
+
+    def boundary_dirichlet(x):
+        return np.isclose(x[0], 0.0)
+
+    def boundary_neumann(x):
+        in_plane = np.isclose(x[0], 2.0)
+        in_square = np.maximum(np.abs(x[1] - 0.5), np.abs(x[2] - 0.5)) <= 0.1
+        return in_plane & in_square
+
+    dirichlet_bcs = fop.homogeneous_dirichlet_fun(
+        domain, space, [boundary_dirichlet], rank_dim
+    )
+    ds_g = fop.fun_ds(domain, [boundary_neumann])
+    volume, g = 1.0, [0.0, 0.0, -4.0]
+    md = Compliance(dim, domain, space, g, ds_g[0], dirichlet_bcs, volume, test_path)
+
+    @fop.region_of(domain)
+    def sub_domain(x):
+        ineqs = [x[1] - 0.35, 0.65 - x[1], x[2] - 0.35, 0.65 - x[2], x[0] - 1.90]
+        return ineqs
+
+    md.sub = [sub_domain.expression()]
+
+    centers = np.array(
+        [
+            (2.0, 0.7, 0.3),
+            (2.0, 0.7, 0.7),
+            (2.0, 0.3, 0.3),
+            (2.0, 0.3, 0.7),
+            (2.0, 0.0, 0.0),
+            (2.0, 0.0, 1.0),
+            (2.0, 1.0, 0.0),
+            (2.0, 1.0, 1.0),
+            (2.0, 0.5, 0.0),
+            (2.0, 0.5, 1.0),
+            (2.0, 0.0, 0.5),
+            (2.0, 1.0, 0.5),
+            (1.7, 0.0, 0.0),
+            (1.7, 0.0, 1.0),
+            (1.7, 1.0, 0.0),
+            (1.7, 1.0, 1.0),
+            (1.7, 0.5, 0.5),
+            (1.7, 0, 0.5),
+            (1.7, 1.0, 0.5),
+            (1.7, 0.5, 0.0),
+            (1.7, 0.5, 1.0),
+            (1.35, 0.25, 0.25),
+            (1.35, 0.75, 0.25),
+            (1.35, 0.25, 0.75),
+            (1.35, 0.75, 0.75),
+            (1.0, 0.0, 0.0),
+            (1.0, 0.0, 1.0),
+            (1.0, 1.0, 0.0),
+            (1.0, 1.0, 1.0),
+            (1.0, 0.5, 0.5),
+            (1.0, 0, 0.5),
+            (1.0, 1.0, 0.5),
+            (1.0, 0.5, 0.0),
+            (1.0, 0.5, 1.0),
+            (0.65, 0.25, 0.25),
+            (0.65, 0.75, 0.25),
+            (0.65, 0.25, 0.75),
+            (0.65, 0.75, 0.75),
+            (0.3, 0.0, 0.0),
+            (0.3, 0.0, 1.0),
+            (0.3, 1.0, 0.0),
+            (0.3, 1.0, 1.0),
+            (0.3, 0.5, 0.5),
+            (0.3, 0, 0.5),
+            (0.3, 1.0, 0.5),
+            (0.3, 0.5, 0.0),
+            (0.3, 0.5, 1.0),
+            (0.0, 0.5, 0.0),
+            (0.0, 0.5, 1.0),
+            (0.0, 0.0, 0.5),
+            (0.0, 1.0, 0.5),
+            (0.0, 0.5, 0.5),
+            (0.0, 0.25, 0.25),
+            (0.0, 0.75, 0.25),
+            (0.0, 0.25, 0.75),
+            (0.0, 0.75, 0.75),
+            (2.0, 0.5, 0.3),
+            (2.0, 0.5, 0.7),
+            (2.0, 0.3, 0.5),
+            (2.0, 0.7, 0.5),
+        ]
+    )
+    radii = np.repeat(0.1, centers.shape[0])
+    md.create_initial_level(centers, radii, ord=np.inf)
+    md.save_initial_level(comm)
+    md.runDP(
+        ctrn_tol=1e-3, dfactor=1e-1, reinit_step=4, reinit_pars=(4, 0.01), smooth=True
+    )
+
+
 test_functions = {
     "01": test_01,
     "02": test_02,
@@ -4095,6 +4481,9 @@ test_functions = {
     "36": test_36,
     "37": test_37,
     "38": test_38,
+    "42": test_42,
+    "43": test_43,
+    "44": test_44,
 }
 
 
