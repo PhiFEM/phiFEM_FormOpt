@@ -2788,7 +2788,7 @@ def test_33():
     test_path = Path("../results/t33/")
     dim = 2
     rank_dim = 2
-    mesh_size = 0.01
+    mesh_size = 0.0098
 
     vertices = np.array(
         [
@@ -2853,8 +2853,8 @@ def test_33():
     bc_theta = (boundary_tags, [neuRT_mkr, neuRB_mkr, neuLT_mkr, neuLB_mkr])
 
     ff = 0.1
-    gg = 0.5
-    area = 0.4
+    gg = 0.2
+    area = 0.3
     g = [(0.0, -ff * 10.0), (0.0, ff * 10.0), (0.0, ff * 1.0), (0.0, -ff * 1.0)]
     k = [(0.0, -gg * 1.0), (0.0, gg * 1.0), (0.0, gg * 2.0), (0.0, -gg * 2.0)]
     # Create the model
@@ -2911,22 +2911,23 @@ def test_33():
     centers += [(0.0, i * 0.2 / 3) for i in range(4)]
     centers += [(0.0, 1.0 - i * 0.2 / 3) for i in range(4)]
     centers += [(0.1, 0.5), (0.1, 0.55), (0.1, 0.45), (0.5, 0.5)]
+    centers += [(0.0, 0.0), (0.0, 1.0), (1.0, 0.5)]
 
     centers = np.array(centers)
     radii = np.repeat(0.05, centers.shape[0])
-    radii[-1] = 0.1
+    radii[-4:] = 0.1
 
     md.create_initial_level(centers, radii)
     md.save_initial_level(comm)
 
     md.runDP(
-        niter=600,
+        niter=300,
         ctrn_tol=1e-3,
         dfactor=0.01,
-        lv_iter=(12, 20),
-        lv_time=(0.001, 0.01),
+        lv_iter=(15, 25),
+        lv_time=(0.001, 0.1),
         reinit_step=4,
-        reinit_pars=(15, 0.001),
+        reinit_pars=(30, 0.001),
         smooth=True,
     )
 

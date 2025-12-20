@@ -896,7 +896,7 @@ class Gripping(Model):
             lmbda * nabla_div(w) * self.Id + 2.0 * mu * self.epsilon(w)
         )
         self.chi = lambda w: conditional(lt(w, 0.0), 1.0, 0.0)
-        self.A = lambda w: conditional(lt(w, 0.0), 1.0, 1e-4)
+        self.A = lambda w: conditional(lt(w, 0.0), 1.0, 1e-3)
 
     def pde(self, phi):
 
@@ -967,8 +967,8 @@ class Gripping(Model):
 
         nv = FacetNormal(self.domain)
 
-        B = 0.01 * dot(th, xi) * self.dx
-        B += inner(grad(th), grad(xi)) * self.dx
+        # B = 0.001 * dot(th, xi) * self.dx
+        B = inner(grad(th), grad(xi)) * self.dx
         B += 1e4 * dot(th, nv) * dot(xi, nv) * self.ds
 
         for sb in self.sub:
