@@ -1,3 +1,29 @@
+"""
+=================================================================================
+Module: FormOpt
+Article Title:
+    FormOpt: A FEniCSx toolbox for level set-based shape optimization
+    supporting parallel computing
+Authors:
+    Josué D. Díaz-Avalos and Antoine Laurain (University of Duisburg-Essen)
+Description:
+    FormOpt is an FEniCSx-based Python module for two- and three-dimensional
+    shape optimization using the level set method with parallel computing support.
+Dependencies:
+    - FEniCSx 0.9
+    - MPI for parallel computing
+    - Gmsh
+    - NumPy, SciPy
+    - Matplotlib
+Citation:
+    If you use this module in your work, please cite:
+    Josué D. Díaz-Avalos and Antoine Laurain. FormOpt: A FEniCSx toolbox
+    for level set-based shape optimization supporting parallel computing.
+License:
+    GNU Lesser General Public License v3.0 (LGPL-3.0)
+=================================================================================
+"""
+
 from pathlib import Path
 
 import gmsh
@@ -1660,6 +1686,28 @@ def basic_solver(a, L, bcs, uh):
     problem.solve()
 
 
+class Smooth:
+
+    def __init__(
+        self, domain: Mesh, space: FunctionSpace, f: Function, diam2: float
+    ) -> None:
+
+        dx = Measure("dx", domain=domain)
+        u = TrialFunction(space)
+        v = TestFunction(space)
+        self.a = form(dot(u, v) * dx + diam2 * inner(grad(u), grad(v)) * dx)
+        self.L = form(dot(f, v) * dx)
+        self.solver = build_solver(domain, self.a, [])
+
+    def run(self, fun: Function) -> None:
+        L = assemble_vector(self.L)
+        apply_lifting(L, [self.a], [[]])
+        L.ghostUpdate(addv=PETSc.InsertMode.ADD_VALUES, mode=PETSc.ScatterMode.REVERSE)
+        set_bc(L, [])
+        self.solver.solve(L, fun.x.petsc_vec)
+        fun.x.scatter_forward()
+
+
 class Velocity:
     """
     This class build and solve the velocity equation.
@@ -2659,6 +2707,7 @@ def runDP(
     nDJ = form((model.bilinear_form(tht, tht))[0])
     # To calculate the velocity field
     cls_vlty = Velocity(dim, domain, sp_vlty, model.bilinear_form, S0, S1)
+    cls_smth = Smooth(domain, sp_vlty, tht, diam2)
     # To calculate the level set function
     cls_lset = Level(domain, sp_lset, phi, tht, diam2, smooth)
     # Reinicialization
@@ -2761,6 +2810,8 @@ def runDP(
                 comm.barrier()
 
             cls_vlty.run(tht)
+            # for ii in range(4):
+            #     cls_smth.run(tht)
             nder = global_scalar(nDJ, comm, np.sqrt)
 
             if rank == 0:

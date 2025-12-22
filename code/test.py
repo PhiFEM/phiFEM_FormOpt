@@ -2788,7 +2788,7 @@ def test_33():
     test_path = Path("../results/t33/")
     dim = 2
     rank_dim = 2
-    mesh_size = 0.0098
+    mesh_size = 0.01
 
     vertices = np.array(
         [
@@ -2852,8 +2852,8 @@ def test_33():
 
     bc_theta = (boundary_tags, [neuRT_mkr, neuRB_mkr, neuLT_mkr, neuLB_mkr])
 
-    ff = 0.1
-    gg = 0.2
+    ff = 1.0
+    gg = 1.0
     area = 0.3
     g = [(0.0, -ff * 10.0), (0.0, ff * 10.0), (0.0, ff * 1.0), (0.0, -ff * 1.0)]
     k = [(0.0, -gg * 1.0), (0.0, gg * 1.0), (0.0, gg * 2.0), (0.0, -gg * 2.0)]
@@ -2890,13 +2890,6 @@ def test_33():
         ineqs = [x[0], 0.1 - x[0], 0.65 - x[1], x[1] - 0.5]
         return ineqs
 
-    @fop.region_of(domain)
-    def sub_domain5(x):
-        # 0.2 < x[0] < 0.9
-        # 0.2 < x[1] < 0.8
-        ineqs = [x[0] - 0.2, 0.9 - x[0], 0.8 - x[1], x[1] - 0.2]
-        return ineqs
-
     md.sub = [
         sub_domain1.expression(),
         sub_domain2.expression(),
@@ -2916,18 +2909,17 @@ def test_33():
     centers = np.array(centers)
     radii = np.repeat(0.05, centers.shape[0])
     radii[-4:] = 0.1
-
     md.create_initial_level(centers, radii)
     md.save_initial_level(comm)
 
     md.runDP(
-        niter=300,
+        niter=600,
         ctrn_tol=1e-3,
         dfactor=0.01,
         lv_iter=(15, 25),
-        lv_time=(0.001, 0.1),
+        lv_time=(0.01, 1.0),
         reinit_step=4,
-        reinit_pars=(30, 0.001),
+        reinit_pars=(20, 0.001),
         smooth=True,
     )
 

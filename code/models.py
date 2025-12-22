@@ -885,7 +885,7 @@ class Gripping(Model):
         self.vol = vol
         self.sub = []
 
-        E, nu = 1.0, 0.3
+        E, nu = 200.0, 0.3
         lmbda = E * nu / (1.0 + nu) / (1.0 - 2.0 * nu)
         mu = E / 2.0 / (1.0 + nu)
 
@@ -967,7 +967,7 @@ class Gripping(Model):
 
         nv = FacetNormal(self.domain)
 
-        # B = 0.001 * dot(th, xi) * self.dx
+        B = 0.1 * dot(th, xi) * self.dx
         B = inner(grad(th), grad(xi)) * self.dx
         B += 1e4 * dot(th, nv) * dot(xi, nv) * self.ds
 
