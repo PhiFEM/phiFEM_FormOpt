@@ -1,11 +1,8 @@
 references/
 tex/distributed.pdf
-docs/installation.pdf
-code/Tutorial.pdf
+tex/formopt.pdf
 code/deprecated/
 code/__pycache__/
-code/Links
-code/mytest.py
 *.lyx~
 *.npz
 *.npy

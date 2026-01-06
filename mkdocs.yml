@@ -1,4 +1,4 @@
-site_name: Distributed
+site_name: FormOpt
 
 nav:
   - Home: index.md
@@ -6,7 +6,6 @@ nav:
   - Velocity class: velocity.md
   - Level class: level.md
   - Reinit class: reinit.md
-  - Installation: installation.md
 
 theme:
   name: material
