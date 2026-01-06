@@ -7,8 +7,8 @@ Article Title:
 Authors:
     Josué D. Díaz-Avalos and Antoine Laurain (University of Duisburg-Essen)
 Description:
-    FormOpt is an FEniCSx-based Python module for two- and three-dimensional
-    shape optimization using the level set method with parallel computing support.
+    FormOpt is a FEniCSx-based Python module for two- and three-dimensional
+    shape optimization using a level set method and with parallel computing support.
 Dependencies:
     - FEniCSx 0.9
     - MPI for parallel computing

@@ -90,7 +90,8 @@
 	Josu\'{e} D. D\'{i}az-Avalos\thanks{Email: \texttt{josue.diazavalos@uni-due.de}} \qquad
 	Antoine Laurain\thanks{Email: \texttt{antoine.laurain@uni-due.de}} \\
 	\\
-	Fakultät für Mathematik, Universität Duisburg-Essen
+	%Fakultät für Mathematik, Universität Duisburg-Essen
+	Faculty of Mathematics, University of Duisburg-Essen
 }
 \date{\today}
 
@@ -153,22 +154,22 @@ An open-source \texttt{Python} implementation of the Null Space Optimizer is als
  
 % 4) We use here the distributed shape derivative approach, why it is good?
 A significant portion of the literature and educational implementations in structural and topology optimization is based on the SIMP method \cite{Sigmund2014}.
-Another widely used class of methods is the level-set approach, which exists in several variants, as reviewed in \cite{vanDijk2013}. Some formulations employ a Heaviside or smoothed Heaviside function to represent the domain \cite{MR1951408}, while others are built upon the concept of the topological derivative \cite{MR2235384,Novotny2013,MR4916810}.
-A further line of level set-based methods relies on shape sensitivity analysis in the infinite-dimensional setting, using shape derivatives \cite{MR2731611,SokZol92}. Educational codes following this approach include \cite{Challis2009,MR2459656}. These methods typically employ the boundary representation of the shape derivative, known as the Hadamard form, which must then be extended into the domain for use within a level-set framework \cite{MR2225309}.
+Another widely used class of methods is the level-set approach, which exists in several variants, as reviewed in \cite{vanDijk2013}. Some formulations employ a Heaviside or smoothed Heaviside function to represent the domain~\cite{MR1951408}, while others are built upon the concept of the topological derivative \cite{MR2235384,Novotny2013,MR4916810}.
+A further line of level set-based methods relies on shape sensitivity analysis in the infinite-dimensional setting, using shape derivatives \cite{MR2731611,SokZol92}. Educational codes following this approach include \cite{Challis2009,MR2459656}. These methods typically employ the boundary representation of the shape derivative, known as the Hadamard form, which must then be extended into the domain for use within a level-set framework~\cite{MR2225309}.
 In the present work, we base our approach on the so-called {\it distributed} or {\it weak shape derivative} \cite{LAURAIN2020328,MR3535238}.
 This formulation offers several advantages including higher accuracy \cite{MR2642680,MR3348199},  weaker regularity requirements \cite{LAURAIN2020328}, and a natural framework for domain extension. An educational code for structural mechanics based on this approach was first proposed in \cite{MR3843884}. The present work represents a natural continuation and extension of \cite{MR3843884}, incorporating additional and modernized features.
 Our overall objective is to provide a framework for learning the fundamental principles of shape sensitivity analysis and their numerical implementation, with an educational focus. 
 The \fx\ platform \cite{fenicsx} employs the Unified Form Language (UFL) to represent weak formulations of PDEs, offering an intuitive notation that closely mirrors the underlying mathematics.
 At the same time, we place strong emphasis on computational efficiency by leveraging the parallel capabilities of \fx, enabling fast and practical testing of shape optimization problems.
 A distinguishing feature of our approach is its emphasis on the optimize-then-discretize paradigm: the shape derivative is derived in the infinite-dimensional setting, and a discrete version is then used in the numerical algorithm.
-\tred{A: I want to write somewhere that the structure of the code is modular, but not sure where yet.}
+% \tred{A: One could also add that the structure of the code is modular.}
 
 
 % 5) The need for parallel computing, and how FenicsX help + recent trend
 With the steady increase in computational power, parallel computing has become not only commonplace but often essential for tackling large-scale problems. 
 This trend is also visible in the topology optimization community, where several recent educational codes incorporate parallel capabilities. 
-Examples include a \texttt{Julia}-based toolbox \cite{Wegert2025}, a parallel \texttt{FreeFEM} framework \cite{MR4916810}, a PETSc  framework \cite{Aage2014}, and a \fx\ implementation for 2D and 3D topology optimization \cite{Jia2024}. The latest version of \texttt{cashocs}, built on FEniCS, has also introduced MPI-based parallelism \cite{BLAUTH2021100646,BLAUTH2023101577}.
-In this work, we propose a natural evolution of the distributed shape derivative approach introduced in \cite{MR3843884}, now extended with parallel computing capabilities. 
+Examples include a \texttt{Julia}-based toolbox \cite{Wegert2025}, a parallel \texttt{FreeFEM} framework~\cite{MR4916810}, a PETSc  framework \cite{Aage2014}, and a \fx\ implementation for 2D and 3D topology optimization \cite{Jia2024}. The latest version of \texttt{cashocs}, built on FEniCS, has also introduced MPI-based parallelism \cite{BLAUTH2021100646,BLAUTH2023101577}.
+In this work, we propose a natural extension of the distributed shape derivative approach introduced in \cite{MR3843884} by incorporating parallel computing capabilities.
 Unlike many educational papers on topology optimization, which focus primarily on structural mechanics, our aim is to provide a broader perspective by addressing shape optimization problems subject to different types of PDE constraints.
 A particularly relevant class of problems considered here are inverse problems, where task parallelism plays a key role, since these problems typically involve families of PDE constraints with varying parameters \cite{MR4261115}. Standard applications in  structural mechanics and linear elasticity are also included as a particular case.
 
@@ -185,7 +186,7 @@ Three paradigms of parallelism are supported: data parallelism, distributing com
 An additional objective of this paper is to offer an accessible introduction to parallelization and its application to PDE-constrained shape optimization.
 The foundation of our framework remains the tensor representation of the shape derivative, as in~\cite{MR3843884}. Practically, this means that when considering a new problem, the main task is to specify the appropriate PDE and geometry, and to analytically compute the corresponding tensors of the distributed shape derivative.
 The \fopt files are available for download at 
-\href{https://github.com/JD26/FormOpt}{\texttt{github.com/JD26/FormOpt}}, %\tred{(cite Github)}
+\href{https://github.com/JD26/FormOpt}{\texttt{github.com/JD26/FormOpt}}, 
 along with several tutorials.
 %This is an opportunity to learn about basic notions of shape sensitivity analysis.
 
@@ -238,7 +239,7 @@ $Dw$ denotes its Jacobian matrix.
 We use $\boldsymbol{0}$ for the zero vector of $\mathds{R}^d$ and 
 $\boldsymbol{1}$ for the all-ones vector of $\mathds{R}^{N_c}$,
 where $N_c$ is the number of constraints.
-%\tred{A: what is the dimension of $\boldsymbol{1}$ actually?}
+
 
 We consider the following generic shape optimization problem with constraints:
 \begin{equation} \label{eq:problem0}
@@ -585,18 +586,7 @@ Using \eqref{eq:general_boundary_exp} and using the fact that the jump of $|u-v-
 % \end{align*}
 % }
 
-% \textbf{Bilinear form.}
-% In addition to the state/adjoint problems and the derivative components,
-% it is necessary to choose a positive bilinear form
-% in order to find a velocity field to compute the level set function.
-% For this problem we choose $B:H_{0}^1(\mathcal{D})^d \times H_{0}^1(\mathcal{D})^d \rightarrow \mathds{R}$
-% defined by
-% \begin{equation} \label{eq:biform}
-% 	B(\theta, \xi) = \int_{\mathcal{D}} {10}^{-1}\theta \cdot \xi + D\theta : D\xi .
-% \end{equation}
-% \tred{A: should probably write $\alpha$ instead of $10^{-1}$, and specify the value of $\alpha$ later.}
 
-% \tred{A: regarding the bilinear form, I think you mean that the coefficient is $10^{-1}$ for this inverse problem. I think we should rather write this in the numerical section, in Section \eqref{sec:num_inverse_elasticity}, as it is just a choice of parameter.}
 
 %%%%%%%%%%%%%%%%%%%%%%%%
 \section{Main algorithm}
@@ -779,6 +769,7 @@ to handle the constraints; see Section~\ref{sub:lagrangian}.
 This class implements a line search method to
 estimate the number of steps and the final time to
 solve the transport equation.
+\tred{A: need to change the name here?}
 
 \item \code{Reinit}:
 This class implements the reinitialization of the level set function
@@ -949,7 +940,7 @@ Finally, the \code{bilinear\_form} method must return
 the chosen bilinear form $B$, and \code{th},  \code{xi}
 represent the arguments $\theta, \xi$ in $B(\theta, \xi)$.
 
-%\tred{A: what do you mean, "By convention"? Maybe clarify.}
+
 
 We adopt the convention that all components of this class are implemented exclusively using
 UFL and native Python functions. For example, the following UFL
@@ -1092,9 +1083,7 @@ $\alpha$ is a penalty parameter, and
 $\beta$ is a proximal parameter.
 Here, $\langle \cdot, \cdot \rangle$ and $\vert \cdot \vert$
 are the standard inner product and norm of $\mathds{R}^{N_c}$.
-%\tred{A: maybe change notation for $n$ which is already used for normal vector?}
 We then follow \cite[Algorithm~1]{MR4589221}:
-%\tred{I think we should write \cite[Algorithm~1]{MR4589221} to not confuse with Algorithm 1 of the present paper.}
 Given the parameters 
 $r\in(0,1)$,
 $\alpha\in(1,\infty)$, $\beta\in(0,1)$, 
@@ -1280,7 +1269,6 @@ as in the \code{Level} class.
 The goal of reinitialization in the standard level set method \cite{MR965860}, see also \cite{MR3843884}, is to prevent the level set function from degenerating over successive iterations.
 This means that one strives to preserve the property $|\nabla\phi|\approx 1$, at least in the vicinity of the interface.
 We follow the same approach and regularly reinitialize the level set function $\phi = \phi(t_{\text{end}}, \cdot)$
-%\tred{A: should it be $t_{end}$ instead of $T$ here?}
 (obtained from \eqref{eq:transport})
 by solving the diffusive Eikonal equation with pseudo-time derivative:
 \begin{equation} \label{eq:Eikonal}
@@ -1328,7 +1316,6 @@ and $\hat{\psi}=\psi+\tau\nabla H(\nabla \varphi(t, \cdot)) \cdot\nabla\psi $, w
 \end{equation}
 
 Note that $|\nabla H(\nabla \varphi(t, \cdot))| = \left|S(\phi)\right|$ (set $p=\nabla \varphi$ in \eqref{eq:grad_H}),
-%\tred{A: I did not understand how you get this formula, maybe you can show me the calculation on paper.}
 so $\tau$ is time-independent, just as in \eqref{eq:tau_lv}.
 The Adams-Bashforth method provides an explicit scheme
 to the nonlinear equation \eqref{eq:Eikonal},
@@ -1370,7 +1357,6 @@ to configure the reinitialization:
 
 \vspace*{0.5cm}
 \noindent\textbf{Adaptive time-stepping.} 
-%\tred{A: I am not sure why this is called "line search", we should discuss that. If it is really about iterations for \eqref{eq:weak_transport}, it is more about solving the transport equation. Is there some backtracking here?}
 The final time and the number of steps/iterations in \eqref{eq:weak_transport}
 are chosen as follows:
 \begin{align}
@@ -1379,7 +1365,6 @@ are chosen as follows:
 	(s_{\max} - s_{\min}) \left( \tfrac{t_{\text{end}} - t_{\min}}{t_{\max} - t_{\min}} \right)^{1/6}
 	+ s_{\min}, \label{eq:steps}
 \end{align}
-%\tred{A: I think it should be $t_{end}$ instead of $T$?}
 respectively, where
 $\theta$ is the velocity field solution to \eqref{eq:velocity}.
 The other parameters are user-defined:
@@ -1392,7 +1377,7 @@ The other parameters are user-defined:
 	Tuple with the minimum and maximum times allowed.
 	By default, \code{lv\_time=(1e-3,1e-1)}.
 	\item $\code{lv\_iter} = (s_{\min}, s_{\max})$:
-	Tuple with the minimum and maximum number of line search steps allowed.
+	Tuple with the minimum and maximum number of steps allowed.
 	By default, \code{lv\_iter=(8,16)}.
 \end{itemize}
 These parameters are configured in \code{run<DP|TP|MP>}.
@@ -1404,7 +1389,7 @@ In \eqref{eq:steps}, we just apply a concave increasing function
 to $t_{\text{end}}$ to find the number of steps.
 
 %\tred{A: why do we need randomness here?}
-To asses the robustness of the line search method,
+To asses the robustness of the adaptive time-stepping,
 randomness can be introduced by specifying
 a seed number $N_\mathrm{seed}$ and a noise level $\vartheta$ in the argument
 $\code{random\_pars} = (N_\mathrm{seed}, \vartheta)$:
@@ -1531,14 +1516,7 @@ we provide the $\code{dir\_extension\_from}$ function, which
 solves~\eqref{eq:w-f} and then extend its solution by calling
 the $\code{dirichlet\_extension}$ function.
 
-% \tred{A: do we really need the Dirichlet extension? Can one define $g$ directly inside the entire domain in general?}
 
-% \tblue{J: From my point of view, in the inverse elasticity problem,
-% $f$ (force) is applied and $g$ (displacement) is observed.
-% Do we could define $g$ and later calculate $f=A_\Omega \sigma(u_g)n$??
-% On the other hand, we need a way of extending the Dirichlet data,
-% because of problems with non-homogeneous boundary conditions.
-% }
 
 % \vspace*{0.5cm}
 % \noindent \textbf{Mesh diameter.}
@@ -1602,7 +1580,7 @@ together with \code{FEniCSx~0.9.0} for the finite element computations and
 \code{NumPy~1.26.3}, \code{SciPy~1.12.0}, \code{Matplotlib~3.8.3}, and \code{MPI4Py~4.0.3}.
 An installation manual is provided in the \code{README} file of the \code{GitHub} repository
 (\href{https://github.com/JD26/FormOpt}{\texttt{github.com/JD26/FormOpt}}).
-% \tred{A: here can you add the url of the repository?}
+
 
 Most of the tests were executed on a laptop; a server was used only when explicitly indicated.
 Their specifications are as follows:
@@ -1863,10 +1841,11 @@ by applying forces on $\Gamma_1$ and recording the corresponding displacements.
 Each $g_k$ is then extended to the entire domain by solving \eqref{eq:dir}.
 This procedure is performed at the beginning of the example codes
 (see the \code{test\_6} and \code{test\_34} functions in \code{test.py}).
-%\tred{A: I am not sure what you mean in this paragraph. Do you mean you generate synthetic data? What do you mean by "This is done in the same location as in the example codes"? You could try to rewrite this paragraph to explain better.}
+
 
 In both examples, the domain $\mathcal{D}$ is a semi-ellipse truncated at the bottom.
 Below we define the vertices and the boundary parts of $\mathcal{D}$ for the second example:
+\begin{minipage}{\linewidth}
 \begin{lstlisting}
 npts = 80
 part = npts // 8
@@ -1896,6 +1875,7 @@ boundary_parts = [
 	(neu_idxH, neu_mkrH, "neuH"),
 ]
 \end{lstlisting}
+\end{minipage}
 
 These variables and the sub-communicator are passed to
 the \code{create\_domain\_2d\_MP} function:
@@ -1978,7 +1958,6 @@ niter=200,dfactor=0.1,lv_time=(1e-3,1.0),cost_tol=0.1
 
 \noindent\textit{Example 1.} (Recovery of a single inclusion)
 The data consists of three pairs of force $f_k$ and displacement $g_k$.
-%\tred{A: so the pairs of forces are $f_k,g_k$ and the displacements are $u_k,y_k$, right? One should write that. We should also write that we sum over $k$ in the cost function $J(\Om)$ defined in \eqref{eq:cost}.}
 The forces are applied separately on different parts of $\Gamma_1$,
 all directed toward the center of the body.
 The resulting boundary displacements are measured, only in $\Gamma_1$
@@ -2018,7 +1997,7 @@ Thus, we have sixteen state equations and their corresponding adjoints.
 We conducted three separate experiments: the first using data parallelism with $16$ processes,
 the second using task parallelism with $16$ processes,
 and the third using mixed parallelism with $32$ processes
-(organized into $16$ groups of $2$ processes each)
+(organized into $16$ groups of $2$ processes each).
 The commands and corresponding execution times were:
 % We employ data parallelism with $16$ processes,
 % task parallelism with $16$ processes, and
@@ -2112,9 +2091,6 @@ where $u_k$ is the solution to \eqref{eq:compli_weak} with $g=g_k$.
 
 In the following examples, the region with zero displacement and
 the force application areas are shown in red and blue, respectively.
-% \tred{A: I think we should also write the configuration that was used to run these tests, 
-% and how fast it was. It can be interesting to mention that some tests are run on the laptop,
-%  others on the server, to show that running on the laptop is fast.}
 
 \noindent\textit{Example 1.} (Symmetric cantilever)
 We consider the rectangular domain $\mathcal{D} = (0, 2)\times(0, 1)$
@@ -2129,14 +2105,6 @@ mpirun -np 4 python test.py 01 # Data (6 sec)
 See the results in Figure \ref{fig:compli1}. 
 We have performed a reinitialization of the level set function
 every four steps, with $20$ iterations and a final time of $0.1$.
-%\tred{final time seria $t_{end}$?}
-% \tred{A: should we write $T=0.1$? I'm not sure.}
-% \tblue{
-% 	J: We use $t_{\text{end}}$ for final time in the transport problem
-% 	For reinitialization we do not have notation for final time.
-% 	Recall that the final time is calculated for the transport problem,
-% 	while for the reinitialization it is imposed.
-% }
 This yields a well approximated distance function.
 The other parameters passed to the \code{runDP} method
 have the following values (with default values used for all unspecified parameters): 
@@ -2188,15 +2156,16 @@ $\Gamma_1 = \{1\} \times (0.4,0.6) \times (0.4,0.6)$.
 The force $g = (0, 0, -4)^\top$ is applied on $\Gamma_1$, and
 volume material is constrained to $V = 1$.
 We run this example using data parallelism with $1$, $2$, and $3$ processes:
-%\tred{A: it would be good if we can make this work in parallel in 3D, at least to be sure that it works.}
 % \begin{lstlisting}
 % python test.py 02 # (1.3 h)
 % \end{lstlisting}
+\begin{minipage}{\linewidth}
 \begin{lstlisting}
 mpirun -np 1 python test.py 02 # (4.357 hours)
 mpirun -np 2 python test.py 02 # (2.332 hours)
 mpirun -np 4 python test.py 02 # (1.486 hours)
 \end{lstlisting}
+\end{minipage}
 See some iterations in Figure \ref{fig:compli2}.
 We employ the bilinear form \eqref{eq:compli1_bili} with
 $\Omega_0 = (1.90,2]\times (0.35, 0.65) \times (0.35, 0.65)$
@@ -2409,7 +2378,6 @@ in order to penalize the material around $\Gamma_0$.
 We apply a uniform heat $f\equiv 1$, with volume constraint $V = 0.6$
 and $\Gamma_0 = \Gamma$ (i.e., the whole boundary is kept at zero temperature).
 We run this example using data parallelism with four processes:
-%\tred{A: I think it should be 4 processes here?}
 \begin{lstlisting}
 mpirun -np 4 python test.py 10 # Data (52 sec)
 \end{lstlisting}
@@ -2450,7 +2418,6 @@ compare the results with those in~\cite{GAO2008805}.
 We apply a localized heat source given by the function
 $f(x,y) \coloneqq \omega(\vert(x,y)-(0.5, 0.5)\vert_2)$,
 where $\omega$ is the radial function defined as
-% \tred{A: maybe we should use another notation? $\phi$ is already used for the level set function sometimes.}
 \begin{equation} \label{eq:rad}
 	\omega(r) \coloneqq
 	\begin{cases}
@@ -2462,7 +2429,6 @@ Thus, $f$ is radially symmetric around the point
 $(0.5,0.5)$ and infinitely differentiable on the entire plane.
 The support of $f$ is the disk centered at $(0.5,0.5)$ with radius $0.1$.
 The volume constraint is $V = 0.5$ and $\Gamma_0=\Gamma$.
-%\tred{A: if $\Gamma_0 = \emptyset $ then we have a pure Neumann problem, right? Isn't that a problem?}
 We run this example using data parallelism with six processes:
 \begin{lstlisting}
 mpirun -np 6 python test.py 11 # Data (11 sec)
@@ -2572,7 +2538,6 @@ mpirun -np 4 python test.py 22 # Task (20 sec)
 \end{lstlisting}
 The numerical results are shown in Figure~\ref{fig:heat5}.
 They agree with the results reported in \cite{MR2278190}, which we are able to reproduce within our framework.
-% \tred{A: I think these results are similar to results from another paper that you sowed me, right? Can you add this reference here and mention that we manage to reproduce their result? }
 \begin{figure}[H]\centering
 \includegraphics[width=0.48\linewidth]{heat5_0.png}
 \hfill
@@ -2595,14 +2560,6 @@ They agree with the results reported in \cite{MR2278190}, which we are able to r
 \subsection{A nonlinear PDE arising in population dynamics}
 \label{sub:pop}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Comments:
-%\tred{A: here also some references}
-%	J: I cited Murray's book.
-%\tred{A: should we use $-\Delta$ instead of $-\nabla^2$?}
-%	J: Now we use $-\Delta$.
-%\tred{A: should explain how the PDE is solved. Newton?}
-%	J: Yes, Newton. I wrote more details about the equations (Jacobian, initial guess).
-
 We present an example in which the PDE constraint is nonlinear.
 Consider the problem of spatially distributing resources in order
 to maximize the population size of a species that consumes those resources.
@@ -2696,6 +2653,23 @@ mpirun -np 2 python test.py 16 # r=100 (42 sec)
 \end{lstlisting}
 See the optimized resource distributions in Figure~\ref{fig:log}.
 
+\begin{figure}[H]
+		\centering
+	\includegraphics[width=0.48\linewidth]{log1_0.png}
+	\hfill
+	\includegraphics[width=0.48\linewidth]{log1_1.png}
+	\includegraphics[width=0.48\linewidth]{log1_2.png}
+	\hfill
+	\includegraphics[width=0.48\linewidth]{log1_3.png}
+	\captionof{figure}{
+		Examples of resource allocation optimization in population dynamics.
+		Initial guess (top-left) and optimized designs for
+		$r=10$ (top-right), $r=40$ (bottom-left), and $r=100$ (bottom-right).
+		The stopping criterion was satisfied at $147$, $107$, and $167$ iterations, respectively.
+	}
+	\label{fig:log}
+	\end{figure}
+
 Newton's method was employed to solve the state equation.
 For this purpose, the \code{pde} method returns the equation \eqref{eq:log_weak} in the form $F(u)=0$,
 an empty list \code{[]} representing the absence of Dirichlet boundary contions,
@@ -2725,43 +2699,16 @@ u0 = lambda x: (
 md = Logistic(dim,domain,space,vol,r,u0,test_path)
 \end{lstlisting}
 Our choice of $u_0$ is motivated by the fact that 
-$u$ represents a population density; hence, it must be positive and, additionally, cannot exceed the maximum value of $K$.
+$u$ represents a population density; hence, it must be positive and, additionally, cannot exceed the maximum value~$K$.
 
-\begin{figure}[H]
-	\centering
-\includegraphics[width=0.48\linewidth]{log1_0.png}
-\hfill
-\includegraphics[width=0.48\linewidth]{log1_1.png}
-\includegraphics[width=0.48\linewidth]{log1_2.png}
-\hfill
-\includegraphics[width=0.48\linewidth]{log1_3.png}
-\captionof{figure}{
-	Examples of resource allocation optimization in population dynamics.
-	Initial guess (top-left) and optimized designs for
-	$r=10$ (top-right), $r=40$ (bottom-left), and $r=100$ (bottom-right).
-	The stopping criterion was satisfied at $147$, $107$, and $167$ iterations, respectively.
-}
-\label{fig:log}
-\end{figure}
+
+
+
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Performance investigation}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-% \tred{A: Here we should discuss some performance data of the code.
-% Show that the code is extremely fast in 2D.
-% Show what size of 3D problems we can consider using a server (also large amount of sources).
-% Also maybe show weak scalabilty tests for parallel computing, as in \cite{Jia2024}.}
-
-% \tred{A: I am also thinking that we do not have a test with many
-% sources or measurements, to illustrate the task and mixed parallelisms.
-% Maybe we could try the elastic inverse problem with more sources
-% (with small compact support maybe), like 12 sources?
-% Or maybe define a sort of simplified EIT with more sources.
-% I think I will try to implement this module myself. }
-
-% \tblue{J : I have implemented a test with 16 measurements in Inverse Elasticity.}
-
 
 We now present two performance tests aimed at assessing parallel scalability.
 We revisit the symmetric cantilevers from \textit{Example~1} and \textit{Example~3} in Subsection~\ref{sub:compli},
@@ -2798,7 +2745,7 @@ Optimized designs with thinner structural parts were obtained.
 \end{minipage}\hfill
 \begin{minipage}{0.48\linewidth}
     \centering
-    \includegraphics[width=0.8\linewidth]{perf_cant2_1.png}
+    \includegraphics[width=0.75\linewidth]{perf_cant2_1.png}
 \end{minipage}
 \captionof{figure}{
 	Performance results on a mesh with $36\,375$ triangles for the cantilever with two loads.
@@ -2815,20 +2762,6 @@ Optimized designs with thinner structural parts were obtained.
 
 This work presents a toolbox for PDE-constrained shape optimization based on the distributed shape derivative and a level-set method.
 The implementation significantly generalizes the approach of \cite{MR3843884}: while inspired by the same underlying concepts, the present implementation is considerably more general in both scope and applicability.
-% In this work, we have provided and explained a code for PDE-constrained shape optimization based on the distributed shape derivative combined with a level-set method. 
-% This is a far-reaching extension of the results of \cite{MR3843884}, which was also based distributed shape derivative and the level set method, but with more limited features. 
-% \tblue{J:
-% Some ideas that could help:
-% Our module encapsulates the numerical methods in classes
-% (level set, velocity problem, reinitialization),
-% which can be modified independently,
-% leaving the user with the task of writing the problem equations
-% (weak formulations, cost function, constraints, derivative components)
-% in UFL format, friendly and modern compared to FreeFEM, that is,
-% in a symbolic way, which FreeFEM does not support.
-% This approach allows the mesh,
-% finite elements, and boundary conditions to be defined separately from the equations.
-% }
 
 The \fopt toolbox introduces several notable features.
 The Unified Form Language (UFL) provides an intuitive way to represent weak formulations of PDEs in a notation close to the mathematical one. 
