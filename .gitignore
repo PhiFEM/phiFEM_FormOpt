@@ -3,6 +3,7 @@ tex/distributed.pdf
 tex/formopt.pdf
 code/deprecated/
 code/__pycache__/
+site/
 *.lyx~
 *.npz
 *.npy
