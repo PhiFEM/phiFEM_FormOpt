@@ -29,8 +29,7 @@ If you have any questions, suggestions, or need assistance with this project, fe
 │	└── Tutorial.ipynb	# Examples with detailed explanations
 ├── tex/        		# LaTeX source files of the article
 ├── results/    		# Directory structure for numerical results
-├── docs/       		# Markdown documentation files
-└── site/       		# API Reference site
+└── docs/       		# Markdown documentation files
 ```
 ## Installation
 
