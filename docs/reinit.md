@@ -4,7 +4,7 @@ The `Reinit` class solve the Eikonal equation
 
 $$
 \begin{aligned}
-    \partial_t \varphi - h^2 \nabla^2 \varphi &= S(\phi)(1 - |\nabla \varphi|)
+    \partial_t \varphi - h^2 \Delta \varphi &= S(\phi)(1 - |\nabla \varphi|)
     && x\in \mathcal{D},\, t>0, \\
     \partial_n \varphi &= 0
     && x\in \partial\mathcal{D},\, t>0, \\

@@ -4,9 +4,9 @@ The `Level` class solves the diffusion-transport equation:
 
 $$
 \begin{aligned}
-\partial_t \phi+\theta\cdot\nabla\phi &= h^2\nabla^2\varphi && x\in \mathcal{D},\, t>0, \\
-					\partial_{n} \phi &= 0 && x\in \partial\mathcal{D},\, t>0, \\
-					       \phi(0, x) &= \phi^{i}(x) && x\in \mathcal{D},
+\partial_t \phi+\theta\cdot\nabla\phi &= h^2\Delta\varphi && x\in \mathcal{D},\, t>0, \\
+\partial_{n} \phi &= 0 && x\in \partial\mathcal{D},\, t>0, \\
+\phi(0, x) &= \phi^{i}(x) && x\in \mathcal{D},
 \end{aligned}
 $$
 

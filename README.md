@@ -7,7 +7,7 @@ Geometric constraints are treated accurately through a Proximal-Perturbed Lagran
 `FormOpt` leverages the powerful features of `FEniCSx`, particularly its support for weak formulations of partial differential equations, diverse finite element types, and scalable parallelism.
 The implementation supports three different parallel computing modes: data parallelism, task parallelism, and a mixed mode. Data parallelism exploits `FEniCSx`'s mesh partitioning features, and we implement a task parallelism mode which is useful for problems governed by a set of partial differential equations with varying parameters. The mixed mode conveniently combines both strategies to achieve efficient utilization of computational resources.
 
-API reference: 
+[API reference](https://jd26.github.io/FormOpt/)
 
 Toolbox paper: [preprint](https://arxiv.org/abs/xxxx.xxxxx)
 

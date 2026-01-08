@@ -68,7 +68,7 @@ def test_01():
     Symmetric Cantilever 2D - Data Parallelism
 
     Run `mpirun -np <nbr of processes> python test.py 01`.
-    For instance, `mpirun -np 8 python test.py 01`.
+    For instance, `mpirun -np 4 python test.py 01`.
 
     To save the output, append `> ../results/t01/out.txt`.
     To delete the images, enter `rm ../results/t01/*.png`.
