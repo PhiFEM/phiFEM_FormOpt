@@ -9,7 +9,7 @@ The implementation supports three different parallel computing modes: data paral
 
 [API reference](https://jd26.github.io/FormOpt/)
 
-Toolbox paper: [preprint](https://arxiv.org/abs/xxxx.xxxxx)
+Toolbox paper: [preprint](https://arxiv.org/abs/2601.05709)
 
 ## Contact:
 If you have any questions, suggestions, or need assistance with this project, feel free to reach out:
