@@ -4,7 +4,7 @@ tex/formopt.pdf
 code/deprecated/
 code/__pycache__/
 site/
-samo/
+samo/Manuscript.pdf
 *.lyx~
 *.npz
 *.npy
