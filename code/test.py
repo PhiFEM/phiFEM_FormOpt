@@ -3930,7 +3930,7 @@ def test_37():
     test_path = Path("../results/t37/")
     dim = 2
     rank_dim = 2
-    mesh_size = 0.012
+    mesh_size = 0.011
 
     vertices = np.array(
         [(0.0, 0.0), (2.0, 0.0), (2.0, 0.45), (2.0, 0.55), (2.0, 1.0), (0.0, 1.0)]
@@ -3958,8 +3958,6 @@ def test_37():
     g = (0.0, -10.0)
 
     md = SVK(dim, domain, space, g, ds_g[0], dirichlet_bcs, alpha, test_path)
-    md.bc_theta = (boundary_tags, [neu_mkr])
-    md.ds_theta = fop.marked_ds(domain, boundary_tags, [dir_mkr])[0]
 
     @fop.region_of(domain)
     def sub_domain(x):

@@ -385,6 +385,12 @@ class Model(ABC):
         """
         return self.ini_lvl.func
 
+    def set_func(self, func: Function) -> None:
+        if hasattr(self, "fcs_to_eval"):
+            self.fcs_to_eval += [func]
+        else:
+            self.fcs_to_eval = [func]
+
     @final
     def runDP(
         self,
@@ -818,7 +824,7 @@ class PPL:
         return (
             f"lagr = {self.Lg:.4f} | "
             f"lm = {', '.join(f'{val:.4f}' for val in self.lm)} | "
-            f"mu = {', '.join(f'{val:.4f}' for val in self.mu)}",
+            f"mu = {', '.join(f'{val:.4f}' for val in self.mu)} | ",
         )[0]
 
 
@@ -2451,12 +2457,19 @@ class NonlinearSolverWrapper:
         self.u = u
         self.initial = initial
         self.solver_initial = None
+        self.niter = 0
 
     def solve(self):
         self.u.interpolate(self.initial)
-        niter, converged = self.solver.solve(self.u)
+        self.niter, converged = self.solver.solve(self.u)
         if not converged:
             print(f"> Newton solver did not converge!")
+
+    def see(self) -> str:
+        """
+        Returns a string with maximum number of iterations
+        """
+        return (f"newt = {self.niter:2.0f} | ",)[0]
 
 
 class NonlinearSolverbySteeping:
@@ -2466,16 +2479,23 @@ class NonlinearSolverbySteeping:
         self.ini = initial
         self.factor = factor
         self.vals = np.linspace(factor_pars[0], 1.0, factor_pars[1])
+        self.max_niter = 0
 
     def solve(self):
 
         self.u.interpolate(self.ini)
-
+        self.max_niter = 0
         for fc in self.vals:
             self.factor.value = PETSc.ScalarType(fc)
             niter, converged = self.solver.solve(self.u)
-            # print(f"factor:{factor}, num iterations: {r[0]}")
-            # print(max(self.u.x.array), min(self.u.x.array))
+            if niter > self.max_niter:
+                self.max_niter = niter
+
+    def see(self) -> str:
+        """
+        Returns a string with maximum number of iterations
+        """
+        return (f"newt = {self.max_niter:2.0f} | ",)[0]
 
 
 def create_nonlinear_solver_with_factor(
@@ -2486,7 +2506,7 @@ def create_nonlinear_solver_with_factor(
     solver = NewtonSolver(comm, problem)
     solver.convergence_criterion = "incremental"
     solver.rtol = np.sqrt(np.finfo(default_real_type).eps) * 1e-2
-    solver.max_it = 40
+    solver.max_it = 20
 
     ksp = solver.krylov_solver
     opts = PETSc.Options()
@@ -2540,6 +2560,19 @@ def create_nonlinear_solver(comm, F, bcs, J, u, initial):
     ksp.setFromOptions()
 
     return NonlinearSolverWrapper(solver, u, initial)
+
+
+def L2_interpolation(domain, space, expr, diam2):
+    dx = Measure("dx", domain=domain)
+    uh = Function(space)
+    v, w = TrialFunction(space), TestFunction(space)
+    problem = LinearProblem(
+        (inner(v, w) + diam2 * dot(grad(v), grad(w))) * dx,
+        inner(expr, w) * dx,
+        u=uh,
+        petsc_options={"ksp_type": "cg"},
+    ).solve()
+    return uh
 
 
 def runDP(
@@ -2635,6 +2668,7 @@ def runDP(
             bi, li = system(weak_form)
             ste_pbs.append(create_solver(form(bi), form(li), bcs, ste_fcs[i]))
         elif len(ste_problem) == 5:
+            # nonlinear: newton with initial guess
             weak_form, bcs, jacobian, seudo_state, ini_func = ste_problem
             true_weak_form = replace(weak_form, {seudo_state: ste_fcs[i]})
             true_jacobian = replace(jacobian, {seudo_state: ste_fcs[i]})
@@ -2644,6 +2678,7 @@ def runDP(
                 )
             )
         else:
+            # nonlinear: newton with initial guess and stepping method
             weak_form, bcs, jacobian, seudo_state, ini_func, factor, factor_pars = (
                 ste_problem
             )
@@ -2684,6 +2719,14 @@ def runDP(
             adj_pbs.append(create_solver(form(bi), form(li), bcs, adj_fcs[i]))
     else:
         adj_fcs = []
+
+    flag_fcs_to_eval = False
+    if hasattr(model, "fcs_to_eval"):
+        nbr_fte = len(model.fcs_to_eval)
+        fcs_to_eval = [Function(sp_lset) for _ in range(nbr_fte)]
+        for i in range(nbr_fte):
+            fcs_to_eval[i].name = model.fte_names[i]
+        flag_fcs_to_eval = True
 
     # Cost functional
     J = form(model.cost(phi, ste_fcs))
@@ -2782,6 +2825,13 @@ def runDP(
 
         xdmf.write_function(tht, 0)
 
+        if fcs_to_eval:
+            for fc, fun in zip(fcs_to_eval, model.fcs_to_eval):
+                fc.interpolate(
+                    L2_interpolation(domain, sp_lset, fun(phi, ste_fcs, adj_fcs), diam2)
+                )
+                xdmf.write_function(fc, 0)
+
         for iter in range(1, niter + 1):
 
             cls_lset.run(phi, lset_steps, lset_end)
@@ -2836,6 +2886,15 @@ def runDP(
                     xdmf.write_function(f, iter)
 
             xdmf.write_function(tht, iter)
+
+            if fcs_to_eval:
+                for fc, fun in zip(fcs_to_eval, model.fcs_to_eval):
+                    fc.interpolate(
+                        L2_interpolation(
+                            domain, sp_lset, fun(phi, ste_fcs, adj_fcs), diam2
+                        )
+                    )
+                    xdmf.write_function(fc, iter)
 
             if rank == 0:
                 if nbr_ctr > 0:
