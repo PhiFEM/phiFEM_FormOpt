@@ -260,6 +260,7 @@ class Elasticity(Model):
 
         u = U[0]
         F = self.F(u)
+        # Cauchy stress
         sigma = self.em.hatQ1(F) * F.T / det(F)
         s = sigma - (1.0 / 3.0) * tr(sigma) * self.Id
 

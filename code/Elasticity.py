@@ -164,7 +164,7 @@ def gripping():
     gg = 1.0
     alpha = 0.25
     g = [(0.0, -ff * 10.0), (0.0, ff * 10.0), (0.0, ff * 1.0), (0.0, -ff * 1.0)]
-    k = [(0.0, -gg * 1.0), (0.0, gg * 1.0), (0.0, gg * 4.0), (0.0, -gg * 4.0)]
+    k = [(0.0, -gg * 1.0), (0.0, gg * 1.0), (0.0, gg * 2.0), (0.0, -gg * 2.0)]
 
     elast_model = Hookecomponents()
     cost_functs = Gripping(k, ds_g)
@@ -233,7 +233,7 @@ def gripping():
     md.save_initial_level(comm)
 
     md.runDP(
-        niter=400,
+        niter=600,
         ctrn_tol=1e-3,
         dfactor=0.01,
         lv_iter=(10, 20),
