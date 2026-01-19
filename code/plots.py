@@ -265,6 +265,42 @@ def plot_domain(domain, title=None):
     plotter.show()
 
 
+def plot_triangulation_and_level0(h5file, niter, lims, lw=0.1, filename=None):
+
+    with h5py.File(h5file / "results.h5", "r") as f:
+
+        points = f["/Mesh/mesh/geometry"][:]
+        cells = f["/Mesh/mesh/topology"][:]
+        phi_group = f["/Function/phi"]
+        values = phi_group[str(niter)][:, 0]
+
+        x_coords, y_coords = points[:, 0], points[:, 1]
+        triang = mtri.Triangulation(x_coords, y_coords, cells)
+        fig, ax = plt.subplots()
+        ax.tricontour(
+            triang,
+            values,
+            levels=[min(values), 0.0, max(values)],
+            linestyles="-",
+            linewidths=lw,
+        )
+        ax.triplot(triang, "b-", linewidth=0.1)
+        ax.set_aspect("equal")
+
+        ax.set_xlim(lims[0])
+        ax.set_ylim(lims[1])
+        ax.set_xticks([])
+        ax.set_yticks([])
+        ax.tick_params(bottom=False, left=False)
+        for spine in ax.spines.values():
+            spine.set_visible(False)
+
+        fig.tight_layout()
+
+        if filename:
+            plt.savefig(filename, dpi=300, pad_inches=0, bbox_inches="tight")
+
+
 def plot_results_for_doc(h5file, niter, lims, lw, path_name, boundaries=None):
 
     with h5py.File(h5file / "results.h5", "r") as f:

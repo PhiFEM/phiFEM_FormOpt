@@ -1695,13 +1695,13 @@ def basic_solver(a, L, bcs, uh):
 class Smooth:
 
     def __init__(
-        self, domain: Mesh, space: FunctionSpace, f: Function, diam2: float
+        self, domain: Mesh, space: FunctionSpace, f: Function, eps: float = 1e-5
     ) -> None:
 
         dx = Measure("dx", domain=domain)
         u = TrialFunction(space)
         v = TestFunction(space)
-        self.a = form(dot(u, v) * dx + diam2 * inner(grad(u), grad(v)) * dx)
+        self.a = form(dot(u, v) * dx + eps * inner(grad(u), grad(v)) * dx)
         self.L = form(dot(f, v) * dx)
         self.solver = build_solver(domain, self.a, [])
 
@@ -2750,7 +2750,7 @@ def runDP(
     nDJ = form((model.bilinear_form(tht, tht))[0])
     # To calculate the velocity field
     cls_vlty = Velocity(dim, domain, sp_vlty, model.bilinear_form, S0, S1)
-    # cls_smth = Smooth(domain, sp_vlty, tht, diam2)
+    cls_smth = Smooth(domain, sp_vlty, tht)
     # To calculate the level set function
     cls_lset = Level(domain, sp_lset, phi, tht, diam2, smooth)
     # Reinicialization
@@ -2860,8 +2860,8 @@ def runDP(
                 comm.barrier()
 
             cls_vlty.run(tht)
-            # for ii in range(4):
-            #     cls_smth.run(tht)
+            # for _ in range(5):
+            #    cls_smth.run(tht)
             nder = global_scalar(nDJ, comm, np.sqrt)
 
             if rank == 0:
