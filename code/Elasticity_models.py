@@ -1,4 +1,5 @@
 from formopt import Model
+from formopt import func_to_eval, qtty_to_eval
 
 from ufl import (
     TrialFunction,
@@ -26,6 +27,7 @@ from ufl import (
     inv,
     tr,
     ln,
+    le,
 )
 
 
@@ -119,6 +121,9 @@ class MRcomponents:
 
         return hq2
 
+    def stress(self, F):
+        return self.hatQ1(F) * F.T / det(F)
+
 
 class Hookecomponents:
     """
@@ -146,6 +151,9 @@ class Hookecomponents:
     def hatQ2(self, F, dF):
         # First Piola-Kirchhoff tangent
         return self.S(sym(dF))
+
+    def stress(self, F):
+        return self.S(sym(F) - self.Id)
 
 
 class SVKcomponents:
@@ -184,49 +192,25 @@ class SVKcomponents:
         # First Piola-Kirchhoff tangent
         return dF * self.S(self.E(F)) + F * self.S(sym(F.T * dF))
 
-
-class Compliance:
-
-    def __init__(self, g, ds_g):
-        self.g = [as_vector(gi) for gi in g]
-        self.ds_g = ds_g
-
-    def jfunc(self, u):
-        return 0.0
-
-    def djfunc(self, u, du):
-        return 0.0
-
-    def lfunc(self, u):
-        return sum([dot(gi, u) * dgi for gi, dgi in zip(self.g, self.ds_g)])
-
-    def dlfunc(self, u, du):
-        return sum([dot(gi, du) * dgi for gi, dgi in zip(self.g, self.ds_g)])
+    def stress(self, F):
+        return self.hatQ1(F) * F.T / det(F)
 
 
-class Gripping:
-
-    def __init__(self, k, ds_g):
-        self.k = [as_vector(ki) for ki in k]
-        self.ds_g = ds_g
-
-    def jfunc(self, u):
-        return 0.0
-
-    def djfunc(self, u, du):
-        return 0.0
-
-    def lfunc(self, u):
-        return sum([dot(ki, u) * dgi for ki, dgi in zip(self.k, self.ds_g)])
-
-    def dlfunc(self, u, du):
-        return sum([dot(ki, du) * dgi for ki, dgi in zip(self.k, self.ds_g)])
-
-
-class Elasticity(Model):
+class Compliance(Model):
 
     def __init__(
-        self, dim, domain, space, path, em, cf, g, ds_g, dir_bcs, alpha, eps=1e-3
+        self,
+        dim,
+        domain,
+        space,
+        path,
+        em,
+        g_arr,
+        dsg_arr,
+        dir_bcs,
+        alpha,
+        pty=True,
+        eps=1e-3,
     ):
 
         self.dim = dim
@@ -234,9 +218,6 @@ class Elasticity(Model):
         self.space = space
         self.path = path
         self.em = em
-        self.cf = cf
-        self.fcs_to_eval = [self.stressVonMises]
-        self.fte_names = ["VonMises"]
 
         self.dx = Measure("dx", domain=domain)
         self.ds = Measure("ds", domain=domain)
@@ -244,10 +225,12 @@ class Elasticity(Model):
         self.bc = dir_bcs
         self.u0 = lambda x: 0.0 * x[:dim]
         self.alpha = alpha
-        self.nN = 4
+        self.pty = pty
+        self.nN = -1
+        self.sub = []
 
-        self.g = [as_vector(gi) for gi in g]
-        self.ds_g = ds_g
+        self.g_arr = [[as_vector(g) for g in g_row] for g_row in g_arr]
+        self.dsg_arr = dsg_arr
 
         self.zero_vec = as_vector(dim * [0.0])
         self.Id = Identity(dim)
@@ -255,16 +238,37 @@ class Elasticity(Model):
 
         self.A = lambda w: conditional(lt(w, 0.0), 1.0, eps)
         self.chi = lambda w: conditional(lt(w, 0.0), 1.0, 0.0)
+        self.sign = lambda w: conditional(lt(w, 0.0), 1.0, -1.0)
 
-    def stressVonMises(self, phi, U, P):
+    def jfunc(self, u):
+        return 0.0
 
+    def djfunc(self, u, du):
+        return 0.0
+
+    def lfunc(self, u, g_list, dsg_list):
+        return sum([dot(g, u) * dsg for g, dsg in zip(g_list, dsg_list)])
+
+    def dlfunc(self, u, du, g_list, dsg_list):
+        return sum([dot(g, du) * dsg for g, dsg in zip(g_list, dsg_list)])
+
+    @qtty_to_eval("Volume")
+    def Volume(self, phi, U, P):
+        return self.chi(phi) * self.dx
+
+    @func_to_eval("Displacement")
+    def normDisplacement(self, phi, U, P):
         u = U[0]
-        F = self.F(u)
-        # Cauchy stress
-        sigma = self.em.hatQ1(F) * F.T / det(F)
+        return self.sign(phi) * sqrt(dot(u, u))
+
+    @func_to_eval("VonMises")
+    def stressVonMises(self, phi, U, P):
+        # Von Mises stress calculated using Cauchy stress
+        u = U[0]
+        sigma = self.em.stress(self.F(u))
         s = sigma - (1.0 / 3.0) * tr(sigma) * self.Id
 
-        return sqrt(1.5 * inner(s, s))
+        return self.chi(phi) * sqrt(1.5 * inner(s, sigma))
 
     def _DW(self, F, dF):
         # First derivative of strain energy density
@@ -280,12 +284,15 @@ class Elasticity(Model):
             u = TrialFunction(self.space)
             v = TestFunction(self.space)
 
-            # Weak formulation of state problem
-            Wf = self.A(phi) * self._DW(self.F(u), grad(v)) * self.dx
-            for gi, dgi in zip(self.g, self.ds_g):
-                Wf -= dot(gi, v) * dgi
+            pdes = []
+            for g_row, dsg_row in zip(self.g_arr, self.dsg_arr):
+                # Weak formulation of state problem
+                Wf = self.A(phi) * self._DW(self.F(u), grad(v)) * self.dx
+                for g, dsg in zip(g_row, dsg_row):
+                    Wf -= dot(g, v) * dsg
+                pdes.append((Wf, self.bc))
 
-            return [(Wf, self.bc)]
+            return pdes
         else:
             u = Coefficient(self.space)
             v = TestFunction(self.space)
@@ -293,61 +300,76 @@ class Elasticity(Model):
             l = Constant(self.domain)
             F = self.F(u)
 
-            # Weak formulation of state problem
-            Wf = self.A(phi) * self._DW(F, grad(v)) * self.dx
-            for gi, dgi in zip(self.g, self.ds_g):
-                Wf -= l * dot(gi, v) * dgi
-            # Jacobian
-            Jc = self.A(phi) * self._D2W(F, grad(du), grad(v)) * self.dx
+            pdes = []
+            for g_row, dsg_row in zip(self.g_arr, self.dsg_arr):
+                # Weak formulation of state problem
+                Wf = self.A(phi) * self._DW(F, grad(v)) * self.dx
+                for g, dsg in zip(g_row, dsg_row):
+                    Wf -= l * dot(g, v) * dsg
+                # Jacobian
+                Jc = self.A(phi) * self._D2W(F, grad(du), grad(v)) * self.dx
+                pdes.append((Wf, self.bc, Jc, u, self.u0, (l, self.nN)))
 
-            return [(Wf, self.bc, Jc, u, self.u0, l, (0.1, self.nN))]
+            return pdes
 
     def adjoint(self, phi, U):
 
-        u = U[0]
         p = TrialFunction(self.space)
         q = TestFunction(self.space)
 
-        F = self.F(u)
+        adjs = []
+        for g_row, dsg_row, u in zip(self.g_arr, self.dsg_arr, U):
+            # Weak formulation of adjoint problem
+            Wf = self.A(phi) * self._D2W(self.F(u), grad(p), grad(q)) * self.dx
+            Wf += self.djfunc(u, q) * self.dx + self.dlfunc(u, q, g_row, dsg_row)
+            adjs.append((Wf, self.bc))
 
-        # Weak formulation of adjoint problem
-        Wf = self.A(phi) * self._D2W(F, grad(p), grad(q)) * self.dx
-        Wf += self.cf.djfunc(u, q) * self.dx + self.cf.dlfunc(u, q)
-
-        return [(Wf, self.bc)]
+        return adjs
 
     def cost(self, phi, U):
-
-        u = U[0]
-
         # Cost functional
-        cf = self.cf.jfunc(u) * self.dx
-        cf += self.cf.lfunc(u)
-        cf += self.alpha * self.chi(phi) * self.dx
 
-        return cf
+        cf_list = []
+
+        for u in U:
+            cf_list.append(self.jfunc(u) * self.dx)
+
+        for g_row, dsg_row, u in zip(self.g_arr, self.dsg_arr, U):
+            cf_list.append(self.lfunc(u, g_row, dsg_row))
+
+        if self.pty:
+            cf_list.append(self.alpha * self.chi(phi) * self.dx)
+
+        return sum(cf_list)
 
     def constraint(self, phi, U):
-        return []
+        if self.pty:
+            return []
+        else:
+            return [(1.0 / self.alpha) * self.chi(phi) * self.dx]
 
     def derivative(self, phi, U, P):
 
-        u = U[0]
-        p = P[0]
-
-        F = self.F(u)
-
-        Q1 = -grad(p).T * self.em.hatQ1(F)
-        Q2 = -grad(u).T * self.em.hatQ2(F, grad(p))
-
-        S1_J = (self.cf.jfunc(u) + self._DW(F, grad(p))) * self.Id
-        S1_J += Q1 + Q2
-        S1_J *= self.A(phi)
-        S1_J += self.alpha * self.chi(phi) * self.Id
-
         S0_J = self.zero_vec
 
-        return (S0_J, []), (S1_J, [])
+        S1_J_list = []
+        for u, p in zip(U, P):
+            F = self.F(u)
+
+            Q1 = -grad(p).T * self.em.hatQ1(F)
+            Q2 = -grad(u).T * self.em.hatQ2(F, grad(p))
+
+            s1 = (self.jfunc(u) + self._DW(F, grad(p))) * self.Id
+            s1 += Q1 + Q2
+            S1_J_list.append(self.A(phi) * s1)
+
+        if self.pty:
+            S1_J_list.append(self.alpha * self.chi(phi) * self.Id)
+            return (S0_J, []), (sum(S1_J_list), [])
+        else:
+            S0_C = self.zero_vec
+            S1_C = (1.0 / self.alpha) * self.chi(phi) * self.Id
+            return (S0_J, [S0_C]), (sum(S1_J_list), [S1_C])
 
     def bilinear_form(self, th, xi):
 

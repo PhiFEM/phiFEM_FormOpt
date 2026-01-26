@@ -163,6 +163,12 @@ class Model(ABC):
             Test path to save the results.
         """
 
+    def __init_subclass__(cls):
+        cls._to_eval = {"function": {}, "quantity": {}}
+        for attr in cls.__dict__.values():
+            if callable(attr) and getattr(attr, "_to_eval", False):
+                cls._to_eval[attr._kind][attr._name] = attr
+
     @abstractmethod
     def pde(
         self, level_set_func: Function
@@ -384,12 +390,6 @@ class Model(ABC):
         Return the callable initial level set function.
         """
         return self.ini_lvl.func
-
-    def set_func(self, func: Function) -> None:
-        if hasattr(self, "fcs_to_eval"):
-            self.fcs_to_eval += [func]
-        else:
-            self.fcs_to_eval = [func]
 
     @final
     def runDP(
@@ -655,6 +655,28 @@ class Model(ABC):
         )
 
 
+def _register(kind, name):
+    def decorator(func):
+        func._to_eval = True
+        func._kind = kind
+        func._name = name
+        return func
+
+    return decorator
+
+
+def func_to_eval(name):
+    # decorator for functions
+    # to be evaluated
+    return _register("function", name)
+
+
+def qtty_to_eval(name):
+    # decorator for quantities
+    # to be evaluated
+    return _register("quantity", name)
+
+
 class ObjFunc:
     """
     Class to save and pass a level set function
@@ -859,11 +881,15 @@ class Save:
     def __init__(self) -> None:
         self.cost = []
         self.nder = []
+        self.quantities = []
         self.ppl_obj = None
 
     def add(self, cost: float, nder: float) -> None:
         self.cost.append(cost)
         self.nder.append(nder)
+
+    def add_quantities(self, qs: List[float]) -> None:
+        self.quantities.append(qs)
 
     def add_times(self, assembly: float, resolution: float) -> None:
         self.times = [assembly, resolution]
@@ -872,30 +898,36 @@ class Save:
         self.ppl_obj = ppl_obj
 
     def save(self, path: Path) -> None:
+        data_to_save = None
+
         if self.ppl_obj is None:
-            np.savez(
-                path / f"{dat_name}.npz",
-                cost=np.array(self.cost),
-                nder=np.array(self.nder),
-                times=self.times,
-            )
+            data_to_save = {
+                "cost": np.array(self.cost),
+                "nder": np.array(self.nder),
+                "times": self.times,
+            }
+
         else:
-            np.savez(
-                path / f"{dat_name}.npz",
-                cost=np.array(self.cost),
-                ctrs=np.array(self.ppl_obj.list_ct),
-                nder=np.array(self.nder),
-                Lg=np.array(self.ppl_obj.list_Lg),
-                lm=np.array(self.ppl_obj.list_lm),
-                mu=np.array(self.ppl_obj.list_mu),
-                z=np.array(self.ppl_obj.list_zs),
-                delta=np.array(self.ppl_obj.list_dl),
-                alpha=np.array(self.ppl_obj.alpha),
-                beta=np.array(self.ppl_obj.beta),
-                rho=np.array(self.ppl_obj.rho),
-                r=np.array(self.ppl_obj.r),
-                times=self.times,
-            )
+            data_to_save = {
+                "cost": np.array(self.cost),
+                "ctrs": np.array(self.ppl_obj.list_ct),
+                "nder": np.array(self.nder),
+                "Lg": np.array(self.ppl_obj.list_Lg),
+                "lm": np.array(self.ppl_obj.list_lm),
+                "mu": np.array(self.ppl_obj.list_mu),
+                "z": np.array(self.ppl_obj.list_zs),
+                "delta": np.array(self.ppl_obj.list_dl),
+                "alpha": np.array(self.ppl_obj.alpha),
+                "beta": np.array(self.ppl_obj.beta),
+                "rho": np.array(self.ppl_obj.rho),
+                "r": np.array(self.ppl_obj.r),
+                "times": self.times,
+            }
+
+        if len(self.quantities) > 0:
+            data_to_save["quantities"] = np.array(self.quantities)
+
+        np.savez(path / f"{dat_name}.npz", **data_to_save)
 
 
 class InitialLevel:
@@ -2201,6 +2233,18 @@ def homogeneous_dirichlet(
     return bcs
 
 
+def homogeneous_dirichlet_y_coord(domain, space, boundary_tags, mrks_dirichlet):
+    bcs = []
+    for mk in mrks_dirichlet:
+        dofs = locate_dofs_topological(
+            space.sub(1),
+            domain.geometry.dim - 1,
+            boundary_tags.indices[boundary_tags.values == mk],
+        )
+        bcs.append(dirichletbc(PETSc.ScalarType(0), dofs, space.sub(1)))
+    return bcs
+
+
 def homogeneous_dirichlet_fun(domain, space, funcs, rank_dimension):
     if rank_dimension == 1:
         u_zero = PETSc.ScalarType(0)
@@ -2473,12 +2517,12 @@ class NonlinearSolverWrapper:
 
 
 class NonlinearSolverbySteeping:
-    def __init__(self, solver, u, initial, factor, factor_pars):
+    def __init__(self, solver, u, initial, factor, nbr_steps):
         self.solver = solver
         self.u = u
         self.ini = initial
         self.factor = factor
-        self.vals = np.linspace(factor_pars[0], 1.0, factor_pars[1])
+        self.vals = np.linspace(0, 1.0, nbr_steps)[1:]
         self.max_niter = 0
 
     def solve(self):
@@ -2498,15 +2542,13 @@ class NonlinearSolverbySteeping:
         return (f"newt = {self.max_niter:2.0f} | ",)[0]
 
 
-def create_nonlinear_solver_with_factor(
-    comm, F, bcs, J, u, initial, factor, factor_pars
-):
+def create_nonlinear_solver_with_factor(comm, F, bcs, J, u, initial, factor, nbr_steps):
 
     problem = NonlinearProblem(F, u, bcs=bcs, J=J)
     solver = NewtonSolver(comm, problem)
     solver.convergence_criterion = "incremental"
     solver.rtol = np.sqrt(np.finfo(default_real_type).eps) * 1e-2
-    solver.max_it = 20
+    solver.max_it = 40
 
     ksp = solver.krylov_solver
     opts = PETSc.Options()
@@ -2527,7 +2569,7 @@ def create_nonlinear_solver_with_factor(
 
     ksp.setFromOptions()
 
-    return NonlinearSolverbySteeping(solver, u, initial, factor, factor_pars)
+    return NonlinearSolverbySteeping(solver, u, initial, factor, nbr_steps)
 
 
 def create_nonlinear_solver(comm, F, bcs, J, u, initial):
@@ -2664,6 +2706,7 @@ def runDP(
     for i in range(nbr_ste):
         ste_problem = ste_eqs[i]
         if len(ste_problem) == 2:
+            # linea problem
             weak_form, bcs = ste_problem
             bi, li = system(weak_form)
             ste_pbs.append(create_solver(form(bi), form(li), bcs, ste_fcs[i]))
@@ -2679,9 +2722,8 @@ def runDP(
             )
         else:
             # nonlinear: newton with initial guess and stepping method
-            weak_form, bcs, jacobian, seudo_state, ini_func, factor, factor_pars = (
-                ste_problem
-            )
+            weak_form, bcs, jacobian, seudo_state, ini_func, factor_pars = ste_problem
+            factor, nbr_newton_steps = factor_pars
             true_factor = const(domain, 0.0)
             true_weak_form = replace(
                 weak_form, {seudo_state: ste_fcs[i], factor: true_factor}
@@ -2698,7 +2740,7 @@ def runDP(
                     ste_fcs[i],
                     ini_func,
                     true_factor,
-                    factor_pars,
+                    nbr_newton_steps,
                 )
             )
 
@@ -2720,13 +2762,19 @@ def runDP(
     else:
         adj_fcs = []
 
-    flag_fcs_to_eval = False
-    if hasattr(model, "fcs_to_eval"):
-        nbr_fte = len(model.fcs_to_eval)
-        fcs_to_eval = [Function(sp_lset) for _ in range(nbr_fte)]
-        for i in range(nbr_fte):
-            fcs_to_eval[i].name = model.fte_names[i]
-        flag_fcs_to_eval = True
+    # to be evaluated: functions
+    nbr_to_ev_fs = len(model._to_eval["function"])
+    if nbr_to_ev_fs > 0:
+        fcs_to_eval = [Function(sp_lset) for _ in range(nbr_to_ev_fs)]
+        for _, name in zip(fcs_to_eval, model._to_eval["function"]):
+            _.name = name
+
+    # to be evaluated: quantities
+    nbr_to_ev_qs = len(model._to_eval["quantity"])
+    if nbr_to_ev_qs > 0:
+        to_ev_qs = []
+        for name, fc in model._to_eval["quantity"].items():
+            to_ev_qs.append(form(fc(model, phi, ste_fcs, adj_fcs)))
 
     # Cost functional
     J = form(model.cost(phi, ste_fcs))
@@ -2748,11 +2796,13 @@ def runDP(
             S1 += L[i] * S1_cts[1][i]
     # Derivative norm
     nDJ = form((model.bilinear_form(tht, tht))[0])
+
     # To calculate the velocity field
     cls_vlty = Velocity(dim, domain, sp_vlty, model.bilinear_form, S0, S1)
-    cls_smth = Smooth(domain, sp_vlty, tht)
+
     # To calculate the level set function
     cls_lset = Level(domain, sp_lset, phi, tht, diam2, smooth)
+
     # Reinicialization
     if reinit_step:
         cls_rein = Reinit(domain, sp_lset, phi, diam2)
@@ -2779,6 +2829,19 @@ def runDP(
         [p.solve() for p in adj_pbs]
         comm.barrier()
 
+    if nbr_to_ev_fs > 0:
+        [
+            fc.interpolate(
+                L2_interpolation(
+                    domain, sp_lset, func(model, phi, ste_fcs, adj_fcs), diam2
+                )
+            )
+            for fc, func in zip(fcs_to_eval, model._to_eval["function"].values())
+        ]
+
+    if nbr_to_ev_qs > 0:
+        qs_eval = global_scalar_list(to_ev_qs, comm)
+
     cls_vlty.run(tht)
     nder = global_scalar(nDJ, comm, np.sqrt)
 
@@ -2797,6 +2860,8 @@ def runDP(
         else:
             print1(0, cost, nder, 0)
         tosave.add(cost, nder)
+        if nbr_to_ev_qs > 0:
+            tosave.add_quantities(qs_eval)
     # ====================================================
     spaceP1 = None
     degree_space = model.space.ufl_element().degree
@@ -2825,12 +2890,9 @@ def runDP(
 
         xdmf.write_function(tht, 0)
 
-        if fcs_to_eval:
-            for fc, fun in zip(fcs_to_eval, model.fcs_to_eval):
-                fc.interpolate(
-                    L2_interpolation(domain, sp_lset, fun(phi, ste_fcs, adj_fcs), diam2)
-                )
-                xdmf.write_function(fc, 0)
+        if nbr_to_ev_fs > 0:
+            for f in fcs_to_eval:
+                xdmf.write_function(f, 0)
 
         for iter in range(1, niter + 1):
 
@@ -2859,9 +2921,23 @@ def runDP(
                 [p.solve() for p in adj_pbs]
                 comm.barrier()
 
+            if nbr_to_ev_fs > 0:
+                [
+                    fc.interpolate(
+                        L2_interpolation(
+                            domain, sp_lset, func(model, phi, ste_fcs, adj_fcs), diam2
+                        )
+                    )
+                    for fc, func in zip(
+                        fcs_to_eval, model._to_eval["function"].values()
+                    )
+                ]
+
+            if nbr_to_ev_qs:
+                qs_eval = global_scalar_list(to_ev_qs, comm)
+
             cls_vlty.run(tht)
-            # for _ in range(5):
-            #    cls_smth.run(tht)
+
             nder = global_scalar(nDJ, comm, np.sqrt)
 
             if rank == 0:
@@ -2885,16 +2961,11 @@ def runDP(
                 for f in adj_fcsP1:
                     xdmf.write_function(f, iter)
 
-            xdmf.write_function(tht, iter)
+            if nbr_to_ev_fs > 0:
+                for f in fcs_to_eval:
+                    xdmf.write_function(f, iter)
 
-            if fcs_to_eval:
-                for fc, fun in zip(fcs_to_eval, model.fcs_to_eval):
-                    fc.interpolate(
-                        L2_interpolation(
-                            domain, sp_lset, fun(phi, ste_fcs, adj_fcs), diam2
-                        )
-                    )
-                    xdmf.write_function(fc, iter)
+            xdmf.write_function(tht, iter)
 
             if rank == 0:
                 if nbr_ctr > 0:
@@ -2902,6 +2973,8 @@ def runDP(
                 else:
                     print1(iter, cost, nder, lset_steps)
                 tosave.add(cost, nder)
+                if nbr_to_ev_qs > 0:
+                    tosave.add_quantities(qs_eval)
 
                 if iter > start_to_check:
                     if nbr_ctr > 0:

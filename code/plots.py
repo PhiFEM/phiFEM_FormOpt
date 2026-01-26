@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import matplotlib.tri as mtri
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib.colors import ListedColormap, Normalize
 
 import pathlib as Path
@@ -23,6 +24,179 @@ from dolfinx.io import XDMFFile
 from mpi4py import MPI
 
 rank = MPI.COMM_WORLD.rank
+
+
+def plot_lv(
+    test_path,
+    niter,
+    limits,
+    displacement=True,
+    figsize=None,
+    boundaries=None,
+    lw=2,
+    filename=None,
+):
+
+    points, cells, phi = None, None, None
+
+    with h5py.File(test_path / "results.h5", "r") as f:
+        points = f["/Mesh/mesh/geometry"][:]
+        cells = f["/Mesh/mesh/topology"][:]
+        phi_group = f["/Function/phi"]
+        phi = phi_group[str(niter)][:, 0]
+        if displacement:
+            u0_group = f["/Function/u0"]
+            u0 = u0_group[str(niter)][:, [0, 1]]
+            points = points + u0
+
+    print("> Level set function")
+    x_coords, y_coords = points[:, 0], points[:, 1]
+    triang = mtri.Triangulation(x_coords, y_coords, cells)
+    fig, ax = plt.subplots(figsize=figsize)
+    ax.tricontourf(
+        triang,
+        phi,
+        levels=[min(phi), 0.0, max(phi)],
+        colors=["black", (1, 1, 1)],
+    )
+    ax.set_aspect("equal")
+    ax.set_xlim(limits[0])
+    ax.set_ylim(limits[1])
+    ax.set_xticks([])
+    ax.set_yticks([])
+    ax.tick_params(bottom=False, left=False)
+    for spine in ax.spines.values():
+        spine.set_visible(False)
+
+    if boundaries:
+        for xy, cl in boundaries:
+            ax.plot(xy[:, 0], xy[:, 1], color=cl, linewidth=lw)
+
+    if filename:
+        plt.savefig(filename, dpi=300, pad_inches=0, bbox_inches="tight")
+
+
+def plot_vm(
+    test_path,
+    niter,
+    limits,
+    vmax,
+    displacement=True,
+    figsize=None,
+    boundaries=None,
+    lw=2,
+    filename=None,
+):
+
+    points, cells, vm = None, None, None
+
+    with h5py.File(test_path / "results.h5", "r") as f:
+        points = f["/Mesh/mesh/geometry"][:]
+        cells = f["/Mesh/mesh/topology"][:]
+        phi_group = f["/Function/phi"]
+        phi = phi_group[str(niter)][:, 0]
+        vm_group = f["/Function/VonMises"]
+        vm = vm_group[str(niter)][:, 0]
+        if displacement:
+            u0_group = f["/Function/u0"]
+            u0 = u0_group[str(niter)][:, [0, 1]]
+            points = points + u0
+    # vm[phi > 0.0] = -1.0
+    print("> Von Mises stress - maximum value = ", np.max(vm))
+    x_coords, y_coords = points[:, 0], points[:, 1]
+    triang = mtri.Triangulation(x_coords, y_coords, cells)
+    fig, ax = plt.subplots(figsize=figsize)
+    ax.set_title("Von Mises stress")
+    cf = ax.tricontourf(
+        triang,
+        vm,
+        cmap="turbo",
+        levels=np.linspace(3.0, vmax, 13),
+        vmin=0,
+        vmax=vmax,
+    )
+
+    divider = make_axes_locatable(ax)
+    cax = divider.append_axes("right", size="2%", pad=0.05)
+    fig.colorbar(cf, cax=cax)
+
+    ax.set_aspect("equal")
+    ax.set_xlim(limits[0])
+    ax.set_ylim(limits[1])
+    ax.set_xticks([])
+    ax.set_yticks([])
+    ax.tick_params(bottom=False, left=False)
+    for spine in ax.spines.values():
+        spine.set_visible(False)
+
+    if boundaries:
+        for xy, cl in boundaries:
+            ax.plot(xy[:, 0], xy[:, 1], color=cl, linewidth=lw)
+
+    if filename:
+        plt.savefig(filename, dpi=300, pad_inches=0, bbox_inches="tight")
+
+
+def plot_dp(
+    test_path,
+    niter,
+    limits,
+    vmax,
+    displacement=True,
+    figsize=None,
+    boundaries=None,
+    lw=2,
+    filename=None,
+):
+
+    points, cells, u0 = None, None, None
+
+    with h5py.File(test_path / "results.h5", "r") as f:
+        points = f["/Mesh/mesh/geometry"][:]
+        cells = f["/Mesh/mesh/topology"][:]
+        phi_group = f["/Function/phi"]
+        phi = phi_group[str(niter)][:, 0]
+        dp_group = f["/Function/Displacement"]
+        dp = dp_group[str(niter)][:, 0]
+        if displacement:
+            u0_group = f["/Function/u0"]
+            u0 = u0_group[str(niter)][:, [0, 1]]
+            points = points + u0
+
+    # dp[phi > 0.0] = -1.0
+    print("> Displacement (in norm) - maximum value = ", np.max(dp))
+    x_coords, y_coords = points[:, 0], points[:, 1]
+    triang = mtri.Triangulation(x_coords, y_coords, cells)
+    fig, ax = plt.subplots(figsize=figsize)
+    ax.set_title("Displacement (in norm)")
+    cf = ax.tricontourf(
+        triang,
+        dp,
+        cmap="turbo",
+        levels=np.linspace(0, vmax, 12),
+        vmin=0,
+        vmax=vmax,
+    )
+
+    divider = make_axes_locatable(ax)
+    cax = divider.append_axes("right", size="2%", pad=0.05)
+    fig.colorbar(cf, cax=cax)
+
+    ax.set_aspect("equal")
+    ax.set_xlim(limits[0])
+    ax.set_ylim(limits[1])
+    ax.set_xticks([])
+    ax.set_yticks([])
+    ax.tick_params(bottom=False, left=False)
+    for spine in ax.spines.values():
+        spine.set_visible(False)
+
+    if boundaries:
+        for xy, cl in boundaries:
+            ax.plot(xy[:, 0], xy[:, 1], color=cl, linewidth=lw)
+
+    if filename:
+        plt.savefig(filename, dpi=300, pad_inches=0, bbox_inches="tight")
 
 
 def plot_bars(num_procs, times, filename, ylimits=None):
@@ -659,6 +833,24 @@ def plot_cost(cost_values, figsize=None, filename=None):
 
     ax.set_xlabel("Iterations")
     ax.set_ylabel("Cost")
+    ax.grid(True, linestyle="--", alpha=0.7)
+    fig.tight_layout()
+
+    if filename:
+        plt.savefig(filename, format=filename.suffix[1:], dpi=300)
+        plt.close()
+    else:
+        plt.show()
+
+
+def plot_volume(volume_values, figsize=None, filename=None):
+    iterations = np.arange(0, len(volume_values))
+
+    fig, ax = plt.subplots(figsize=figsize)
+    ax.plot(iterations, volume_values, color="black", linewidth=2)
+
+    ax.set_xlabel("Iterations")
+    ax.set_ylabel("Volume")
     ax.grid(True, linestyle="--", alpha=0.7)
     fig.tight_layout()
 
