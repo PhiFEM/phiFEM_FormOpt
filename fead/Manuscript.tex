@@ -19,7 +19,14 @@
 %% SP 2008/03/01
 %% $Id: elsarticle-template-num.tex 289 2026-01-09 06:13:01Z rishi $
 %%
-\documentclass[preprint,12pt]{elsarticle}
+\documentclass[preprint,9pt]{elsarticle}
+\usepackage{geometry}
+\geometry{
+  left=2.5cm,
+  right=2.5cm,
+  top=2cm,
+  bottom=2.5cm
+}
 
 %% Use the option review to obtain double line spacing
 %% \documentclass[authoryear,preprint,review,12pt]{elsarticle}
@@ -655,7 +662,7 @@ For several measurements, one can simply sum over the measurements in \eqref{eq:
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.5\textwidth]{Fig1.png}
+\includegraphics[width=0.4\textwidth]{Fig1.png}
 \caption{
 	Geometric configuration for the inverse problem in elasticity.
 }\label{fig:elast_dom}
@@ -2293,11 +2300,11 @@ See the result in Figure~\ref{fig:inv1}.
 \centering
 \begin{minipage}{0.48\linewidth}
 	\centering
-	\includegraphics[width=\linewidth]{Fig2a.png}
+	\includegraphics[width=0.6\linewidth]{Fig2a.png}
 \end{minipage}\hfill
 \begin{minipage}{0.48\linewidth}
 	\centering
-	\includegraphics[width=\linewidth]{Fig2b.png}
+	\includegraphics[width=0.6\linewidth]{Fig2b.png}
 \end{minipage}
 
 \caption{
@@ -2337,11 +2344,11 @@ See the recovered inclusions in Figure \ref{fig:inv2}.
 \centering
 \begin{minipage}{0.48\linewidth}
 	\centering
-	\includegraphics[width=\linewidth]{Fig3a.png}
+	\includegraphics[width=0.6\linewidth]{Fig3a.png}
 \end{minipage}\hfill
 \begin{minipage}{0.48\linewidth}
 	\centering
-	\includegraphics[width=\linewidth]{Fig3b.png}
+	\includegraphics[width=0.6\linewidth]{Fig3b.png}
 \end{minipage}
 
 \caption{
@@ -2468,16 +2475,16 @@ contains the boundary $\Gamma_1$.
 \centering
 \begin{minipage}{0.48\linewidth}
 	\centering
-	\includegraphics[width=\linewidth]{Fig4a.png}
+	\includegraphics[width=0.6\linewidth]{Fig4a.png}
 \end{minipage}\hfill
 \begin{minipage}{0.48\linewidth}
 	\centering
-	\includegraphics[width=\linewidth]{Fig4b.png}
+	\includegraphics[width=0.6\linewidth]{Fig4b.png}
 \end{minipage}
 
 \begin{minipage}{0.85\linewidth}
 	\centering
-	\includegraphics[width=\linewidth]{Fig4c.png}
+	\includegraphics[width=0.6\linewidth]{Fig4c.png}
 \end{minipage}
 
 \caption{
@@ -2533,22 +2540,22 @@ md.runDP(
 \centering
 \begin{minipage}{0.48\linewidth}
 	\centering
-	\includegraphics[width=\linewidth]{Fig5a.png}
+	\includegraphics[width=0.6\linewidth]{Fig5a.png}
 \end{minipage}\hfill
 \begin{minipage}{0.48\linewidth}
 	\centering
-	\includegraphics[width=\linewidth]{Fig5b.png}
+	\includegraphics[width=0.6\linewidth]{Fig5b.png}
 \end{minipage}
 
 \vspace{0.5em}
 
 \begin{minipage}{0.48\linewidth}
 	\centering
-	\includegraphics[width=\linewidth]{Fig5c.png}
+	\includegraphics[width=0.6\linewidth]{Fig5c.png}
 \end{minipage}\hfill
 \begin{minipage}{0.48\linewidth}
 	\centering
-	\includegraphics[width=\linewidth]{Fig5d.png}
+	\includegraphics[width=0.6\linewidth]{Fig5d.png}
 \end{minipage}
 
 \caption{
@@ -2599,11 +2606,11 @@ reinit_step=4, reinit_pars=(16, 0.05), smooth=True
 \centering
 \begin{minipage}{0.48\linewidth}
 	\centering
-	\includegraphics[width=\linewidth]{Fig6a.png}
+	\includegraphics[width=0.6\linewidth]{Fig6a.png}
 \end{minipage}\hfill
 \begin{minipage}{0.48\linewidth}
 	\centering
-	\includegraphics[width=\linewidth]{Fig6b.png}
+	\includegraphics[width=0.6\linewidth]{Fig6b.png}
 \end{minipage}
 
 \caption{
@@ -2659,11 +2666,11 @@ See the result in Figure~\ref{fig:compli4}.
 \centering
 \begin{minipage}{0.48\linewidth}
 	\centering
-	\includegraphics[width=\linewidth]{Fig7a.png}
+	\includegraphics[width=0.6\linewidth]{Fig7a.png}
 \end{minipage}\hfill
 \begin{minipage}{0.48\linewidth}
 	\centering
-	\includegraphics[width=\linewidth]{Fig7b.png}
+	\includegraphics[width=0.6\linewidth]{Fig7b.png}
 \end{minipage}
 
 \caption{
@@ -2765,11 +2772,11 @@ in order to penalize the material around~$\Gamma_0$.
 \centering
 \begin{minipage}{0.48\linewidth}
 	\centering
-	\includegraphics[width=\linewidth]{Fig8a.png}
+	\includegraphics[width=0.6\linewidth]{Fig8a.png}
 \end{minipage}\hfill
 \begin{minipage}{0.48\linewidth}
 	\centering
-	\includegraphics[width=\linewidth]{Fig8b.png}
+	\includegraphics[width=0.6\linewidth]{Fig8b.png}
 \end{minipage}
 
 \caption{
@@ -2804,11 +2811,11 @@ compare the results with those in \cite{GAO2008805}.
 \centering
 \begin{minipage}{0.48\linewidth}
 	\centering
-	\includegraphics[width=\linewidth]{Fig9a.png}
+	\includegraphics[width=0.6\linewidth]{Fig9a.png}
 \end{minipage}\hfill
 \begin{minipage}{0.48\linewidth}
 	\centering
-	\includegraphics[width=\linewidth]{Fig9b.png}
+	\includegraphics[width=0.6\linewidth]{Fig9b.png}
 \end{minipage}
 
 \caption{
@@ -2850,11 +2857,11 @@ allowing tangential displacements along the boundary $\partial\mathcal{D}$.
 \centering
 \begin{minipage}{0.48\linewidth}
 	\centering
-	\includegraphics[width=\linewidth]{Fig10a.png}
+	\includegraphics[width=0.6\linewidth]{Fig10a.png}
 \end{minipage}\hfill
 \begin{minipage}{0.48\linewidth}
 	\centering
-	\includegraphics[width=\linewidth]{Fig10b.png}
+	\includegraphics[width=0.6\linewidth]{Fig10b.png}
 \end{minipage}
 
 \caption{
@@ -2903,22 +2910,22 @@ The results are shown in Figure \ref{fig:heat4}.
 \centering
 \begin{minipage}{0.48\linewidth}
 	\centering
-	\includegraphics[width=\linewidth]{Fig11a.png}
+	\includegraphics[width=0.6\linewidth]{Fig11a.png}
 \end{minipage}\hfill
 \begin{minipage}{0.48\linewidth}
 	\centering
-	\includegraphics[width=\linewidth]{Fig11b.png}
+	\includegraphics[width=0.6\linewidth]{Fig11b.png}
 \end{minipage}
 
 \vspace{0.5em}
 
 \begin{minipage}{0.48\linewidth}
 	\centering
-	\includegraphics[width=\linewidth]{Fig11c.png}
+	\includegraphics[width=0.6\linewidth]{Fig11c.png}
 \end{minipage}\hfill
 \begin{minipage}{0.48\linewidth}
 	\centering
-	\includegraphics[width=\linewidth]{Fig11d.png}
+	\includegraphics[width=0.6\linewidth]{Fig11d.png}
 \end{minipage}
 
 \caption{
@@ -2980,22 +2987,22 @@ which we are able to reproduce within our framework.
 \centering
 \begin{minipage}{0.48\linewidth}
 	\centering
-	\includegraphics[width=\linewidth]{Fig12a.png}
+	\includegraphics[width=0.6\linewidth]{Fig12a.png}
 \end{minipage}\hfill
 \begin{minipage}{0.48\linewidth}
 	\centering
-	\includegraphics[width=\linewidth]{Fig12b.png}
+	\includegraphics[width=0.6\linewidth]{Fig12b.png}
 \end{minipage}
 
 \vspace{0.5em}
 
 \begin{minipage}{0.48\linewidth}
 	\centering
-	\includegraphics[width=\linewidth]{Fig12c.png}
+	\includegraphics[width=0.6\linewidth]{Fig12c.png}
 \end{minipage}\hfill
 \begin{minipage}{0.48\linewidth}
 	\centering
-	\includegraphics[width=\linewidth]{Fig12d.png}
+	\includegraphics[width=0.6\linewidth]{Fig12d.png}
 \end{minipage}
 
 \caption{
@@ -3127,22 +3134,22 @@ See the optimized resource distributions in Figure~\ref{fig:log}.
 \centering
 \begin{minipage}{0.48\linewidth}
 	\centering
-	\includegraphics[width=\linewidth]{Fig13a.png}
+	\includegraphics[width=0.6\linewidth]{Fig13a.png}
 \end{minipage}\hfill
 \begin{minipage}{0.48\linewidth}
 	\centering
-	\includegraphics[width=\linewidth]{Fig13b.png}
+	\includegraphics[width=0.6\linewidth]{Fig13b.png}
 \end{minipage}
 
 \vspace{0.5em}
 
 \begin{minipage}{0.48\linewidth}
 	\centering
-	\includegraphics[width=\linewidth]{Fig13c.png}
+	\includegraphics[width=0.6\linewidth]{Fig13c.png}
 \end{minipage}\hfill
 \begin{minipage}{0.48\linewidth}
 	\centering
-	\includegraphics[width=\linewidth]{Fig13d.png}
+	\includegraphics[width=0.6\linewidth]{Fig13d.png}
 \end{minipage}
 
 \caption{
@@ -3214,11 +3221,11 @@ Optimized designs with thinner structural parts were obtained.
 \centering
 \begin{minipage}{0.48\linewidth}
 	\centering
-	\includegraphics[width=\linewidth]{Fig14a.png}
+	\includegraphics[width=0.6\linewidth]{Fig14a.png}
 \end{minipage}\hfill
 \begin{minipage}{0.48\linewidth}
 	\centering
-	\includegraphics[width=\linewidth]{Fig14b.png}
+	\includegraphics[width=0.6\linewidth]{Fig14b.png}
 \end{minipage}
 
 \caption{
@@ -3233,7 +3240,7 @@ Optimized designs with thinner structural parts were obtained.
 \centering
 \begin{minipage}{0.48\linewidth}
 	\centering
-	\includegraphics[width=\linewidth]{Fig15a.png}
+	\includegraphics[width=0.6\linewidth]{Fig15a.png}
 \end{minipage}\hfill
 \begin{minipage}{0.48\linewidth}
 	\centering

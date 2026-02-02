@@ -110,7 +110,7 @@ def plot_vm(
         triang,
         vm,
         cmap="turbo",
-        levels=np.linspace(3.0, vmax, 13),
+        levels=14,
         vmin=0,
         vmax=vmax,
     )
