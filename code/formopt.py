@@ -882,6 +882,7 @@ class Save:
         self.cost = []
         self.nder = []
         self.quantities = []
+        self.q_names = None
         self.ppl_obj = None
 
     def add(self, cost: float, nder: float) -> None:
@@ -890,6 +891,9 @@ class Save:
 
     def add_quantities(self, qs: List[float]) -> None:
         self.quantities.append(qs)
+
+    def add_qtty_names(self, names):
+        self.q_names = names
 
     def add_times(self, assembly: float, resolution: float) -> None:
         self.times = [assembly, resolution]
@@ -925,7 +929,9 @@ class Save:
             }
 
         if len(self.quantities) > 0:
-            data_to_save["quantities"] = np.array(self.quantities)
+            qtts = np.array(self.quantities)
+            for i in range(len(self.q_names)):
+                data_to_save[self.q_names[i]] = qtts[:, i]
 
         np.savez(path / f"{dat_name}.npz", **data_to_save)
 
@@ -2773,8 +2779,14 @@ def runDP(
     nbr_to_ev_qs = len(model._to_eval["quantity"])
     if nbr_to_ev_qs > 0:
         to_ev_qs = []
+        qs_names = []
+
         for name, fc in model._to_eval["quantity"].items():
             to_ev_qs.append(form(fc(model, phi, ste_fcs, adj_fcs)))
+            qs_names.append(name)
+
+        if rank == 0:
+            tosave.add_qtty_names(qs_names)
 
     # Cost functional
     J = form(model.cost(phi, ste_fcs))

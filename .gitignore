@@ -5,6 +5,8 @@ code/deprecated/
 code/__pycache__/
 site/
 samo/Manuscript.pdf
+fead/Manuscript.pdf
+fead/doc/
 *.lyx~
 *.npz
 *.npy

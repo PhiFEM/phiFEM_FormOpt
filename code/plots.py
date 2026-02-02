@@ -49,7 +49,6 @@ def plot_lv(
             u0 = u0_group[str(niter)][:, [0, 1]]
             points = points + u0
 
-    print("> Level set function")
     x_coords, y_coords = points[:, 0], points[:, 1]
     triang = mtri.Triangulation(x_coords, y_coords, cells)
     fig, ax = plt.subplots(figsize=figsize)
@@ -851,6 +850,24 @@ def plot_volume(volume_values, figsize=None, filename=None):
 
     ax.set_xlabel("Iterations")
     ax.set_ylabel("Volume")
+    ax.grid(True, linestyle="--", alpha=0.7)
+    fig.tight_layout()
+
+    if filename:
+        plt.savefig(filename, format=filename.suffix[1:], dpi=300)
+        plt.close()
+    else:
+        plt.show()
+
+
+def plot2(values, title="values", figsize=None, filename=None):
+    iterations = np.arange(0, len(values))
+
+    fig, ax = plt.subplots(figsize=figsize)
+    ax.plot(iterations, values, color="black", linewidth=2)
+
+    ax.set_xlabel("Iterations")
+    ax.set_ylabel(title)
     ax.grid(True, linestyle="--", alpha=0.7)
     fig.tight_layout()
 
