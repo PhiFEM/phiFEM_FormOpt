@@ -858,8 +858,8 @@ $|u-v-g|^2$ on $\partial\Omega$ vanishes, we get
 \begin{align*}
 	\mathfrak{G} & := A_{\Omega}\left\{
 		\sigma(u)\colon\!\epsilon(p) + \sigma(v+g)\colon\!\epsilon(q)
-	\right\}
-	 - A_{\Omega} \left(
+	\right\}\\
+	& \quad - A_{\Omega} \left(
 		{Du}^{\top}\sigma(p) + {Dp}^{\top}\sigma(u)+
 		{Dv}^{\top}\sigma(q) + {Dq}^{\top}\sigma(v+g)
 	\right)n\cdot n \quad\text{on}\;\partial\Omega.
@@ -925,20 +925,22 @@ which will be explained in the following subsections.
 Choose an initial $\phi^0:\overline{\mathcal{D}}\to\mathds{R}$.
 \For{$i = 0, 1, 2, \dots$}
 \State Solve \textbf{state} problems with $\Omega^i$.
-Let $U$ be the solutions.
+\Statex \hspace{1.2em} Let $U$ be the solutions.
 \State Solve \textbf{adjoint} problems with $\Omega^i$ and $U$.
- Let $P$ be the solutions.
+\Statex \hspace{1.2em} Let $P$ be the solutions.
 \State Use $\Omega^i$ and $U$ to compute \textbf{cost} value $J(\Omega^i)$.
 \State Use $\Omega^i$ and $U$ to compute \textbf{constraint} error.
 \State Check stopping criterion based on cost value
-and constraint error.
+\Statex \hspace{1.2em} and constraint error.
 \State Use $\Omega^i$, $U$, $P$ to build derivative components:
-$S_0^{J}$, $S_1^{J}$ (cost)%
+\Statex \hspace{1.2em} $S_0^{J}$, $S_1^{J}$ (cost)%
 		and $S_0^{C}$, $S_1^{C}$ (constraint).
 \State Solve \textbf{velocity} equation \eqref{eq:velocity_eq0} with
-$S_0^{J}$, $S_1^{J}$, $S_0^{C}$, and $S_1^{C}$.
+\Statex \hspace{1.2em} $S_0^{J}$, $S_1^{J}$, $S_0^{C}$, and $S_1^{C}$.
+\Statex \hspace{1.2em} %
 Let $\theta\colon\overline{\mathcal{D}}\to\mathds{R}^d$ be the solution.
 \State Solve \textbf{transport} equation \eqref{eq:transport0} with $\theta$.
+\Statex \hspace{1.2em} %
 Let $\phi^{i+1}\colon\overline{\mathcal{D}}\to\mathds{R}$ be the solution.
 \State Check stopping criterion.
 \EndFor
@@ -1131,7 +1133,8 @@ we have implemented several models in \texttt{models.py}:
 Tests using these models are provided in \texttt{test.py}.
 For each test, there is a corresponding folder in \texttt{results/},
 where the results are saved. 
-In \texttt{code/Tutorial.ipynb}, a tutorial covering a few of these tests can be found.
+A tutorial covering a few of these tests can be found in
+\texttt{code/Tutorial.ipynb}.
 The files \texttt{load.py} and \texttt{plots.py} contain auxiliary code
 for visualizing the results. 
 We recommend ParaView \cite{10.5555/2789330}
@@ -1385,11 +1388,11 @@ the iterations are defined by
 \begin{equation}\label{eq:lag_method}
 \begin{aligned}
 	\mu^{i} &= \mu^{i-1}+\delta^{i-1}
-	\tfrac{\lambda^{i-1}-\mu^{i-1}}{|\lambda^{i-1}-\mu^{i-1}|^{2} + 1},\qquad
-	\lambda^{i} = \mu^{i}+
+	\tfrac{\lambda^{i-1}-\mu^{i-1}}{|\lambda^{i-1}-\mu^{i-1}|^{2} + 1}\\
+	\lambda^{i} &= \mu^{i}+
 	\tfrac{\alpha}{1+\alpha\beta}(C(\Omega^{i})-\boldsymbol{1})\\
-	z^{i} &= \tfrac{1}{\alpha}(\lambda^{i}-\mu^{i}),\qquad \qquad \qquad \qquad 
-	\delta^{i} =r\delta^{i-1}
+	z^{i} &= \tfrac{1}{\alpha}(\lambda^{i}-\mu^{i})\\
+	\delta^{i} &=r\delta^{i-1}
 \end{aligned}
 \end{equation}
 for $i=1,2,\dots$, where $\Omega^{i}$ is given by \eqref{eq:subdomain}.
@@ -1619,10 +1622,10 @@ Find $\varphi(t + \delta t, \cdot) \in H^1(\mathcal{D})$ such that
 	\mathcal{G}(\varphi(t, \cdot), \varphi(t - \delta t, \cdot), \hat{\psi})
 \end{equation}
 for all $\psi\in H^1(\mathcal{D})$, where $\delta t$ is the time step,
-$
+\[
 	\mathcal{G}(u, v, w) = \tfrac{H(\nabla v)-3H(\nabla u)}{2} w +
 	h^2 \tfrac{\nabla v - 3\nabla u}{2} \cdot \nabla w,
-$
+\]
 and $\hat{\psi}=\psi+\tau\nabla H(\nabla\varphi(t,\cdot))\cdot\nabla\psi$, with 
 \begin{equation}
 	\tau(x) = \frac{1}{2}\left(\frac{1}{\delta t^2}  +
@@ -1661,7 +1664,7 @@ to configure the reinitialization:
 	\texttt{i} denotes the current iteration. By default, \texttt{reinit\_step=False}.
 	\item \texttt{reinit\_pars}:
 	Tuple with the number of iterations and the final time for \eqref{eq:weak_HJ}.
-	By default, we set \texttt{reinit\_pars=(8,1e-1)}.
+	By default, \texttt{reinit\_pars=(8,1e-1)}.
 \end{itemize}
 
 \vspace*{0.5cm}
@@ -1688,7 +1691,7 @@ The other parameters are user-defined:
 	By default, \texttt{dfactor=1e-2}.
 	\item $\texttt{lv\_time} = (t_{\min}, t_{\max})$:
 	Tuple with the minimum and maximum times allowed.
-	By default, we set \texttt{lv\_time=(1e-3,1e-1)}.
+	By default, \texttt{lv\_time=(1e-3,1e-1)}.
 	\item $\texttt{lv\_iter} = (s_{\min}, s_{\max})$:
 	Tuple with the minimum and maximum number of steps allowed.
 	By default, \texttt{lv\_iter=(8,16)}.
@@ -1714,10 +1717,10 @@ By default, \texttt{random\_pars=(1, 0.05)}.
 In addition, a lower bound is imposed on $B(\theta, \theta)$
 to prevent division by zero in \eqref{eq:tend}.
 Before returning $t_{\text{end}}$ and $\hat{s}$, we ensure that
-$
+\[
 	t_{\min}\leq t_{\text{end}} \leq t_{\max},\quad
 	s_{\min}\leq \hat{s} \leq s_{\max},
-$
+\]
 and that $\hat{s}$ is rounded to an integer.
 We recall that the \texttt{AdapTime} class 
 performs all these procedures.
@@ -1747,9 +1750,9 @@ we apply the following stopping criteria:
 		<\texttt{lgrn\_tol}\cdot|L(\Omega^i,z^i,\lambda^i,\mu^i)|
 	\]
 	and
-	$
+	\[
 		|C(\Omega^i)-\textbf{1}|_\infty<\texttt{ctrn\_tol},
-	$
+	\]
 \end{itemize}
 where $I(i) = \{i-\texttt{prev}, \dots,i-1\}$.
 The parameters \texttt{cost\_tol}, \texttt{lgrn\_tol}, and \texttt{ctrn\_tol} 
@@ -1773,24 +1776,24 @@ Then, we define $\phi^0\colon\mathcal{\overline{D}}\to\mathds{R}$ as follows:
 	\phi^0(x)=\texttt{factor}\cdot\max_k \phi_k(x),	
 \end{equation}
 where each function $\phi_k\colon\overline{\mathcal{D}}\to\mathds{R}$ is given by
-$
+\[
 	\phi_k(x)=\texttt{radii}[k] -
 	|x-\texttt{centers}[k]|_{\texttt{ord}}. 
-$
+\]
 Here, $\texttt{factor}$ is a non-zero float number and \texttt{ord}
 is the order of the norm $\left|\cdot\right|_{\texttt{ord}}$.
 By default, \texttt{factor=1.0} and \texttt{ord=2} (Euclidean norm).
 Note that the set
-$
+\[
 	\left\{x\in\overline{\mathcal{D}}\mid\texttt{factor}\cdot\phi_k(x)<0\right\}
-$
+\]
 determines either the complement of a closed ball
 or an open ball, if \texttt{factor} is positive or negative, respectively.
 Starting from \eqref{eq:phi0} and applying level set operations,
 we see that the initial domain
-$
+\[
 	\Omega^0=\left\{x\in\overline{\mathcal{D}}\mid\phi^0(x)<0\right\}
-$
+\]
 is given by
 \[
 	\Omega^0 = 
@@ -1864,11 +1867,11 @@ Solving \eqref{eq:velocity} with this additional term enforces
 $\theta \approx 0$ within $\Omega_0$, effectively keeping
 the subdomain $\Omega_0$ unperturbed during the shape optimization process.
 For instance, the subdomain
-$
+\[
 	\Omega_0=\left\{
 		(x,y)\in \overline{\mathcal{D}} \mid 1.95<x,\, 0.42<y<0.58
 	\right\}
-$
+\]
 is modeled using the function
 \begin{lstlisting}
 @dib.region_of(domain) # decorator
@@ -1900,7 +1903,7 @@ the finite element computations and \texttt{Gmsh~4.12.2} for mesh generation.
 Other important modules are \texttt{NumPy~1.26.3}, \texttt{SciPy~1.12.0},
 \texttt{Matplotlib~3.8.3}, and \texttt{MPI4Py~4.0.3}.
 An installation manual is provided in the \texttt{README} file of
-the following \texttt{GitHub} repository:
+the \texttt{GitHub} repository
 (\href{https://github.com/JD26/FormOpt}{\texttt{github.com/JD26/FormOpt}}).
 
 Most of the tests were executed on a laptop; a server was used only
@@ -2389,9 +2392,9 @@ Find $u \in  H^1_{\Gamma_0}(\mathcal{D})^d$ such that
 \forall \, v \in  H^1_{\Gamma_0}(\mathcal{D})^d,
 \end{equation}
 and $A_{\Omega}\colon\overline{\mathcal{D}}\to\mathds{R}$ is given by
-%\begin{equation}\label{eq:compli_AOmega}
-$A_{\Omega} = \chi_{\Omega} + {10}^{-4}\chi_{\overline{\mathcal{D}}\setminus\Omega}.$
-%\end{equation}
+\begin{equation}\label{eq:compli_AOmega}
+	A_{\Omega} = \chi_{\Omega} + {10}^{-4}\chi_{\overline{\mathcal{D}}\setminus\Omega}.
+\end{equation}
 The corresponding strong formulation is the following transmission problem:
 \begin{equation}\label{eq:compli_prob}
 	\begin{aligned}
@@ -2416,7 +2419,7 @@ The derivative components of the compliance $J(\Omega)$ and the constraint funct
 
 The \texttt{Compliance} and \texttt{CompliancePlus} classes
 contain the equations for compliance minimization.
-In \texttt{CompliancePlus}, we extend \texttt{Compliance} by considering
+\texttt{CompliancePlus} extends \texttt{Compliance} by considering
 multiple forces $\left\{g_k\right\}_k$, along with
 the cost functional $J(\Omega)$ as a sum of compliances associated to each $g_k$, namely
 \begin{equation} \label{eq:compli_plus}
@@ -2462,9 +2465,9 @@ with $\theta, \xi \in \mathbb{H} = H^1(\mathcal{D})^d$. Thus, $B$
 allows only tangential displacements along the boundary $\partial \mathcal{D}$, and
 penalizes the material around the force application boundary through the term ${10}^4(\theta\cdot\xi)\chi_{\Omega_0}$, where
 the subdomain
-$
+\[
 \Omega_0 \coloneqq (1.95,2]\times (0.42, 0.58) \subset \overline{\mathcal{D}}
-$
+\]
 contains the boundary $\Gamma_1$.
 \end{example}
 
@@ -2623,15 +2626,15 @@ This example also applies multiple loads.
 We consider the rectangular domain $\mathcal{D} = (0, 2)\times(0, 1)$.
 The forces $g^{\mathrm{I}} = (0,-2)^\top$ and $g^{\mathrm{II}} = (0, 2)^\top$
 are applied separately on
-$
+\[
 	\Gamma_1^{\mathrm{I}} = (0.95,1.05) \times \{y=0\}\;
 	\text{(bottom-center side)}
-$
+\]
 and
-$
+\[
 	\Gamma_1^{\mathrm{II}} = \{x=2\} \times (0.45,0.55)\;
 	\text{(left-center side)},
-$
+\]
 respectively.
 The boundary of zero displacement is $\Gamma_0 = \{x=0\} \times (0, 1)$ 
 and the area constraint is $V = 1.1$.
@@ -2709,10 +2712,10 @@ where $u$ is the solution to the following transmission problem
 \end{aligned}	
 \end{equation}
 and $A_{\Omega}\colon\overline{\mathcal{D}}\to\mathds{R}$ is given by
-%\begin{equation}\label{eq:heat_AOmega}
-$A_{\Omega} = \chi_{\Omega} +
-	{10}^{-3}\chi_{\overline{\mathcal{D}}\setminus\Omega}.$
-%\end{equation}
+\begin{equation}\label{eq:heat_AOmega}
+	A_{\Omega} = \chi_{\Omega} +
+	{10}^{-3}\chi_{\overline{\mathcal{D}}\setminus\Omega}.
+\end{equation}
 According to \eqref{eq:problem}, the constraint function for this problem
 is written as
 \begin{equation}
@@ -2729,14 +2732,17 @@ Find $u\in H^1_{\Gamma_0}(\mathcal{D})$ such that
 In this case, the adjoint problem is the same as \eqref{eq:heat_weak}
 (except by a minus sign on the right-hand side), and thus $p=-u$.
 The shape derivative components are given by
-$$S^J_0 = 2u\nabla f,\qquad 
-	S^J_1 = (2uf-A_{\Omega}{|\nabla u|}^{2})I +
+\[
+\begin{aligned}
+	S^J_0 &= 2u\nabla f, \\
+	S^J_1 &= (2uf-A_{\Omega}{|\nabla u|}^{2})I +
 				2A_{\Omega}\nabla u\otimes\nabla u
-$$
+\end{aligned}
+\]
 for the cost functional, and
-$
-	S^C_0 = \boldsymbol{0}$, $S^C_1 = \frac{1}{V} \chi_\Omega I
-$
+\[
+	S^C_0 = \boldsymbol{0},\quad S^C_1 = \frac{1}{V} \chi_\Omega I
+\]
 for the constraint function.
 In all examples, we use the square domain $\mathcal{D} = (0, 1)\times(0, 1)$,
 and red color to highlight $\Gamma_0$, where the temperature is fixed to zero.
@@ -2756,9 +2762,9 @@ In this example, we have employed the bilinear form
 \]
 with $\theta, \xi \in \mathbb{H} = H^1_0(\mathcal{D})^d$
 and
-$
+\[
 	\Omega_0 = (0.3, 0.7)\times[0, 0.05),
-$
+\]
 in order to penalize the material around~$\Gamma_0$.
 \end{example}
 
@@ -2870,9 +2876,9 @@ In this example, we perform two tests.
 In the first test, we solve the problem with one heat sink
 $\Gamma_0 = \Gamma_0^\mathrm{I} \cup \Gamma_0^\mathrm{II}$,
 where
-$
+\[
 \Gamma_0^\mathrm{I} = (0.4,0.6)\times\{y=0\}\;,\;\Gamma_0^\mathrm{II} = \{x=1\}\times(0.4,0.6).
-$
+\]
 In the second test, we solve the problem with multiple heat sinks
 $\Gamma_0^\mathrm{I}$ and $\Gamma_0^\mathrm{II}$. In this case,
 the cost functional is given by the sum of the corresponding thermal compliances:
@@ -2939,14 +2945,18 @@ but for the heat source.
 In the single case test, we apply one heat source 
 $f = f^\mathrm{I} + f^\mathrm{II} + f^\mathrm{III} + f^\mathrm{IV}$,
 where
-$$
-	f^\mathrm{I}(x,y) \coloneqq \omega(\vert(x,y)-(0.5, 0.25)\vert_2),\qquad
+\[
+	f^\mathrm{I}(x,y) \coloneqq \omega(\vert(x,y)-(0.5, 0.25)\vert_2),
+\]
+\[
 	f^\mathrm{II}(x,y) \coloneqq \omega(\vert(x,y)-(0.75, 0.5)\vert_2),
-$$
-$$
-	f^\mathrm{III}(x,y) \coloneqq \omega(\vert(x,y)-(0.5, 0.75)\vert_2),\qquad
+\]
+\[
+	f^\mathrm{III}(x,y) \coloneqq \omega(\vert(x,y)-(0.5, 0.75)\vert_2),
+\]
+\[
 	f^\mathrm{IV}(x,y) \coloneqq \omega(\vert(x,y)-(0.25, 0.5)\vert_2).
-$$
+\]
 The function $\omega$ was defined in \eqref{eq:rad}.
 In the multiple case, we consider four heat sources 
 $f=f^\mathrm{I}$, $f=f^\mathrm{II}$, $f=f^\mathrm{III}$, and $f=f^\mathrm{IV}$,
@@ -3026,7 +3036,9 @@ The problem reads
 	J(\Omega) \coloneqq -\int_{\mathcal{D}} u
 \end{equation}
 subject to
-$\int_{\mathcal{D}} \chi_{\Omega} = V,$
+\begin{equation}
+	\int_{\mathcal{D}} \chi_{\Omega} = V,
+\end{equation}
 where $u$ is the solution to
 \begin{equation}\label{eq:log_prob}
 \begin{aligned}
@@ -3082,19 +3094,19 @@ The derivative components of the cost functional \eqref{eq:log_cost} and
 the constraint \eqref{eq:log_const} are
 \[
 \begin{aligned}
-	S^J_0 &= \boldsymbol{0},\qquad
-	S^J_1 = \left(
+	S^J_0 &= \boldsymbol{0},\\
+	S^J_1 &= \left(
 				\nabla u\cdot\nabla p-u-ru\left(1-\frac{u}{K_{\Omega}}\right)p
 			\right)I
 		-(\nabla u\otimes\nabla p+\nabla p\otimes\nabla u),
 \end{aligned}
 \]
 and
-$
+\[
 	S_0^C =\boldsymbol{0},
 	\quad
 	S_1^C =\frac{1}{V}\chi_{\Omega}I.
-$
+\]
 
 \begin{example}\label{ex:log}
 We solve problem \eqref{eq:log_cost}--\eqref{eq:log_prob}
