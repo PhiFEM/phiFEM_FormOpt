@@ -456,7 +456,7 @@ We denote its time derivative at $t=0$ as
 $\theta\coloneqq\frac{\partial}{\partial t}T_t|_{t=0}$.
 Conversely, one can also start with a given $\theta\in\Theta^k(\mathcal{D})$,
 where
-\[
+$
 	\Theta^k(\mathcal{D})\coloneqq
 	\left\{
 		\theta \in C^k_c(\mathds{R}^d,\mathds{R}^d)
@@ -465,7 +465,7 @@ where
 		\text{ and }
 		\theta|_\Upsilon = 0
 	\right\}
-\]
+$
 and $\Upsilon\subset\partial\mathcal{D}$ is the set of points
 where the normal $n$ is not defined, i.e.,
 the set of singular points of $\partial\mathcal{D}$.
@@ -607,10 +607,10 @@ for other PDEs are provided in Section~\ref{sec:results}.
 Let $\Gamma_0$, $\Gamma_1$ be subsets of $\Gamma\coloneqq\partial\mathcal{D}$
 such that $\Gamma=\Gamma_0\cup\Gamma_1$. 
 Let $H_{\Gamma_0}(\mathcal{D})^d$ be the space of functions
-\[
+$
 	H_{\Gamma_0}(\mathcal{D})^d\coloneqq
 	\left\{ u\in H(\mathcal{D})^{d}\mid u|_{\Gamma_0}=\boldsymbol{0}\right\}. 
-\]
+$
 The strain and stress tensors are given by, respectively,
 \[
 	\epsilon(w) \coloneqq \frac{Dw+{Dw}^{\top}}{2},\quad
@@ -1458,11 +1458,11 @@ def bilinear_form(self, th, xi):
 	return B, False
 \end{lstlisting}
 corresponds to the bilinear form
-\[
+$
 	B(\theta,\xi) = {10}^{-1} \int_{\mathcal{D}} \theta \cdot \xi + 
 	\int_{\mathcal{D}} D\theta \colon\! D\xi
 	+{10}^4 \int_{\partial \mathcal{D}} (\theta \cdot n) (\xi \cdot n),	
-\]	
+$	
 indicating that $\mathbb{H} = H^1(\mathcal{D})^d$.
 
 Recall that the \texttt{Velocity} class sets up
@@ -1589,9 +1589,9 @@ by solving the diffusive Eikonal equation with pseudo-time derivative:
 \end{aligned}
 \end{equation}
 where $S(\phi)\colon\overline{\mathcal{D}}\to (-1, 1)$ is given by 
-\begin{equation*}
+$
 	S(\phi) = \frac{\phi}{\sqrt{\phi^2 + h^2}}\quad (h= \text{mesh diameter}).
-\end{equation*}
+$
 The function $S(\phi)$ approximates the signed distance function associated
 with the set $\{x\in\overline{\mathcal{D}} \mid \phi(x)<0\}$.
 We write the first equation in \eqref{eq:Eikonal}
@@ -1715,8 +1715,8 @@ In addition, a lower bound is imposed on $B(\theta, \theta)$
 to prevent division by zero in \eqref{eq:tend}.
 Before returning $t_{\text{end}}$ and $\hat{s}$, we ensure that
 $
-	t_{\min}\leq t_{\text{end}} \leq t_{\max},\quad
-	s_{\min}\leq \hat{s} \leq s_{\max},
+	t_{\min}\leq t_{\text{end}} \leq t_{\max}$, 
+$	s_{\min}\leq \hat{s} \leq s_{\max},
 $
 and that $\hat{s}$ is rounded to an integer.
 We recall that the \texttt{AdapTime} class 
@@ -1725,9 +1725,9 @@ performs all these procedures.
 \vspace*{0.5cm}
 \noindent \textbf{Stopping criterion.}
 Starting from iteration $i$ of Algorithm~\ref{eq:algo_lv} such that
-\[
+$
 	i>\texttt{start\_to\_check},
-\]
+$
 we apply the following stopping criteria:
 \begin{itemize}
 	\item (problem without constraints) the relative error of
@@ -1737,7 +1737,7 @@ we apply the following stopping criteria:
 		<\texttt{cost\_tol}\cdot |J(\Omega^i)|;
 	\]
 	\item (problem with constraints) the relative error of
-	the Lagrangian functional $L$ together with the constrain error, namely
+	the Lagrangian functional $L$ together with the constraint error, namely
 	\[
 		\left|
 		(
@@ -3155,9 +3155,9 @@ For this purpose, the \texttt{pde} method returns the equation
 representing the absence of Dirichlet boundary contions,
 the Jacobian $DF(u)(\delta u)$, the \texttt{UFL} variable
 that represents the state $u$, and the positive function
-\[
+$
 	u_0(x,y)=1+0.2\sin(6\pi x)\sin(6\pi y)
-\]
+$
 as initial guess:
 
 \begin{lstlisting}
