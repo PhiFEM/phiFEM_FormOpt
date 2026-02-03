@@ -208,7 +208,7 @@ def inverter2(test_path, kappa, alpha, beta, nM=0):
     md.save_initial_level(comm)
 
     md.runDP(
-        niter=600,
+        niter=500,
         dfactor=1e-2,
         lv_iter=(10, 20),
         lv_time=(1e-3, 0.1),

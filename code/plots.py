@@ -58,6 +58,9 @@ def plot_lv(
         levels=[min(phi), 0.0, max(phi)],
         colors=["black", (1, 1, 1)],
     )
+
+    ax.tricontour(triang, phi, levels=[0], colors="k", linewidths=1)
+
     ax.set_aspect("equal")
     ax.set_xlim(limits[0])
     ax.set_ylim(limits[1])
@@ -86,6 +89,9 @@ def plot_vm(
     lw=2,
     filename=None,
 ):
+    """
+    Von Misses stress
+    """
 
     points, cells, vm = None, None, None
 
@@ -100,7 +106,7 @@ def plot_vm(
             u0_group = f["/Function/u0"]
             u0 = u0_group[str(niter)][:, [0, 1]]
             points = points + u0
-    # vm[phi > 0.0] = -1.0
+
     print("> Von Mises stress - maximum value = ", np.max(vm))
     x_coords, y_coords = points[:, 0], points[:, 1]
     triang = mtri.Triangulation(x_coords, y_coords, cells)
@@ -110,10 +116,12 @@ def plot_vm(
         triang,
         vm,
         cmap="turbo",
-        levels=14,
+        levels=np.linspace(0, vmax, 14),
         vmin=0,
         vmax=vmax,
     )
+
+    ax.tricontour(triang, phi, levels=[0], colors="k", linewidths=1)
 
     divider = make_axes_locatable(ax)
     cax = divider.append_axes("right", size="2%", pad=0.05)
@@ -147,6 +155,9 @@ def plot_dp(
     lw=2,
     filename=None,
 ):
+    """
+    Displacement
+    """
 
     points, cells, u0 = None, None, None
 
@@ -162,7 +173,6 @@ def plot_dp(
             u0 = u0_group[str(niter)][:, [0, 1]]
             points = points + u0
 
-    # dp[phi > 0.0] = -1.0
     print("> Displacement (in norm) - maximum value = ", np.max(dp))
     x_coords, y_coords = points[:, 0], points[:, 1]
     triang = mtri.Triangulation(x_coords, y_coords, cells)
@@ -172,10 +182,12 @@ def plot_dp(
         triang,
         dp,
         cmap="turbo",
-        levels=np.linspace(0, vmax, 12),
+        levels=np.linspace(0, vmax, 14),
         vmin=0,
         vmax=vmax,
     )
+
+    ax.tricontour(triang, phi, levels=[0], colors="k", linewidths=1)
 
     divider = make_axes_locatable(ax)
     cax = divider.append_axes("right", size="2%", pad=0.05)

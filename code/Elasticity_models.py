@@ -251,7 +251,7 @@ class Compliance(Model):
     @func_to_eval("Displacement")
     def normDisplacement(self, phi, U, P):
         u = U[0]
-        return self.sign(phi) * sqrt(dot(u, u))
+        return self.chi(phi) * sqrt(dot(u, u))
 
     @func_to_eval("VonMises")
     def stressVonMises(self, phi, U, P):
@@ -466,7 +466,7 @@ class Mechanism(Model):
     @func_to_eval("Displacement")
     def normDisplacement(self, phi, U, P):
         u = U[0]
-        return self.sign(phi) * sqrt(dot(u, u))
+        return self.chi(phi) * sqrt(dot(u, u))
 
     @func_to_eval("VonMises")
     def stressVonMises(self, phi, U, P):
