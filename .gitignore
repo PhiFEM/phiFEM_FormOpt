@@ -7,6 +7,7 @@ site/
 samo/Manuscript.pdf
 fead/Manuscript.pdf
 fead/doc/
+fead2/
 *.lyx~
 *.npz
 *.npy

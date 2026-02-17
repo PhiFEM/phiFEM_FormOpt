@@ -26,6 +26,154 @@ from mpi4py import MPI
 rank = MPI.COMM_WORLD.rank
 
 
+def select(test_path, niter, limits):
+
+    points, cells, phi = None, None, None
+
+    with h5py.File(test_path / "phi_functions.h5", "r") as f:
+        points = f["/Mesh/mesh/geometry"][:]
+        cells = f["/Mesh/mesh/topology"][:]
+        phi_group = f["/Function/phi"]
+        phi = phi_group[str(0)][:, 0]
+        u0_group = f["/Function/u" + str(niter)]
+        u0 = u0_group[str(0)][:, [0, 1]]
+        points = points + u0
+
+    x_coords, y_coords = points[:, 0], points[:, 1]
+    triang = mtri.Triangulation(x_coords, y_coords, cells)
+    fig, ax = plt.subplots()
+    ax.tricontourf(
+        triang,
+        phi,
+        levels=[min(phi), 0.0, max(phi)],
+        colors=["black", (1, 1, 1)],
+    )
+
+    ax.tricontour(triang, phi, levels=[0], colors="k", linewidths=1)
+    ax.scatter(x_coords, y_coords, s=5, color="blue")
+    ax.set_aspect("equal")
+    ax.set_xlim(limits[0])
+    ax.set_ylim(limits[1])
+    ax.set_xticks([])
+    ax.set_yticks([])
+    ax.tick_params(bottom=False, left=False)
+    for spine in ax.spines.values():
+        spine.set_visible(False)
+
+    (selected_point,) = ax.plot([], [], "ro", markersize=8)
+
+    def onclick(event):
+        if event.inaxes != ax:
+            return
+
+        # Distancia al punto clickeado
+        dist = (x_coords - event.xdata) ** 2 + (y_coords - event.ydata) ** 2
+        idx = np.argmin(dist)
+
+        # Resaltar nodo
+        selected_point.set_data([x_coords[idx]], [y_coords[idx]])
+        fig.canvas.draw_idle()
+
+        print(f": {idx}")
+        # print(f"Coordenadas: ({x_coords[idx]}, {y_coords[idx]})")
+        # print("-" * 40)
+
+    fig.canvas.mpl_connect("button_press_event", onclick)
+
+    plt.show()
+
+
+def plot_lv_with_control_pts(
+    test_path, final_iter, limits, idxs, title=None, figsize=None
+):
+
+    points, cells, phi = None, None, None
+
+    with h5py.File(test_path / "phi_functions.h5", "r") as f:
+        points = f["/Mesh/mesh/geometry"][:]
+        cells = f["/Mesh/mesh/topology"][:]
+        phi_group = f["/Function/phi"]
+        phi = phi_group[str(0)][:, 0]
+
+    x_coords, y_coords = points[:, 0], points[:, 1]
+    triang = mtri.Triangulation(x_coords, y_coords, cells)
+    fig, ax = plt.subplots(figsize=figsize)
+    ax.tricontourf(
+        triang,
+        phi,
+        levels=[min(phi), 0.0, max(phi)],
+        colors=["black", (1, 1, 1)],
+    )
+
+    ax.tricontour(triang, phi, levels=[0], colors="k", linewidths=1)
+    ax.scatter(x_coords[idxs], y_coords[idxs], s=5, color="yellow")
+    for i, idx in enumerate(idxs):
+        ax.annotate(
+            str(i),  # texto que quieres mostrar
+            (x_coords[idx], y_coords[idx]),  # posición del punto
+            textcoords="offset points",  # desplaza el texto respecto al punto
+            xytext=(4, 4),  # desplazamiento en puntos (x,y)
+            ha="left",  # alineación horizontal
+            va="bottom",  # alineación vertical
+            fontsize=10,
+            color="red",
+        )
+
+    ax.set_title(title)
+    ax.set_aspect("equal")
+    ax.set_xlim(limits[0])
+    ax.set_ylim(limits[1])
+    ax.set_xticks([])
+    ax.set_yticks([])
+    ax.tick_params(bottom=False, left=False)
+    for spine in ax.spines.values():
+        spine.set_visible(False)
+
+    ls = []
+    with h5py.File(test_path / "phi_functions.h5", "r") as f:
+        for i in range(1, final_iter + 1):
+            u_group = f["/Function/u" + f"{i:03}"]
+            u = u_group[str(0)][:, [0, 1]]
+            ls.append(np.linalg.norm(u[idxs], axis=1))
+
+    return np.array(ls).T
+
+
+def plot_lv2(test_path, niter, limits, title=None, figsize=None):
+
+    points, cells, phi = None, None, None
+
+    with h5py.File(test_path / "phi_functions.h5", "r") as f:
+        points = f["/Mesh/mesh/geometry"][:]
+        cells = f["/Mesh/mesh/topology"][:]
+        phi_group = f["/Function/phi"]
+        phi = phi_group[str(0)][:, 0]
+        u0_group = f["/Function/u" + str(niter)]
+        u0 = u0_group[str(0)][:, [0, 1]]
+        points = points + u0
+
+    x_coords, y_coords = points[:, 0], points[:, 1]
+    triang = mtri.Triangulation(x_coords, y_coords, cells)
+    fig, ax = plt.subplots(figsize=figsize)
+    ax.tricontourf(
+        triang,
+        phi,
+        levels=[min(phi), 0.0, max(phi)],
+        colors=["black", (1, 1, 1)],
+    )
+
+    ax.tricontour(triang, phi, levels=[0], colors="k", linewidths=1)
+    ax.set_title(title)
+    ax.set_aspect("equal")
+    ax.set_xlim(limits[0])
+    ax.set_ylim(limits[1])
+    ax.set_xticks([])
+    ax.set_yticks([])
+    ax.tick_params(bottom=False, left=False)
+    for spine in ax.spines.values():
+        spine.set_visible(False)
+
+
 def plot_lv(
     test_path,
     niter,

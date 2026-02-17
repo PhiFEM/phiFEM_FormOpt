@@ -25,6 +25,7 @@ License:
 """
 
 from pathlib import Path
+from h5py import File
 
 import gmsh
 from mpi4py import MPI
@@ -1944,7 +1945,6 @@ class Level:
         tend : float
             Final time.
         """
-
         self.dt.value = tend / steps
 
         solver = build_solver(self.domain, self.a, [])
@@ -2406,6 +2406,15 @@ def get_rank_dimension(shape):
         return shape
 
 
+def SolveLinearProblem(space, pde, name):
+    u = Function(space)
+    u.name = name
+    weak_form, bcs = pde
+    bi, li = system(weak_form)
+    basic_solver(form(bi), form(li), bcs, u)
+    return u
+
+
 def solve_pde(space, pde, phi):
 
     eqs = pde(phi)
@@ -2523,21 +2532,26 @@ class NonlinearSolverWrapper:
 
 
 class NonlinearSolverbySteeping:
-    def __init__(self, solver, u, initial, factor, nbr_steps):
+    def __init__(self, solver, u, initial, factor, nbr_steps, func=None):
         self.solver = solver
         self.u = u
         self.ini = initial
         self.factor = factor
         self.vals = np.linspace(0, 1.0, nbr_steps)[1:]
         self.max_niter = 0
+        self.func = func
 
     def solve(self):
 
         self.u.interpolate(self.ini)
         self.max_niter = 0
+
         for fc in self.vals:
             self.factor.value = PETSc.ScalarType(fc)
             niter, converged = self.solver.solve(self.u)
+            if self.func is not None:
+                print(f"> Factor = {fc}")
+                self.func(self.u)
             if niter > self.max_niter:
                 self.max_niter = niter
 
@@ -2548,7 +2562,9 @@ class NonlinearSolverbySteeping:
         return (f"newt = {self.max_niter:2.0f} | ",)[0]
 
 
-def create_nonlinear_solver_with_factor(comm, F, bcs, J, u, initial, factor, nbr_steps):
+def create_nonlinear_solver_with_factor(
+    comm, F, bcs, J, u, initial, factor, nbr_steps, func=None
+):
 
     problem = NonlinearProblem(F, u, bcs=bcs, J=J)
     solver = NewtonSolver(comm, problem)
@@ -2575,7 +2591,7 @@ def create_nonlinear_solver_with_factor(comm, F, bcs, J, u, initial, factor, nbr
 
     ksp.setFromOptions()
 
-    return NonlinearSolverbySteeping(solver, u, initial, factor, nbr_steps)
+    return NonlinearSolverbySteeping(solver, u, initial, factor, nbr_steps, func)
 
 
 def create_nonlinear_solver(comm, F, bcs, J, u, initial):
@@ -2621,6 +2637,68 @@ def L2_interpolation(domain, space, expr, diam2):
         petsc_options={"ksp_type": "cg"},
     ).solve()
     return uh
+
+
+class Save_Functions:
+
+    def __init__(self, space, names):
+
+        self.functions = [Function(space) for _ in range(len(names))]
+        for i in range(len(names)):
+            self.functions[i].name = names[i]
+        self.idx = 0
+
+    def save(self, f):
+        self.functions[self.idx].interpolate(f)
+        self.idx += 1
+
+
+def SolveNonlinearOnce(domain, space, ste_problem, names):
+
+    sf = Save_Functions(space, names)
+    solution = Function(space)
+
+    weak_form, bcs, jacobian, seudo_state, ini_func, factor_pars = ste_problem
+    factor, nbr_newton_steps = factor_pars
+    true_factor = const(domain, 0.0)
+    true_weak_form = replace(weak_form, {seudo_state: solution, factor: true_factor})
+    true_jacobian = replace(jacobian, {seudo_state: solution, factor: true_factor})
+
+    problem = create_nonlinear_solver_with_factor(
+        comm,
+        true_weak_form,
+        bcs,
+        true_jacobian,
+        solution,
+        ini_func,
+        true_factor,
+        nbr_newton_steps,
+        sf.save,
+    )
+
+    problem.solve()
+
+    return sf.functions
+
+
+def read_level_set_function(path: Path, domain: Mesh, niter: int) -> Function:
+    """
+    Read a level set function from the results.
+    Especifically, the h5 file called res_name.h5.
+    Parallelism does not work with this function.
+    It is assumed that the domain corresponds to the level set function.
+    """
+    with File(path / f"{res_name}.h5", "r") as data_file:
+        phi_group = data_file[f"/Function/phi"]
+        phi_vals = phi_group[str(niter)][:, 0]
+        space = create_space(domain, "CG", 1)
+        phi = Function(space)
+        phi.name = "phi"
+        phi.x.array[:] = phi_vals
+
+        return phi
+
+    return None
 
 
 def runDP(
