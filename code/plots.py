@@ -116,7 +116,7 @@ def plot_lv_with_control_pts(
             ha="left",  # alineación horizontal
             va="bottom",  # alineación vertical
             fontsize=10,
-            color="red",
+            bbox=dict(boxstyle="round", fc="0.8"),
         )
 
     ax.set_title(title)
