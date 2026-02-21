@@ -399,7 +399,6 @@ class Mechanism(Model):
         dir_bcs,
         kappa,
         alpha,
-        beta,
         eps=1e-2,
     ):
 
@@ -416,7 +415,6 @@ class Mechanism(Model):
         self.u0 = lambda x: 0.0 * x[:dim]
         self.kappa = kappa
         self.alpha = alpha
-        self.beta = beta
         self.nN = -1
         self.sub = []
 
@@ -432,17 +430,6 @@ class Mechanism(Model):
         self.A = lambda w: conditional(lt(w, 0.0), 1.0, eps)
         self.chi = lambda w: conditional(lt(w, 0.0), 1.0, 0.0)
         self.sign = lambda w: conditional(lt(w, 0.0), 1.0, -1.0)
-
-    def jfunc(self, phi, grad_u):
-        # j(grad u)
-        # j does not depend on u
-        volume = self.alpha * self.chi(phi)
-        energy = self.beta * self.A(phi) * self.em.W(self.Id + grad_u)
-        return volume + energy
-
-    def djfunc(self, phi, grad_u):
-        # Derivative w.r.t. grad_u
-        return self.beta * self.A(phi) * self.em.hatQ1(self.Id + grad_u)
 
     def lfunc(self, u):
 
@@ -540,15 +527,13 @@ class Mechanism(Model):
 
         # Weak formulation of adjoint problem
         Wf = self._D2W(phi, self.F(u), grad(p), grad(q)) * self.dx
-        Wf += inner(self.djfunc(phi, grad(u)), grad(q)) * self.dx
         Wf += self.dlfunc(q)
 
         return [(Wf, self.bc)]
 
     def cost(self, phi, U):
-        # Cost functional
         u = U[0]
-        return self.jfunc(phi, grad(u)) * self.dx + self.lfunc(u)
+        return self.lfunc(u) + self.alpha * self.chi(phi) * self.dx
 
     def constraint(self, phi, U):
         return []
@@ -559,24 +544,19 @@ class Mechanism(Model):
         F = self.F(u)
 
         S0_J = self.zero_vec
-
-        Q1 = -grad(p).T * self.A(phi) * self.em.hatQ1(F)
-        Q2 = -grad(u).T * self.A(phi) * self.em.hatQ2(F, grad(p))
-        Q3 = -grad(u).T * self.djfunc(phi, grad(u))
-
-        S1_J = (self.jfunc(phi, grad(u)) + self._DW(phi, F, grad(p))) * self.Id
-        S1_J += Q1 + Q2 + Q3
+        Q1 = grad(p).T * self.em.hatQ1(F)
+        Q2 = grad(u).T * self.em.hatQ2(F, grad(p))
+        S1_J = (self._DW(phi, F, grad(p)) + self.alpha * self.chi(phi)) * self.Id
+        S1_J -= self.A(phi) * (Q1 + Q2)
 
         return (S0_J, []), (S1_J, [])
 
     def bilinear_form(self, th, xi):
 
         nv = FacetNormal(self.domain)
-
         B = dot(th, xi) * self.dx
         B += 0.1 * inner(grad(th), grad(xi)) * self.dx
         B += 1e4 * dot(th, nv) * dot(xi, nv) * self.ds
-
         for sb in self.sub:
             B += 1e4 * sb * dot(th, xi) * self.dx
 
@@ -769,6 +749,398 @@ class Mechanism2(Model):
         B += 0.1 * inner(grad(th), grad(xi)) * self.dx
         B += 1e4 * dot(th, nv) * dot(xi, nv) * self.ds
 
+        for sb in self.sub:
+            B += 1e4 * sb * dot(th, xi) * self.dx
+
+        return B, False
+
+
+class MechanismKV(Model):
+
+    def __init__(
+        self,
+        dim,
+        domain,
+        space,
+        path,
+        em,
+        g_in,
+        ds_in,
+        g_out,
+        ds_out,
+        dir_bcs,
+        kappa,
+        alpha,
+        eps,
+    ):
+
+        self.dim = dim
+        self.domain = domain
+        self.space = space
+        self.path = path
+        self.em = em
+
+        self.dx = Measure("dx", domain=domain)
+        self.ds = Measure("ds", domain=domain)
+
+        self.bc = dir_bcs
+        self.u0 = lambda x: 0.0 * x[:dim]
+        self.kappa = kappa
+        self.alpha = alpha
+        self.nN = -1
+        self.sub = []
+
+        self.g_in = [as_vector(_) for _ in g_in]
+        self.ds_in = ds_in
+        self.g_out = [as_vector(_) for _ in g_out]
+        self.ds_out = ds_out
+
+        self.zero_vec = as_vector(dim * [0.0])
+        self.Id = Identity(dim)
+        self.F = lambda w: self.Id + grad(w)
+
+        self.A = lambda w: conditional(lt(w, 0.0), 1.0, eps)
+        self.chi = lambda w: conditional(lt(w, 0.0), 1.0, 0.0)
+        self.sign = lambda w: conditional(lt(w, 0.0), 1.0, -1.0)
+
+    @qtty_to_eval("Volume")
+    def Volume(self, phi, U, P):
+        return self.chi(phi) * self.dx
+
+    @qtty_to_eval("InDisp")
+    def InDisp(self, phi, U, P):
+        u = U[0]
+        return sum([dot(g, u) * dsg for g, dsg in zip(self.g_in, self.ds_in)])
+
+    @qtty_to_eval("OutDisp")
+    def OutDisp(self, phi, U, P):
+        u = U[0]
+        return sum([dot(g, u) * dsg for g, dsg in zip(self.g_out, self.ds_out)])
+
+    @func_to_eval("Displacement")
+    def normDisplacement(self, phi, U, P):
+        u = U[0]
+        return self.chi(phi) * sqrt(dot(u, u))
+
+    @func_to_eval("VonMises")
+    def stressVonMises(self, phi, U, P):
+        # Von Mises stress calculated using Cauchy stress
+        u = U[0]
+        sigma = self.em.stress(self.F(u))
+        s = sigma - (1.0 / 3.0) * tr(sigma) * self.Id
+
+        return self.chi(phi) * sqrt(1.5 * inner(s, sigma))
+
+    def _DW(self, phi, F, dF):
+        # First derivative of strain energy density
+        return self.A(phi) * inner(dF, self.em.hatQ1(F))
+
+    def _D2W(self, phi, F, dF1, dF2):
+        # Second derivative of strain energy density
+        return self.A(phi) * inner(dF1, self.em.hatQ2(F, dF2))
+
+    def pde(self, phi):
+
+        if self.em.lineal:
+            u = TrialFunction(self.space)
+            v = TrialFunction(self.space)
+            w = TestFunction(self.space)
+
+            Win = self._DW(phi, self.F(u), grad(w)) * self.dx
+            for g, dsg in zip(self.g_in, self.ds_in):
+                Win -= dot(g, w) * dsg
+
+            Wout = self._DW(phi, self.F(v), grad(w)) * self.dx
+            for g, dsg in zip(self.g_out, self.ds_out):
+                Wout -= dot(g, w) * dsg
+
+            return [(Win, self.bc), (Wout, self.bc)]
+
+        else:
+            u = Coefficient(self.space)
+            v = Coefficient(self.space)
+            du = TrialFunction(self.space)
+            dv = TrialFunction(self.space)
+            w = TestFunction(self.space)
+            lin = Constant(self.domain)
+            lout = Constant(self.domain)
+            Fu = self.F(u)
+            Fv = self.F(v)
+
+            Win = self._DW(phi, Fu, grad(w)) * self.dx
+            for g, dsg in zip(self.g_in, self.ds_in):
+                Win -= lin * dot(g, w) * dsg
+            Jcin = self._D2W(phi, Fu, grad(du), grad(w)) * self.dx
+
+            Wout = self._DW(phi, Fv, grad(w)) * self.dx
+            for g, dsg in zip(self.g_out, self.ds_out):
+                Wout -= lout * dot(g, w) * dsg
+            Jcout = self._D2W(phi, Fv, grad(dv), grad(w)) * self.dx
+
+            in_case = (Win, self.bc, Jcin, u, self.u0, (lin, self.nN))
+            out_case = (Wout, self.bc, Jcout, v, self.u0, (lout, self.nN))
+            return [in_case, out_case]
+
+    def adjoint(self, phi, U):
+
+        p = TrialFunction(self.space)
+        q = TrialFunction(self.space)
+        r = TestFunction(self.space)
+        u = U[0]
+        v = U[1]
+        uv = u - self.kappa * v
+        qs = self._DW(phi, self.F(uv), grad(r))
+        qs += self._D2W(phi, self.F(uv), grad(uv), grad(r))
+
+        Win = self._D2W(phi, self.F(u), grad(p), grad(r)) * self.dx
+        Win += qs * self.dx
+
+        Wout = self._D2W(phi, self.F(v), grad(q), grad(r)) * self.dx
+        Wout -= self.kappa * qs * self.dx
+
+        return [(Win, self.bc), (Wout, self.bc)]
+
+    def cost(self, phi, U):
+        u = U[0]
+        v = U[1]
+        uv = u - self.kappa * v
+        J = self._DW(phi, self.F(uv), grad(uv)) * self.dx
+        J += self.alpha * self.chi(phi) * self.dx
+        return J
+
+    def constraint(self, phi, U):
+        return []
+
+    def derivative(self, phi, U, P):
+        u = U[0]
+        v = U[1]
+        p = P[0]
+        q = P[1]
+        uv = u - self.kappa * v
+
+        S0_J = self.zero_vec
+
+        Q1u = grad(p).T * self.em.hatQ1(self.F(u))
+        Q2u = grad(u).T * self.em.hatQ2(self.F(u), grad(p))
+
+        Q1v = grad(q).T * self.em.hatQ1(self.F(v))
+        Q2v = grad(v).T * self.em.hatQ2(self.F(v), grad(q))
+
+        Quv = self.em.hatQ1(self.F(uv)) + self.em.hatQ2(self.F(uv), grad(uv))
+
+        s1I = self._DW(phi, self.F(uv), grad(uv))
+        s1I += self._DW(phi, self.F(u), grad(p))
+        s1I += self._DW(phi, self.F(v), grad(q))
+        s1I += self.alpha * self.chi(phi)
+
+        S1_J = s1I * self.Id
+        S1_J -= grad(uv).T * self.A(phi) * Quv
+        S1_J -= self.A(phi) * (Q1u + Q2u)
+        S1_J -= self.A(phi) * (Q1v + Q2v)
+
+        return (S0_J, []), (S1_J, [])
+
+    def bilinear_form(self, th, xi):
+
+        nv = FacetNormal(self.domain)
+        B = dot(th, xi) * self.dx
+        B += 0.1 * inner(grad(th), grad(xi)) * self.dx
+        B += 1e4 * dot(th, nv) * dot(xi, nv) * self.ds
+        for sb in self.sub:
+            B += 1e4 * sb * dot(th, xi) * self.dx
+
+        return B, False
+
+
+class MechanismRobin(Model):
+
+    def __init__(
+        self,
+        dim,
+        domain,
+        space,
+        path,
+        em,
+        g_in,
+        ds_in,
+        g_out,
+        ds_out,
+        dir_bcs,
+        kappa,
+        alpha,
+        eps,
+    ):
+
+        self.dim = dim
+        self.domain = domain
+        self.space = space
+        self.path = path
+        self.em = em
+
+        self.dx = Measure("dx", domain=domain)
+        self.ds = Measure("ds", domain=domain)
+
+        self.bc = dir_bcs
+        self.u0 = lambda x: 0.0 * x[:dim]
+        self.kappa = kappa
+        self.alpha = alpha
+        self.nN = -1
+        self.sub = []
+
+        self.g_in = [as_vector(_) for _ in g_in]
+        self.ds_in = ds_in
+        self.g_out = [as_vector(_) for _ in g_out]
+        self.ds_out = ds_out
+
+        self.zero_vec = as_vector(dim * [0.0])
+        self.Id = Identity(dim)
+        self.F = lambda w: self.Id + grad(w)
+
+        self.A = lambda w: conditional(lt(w, 0.0), 1.0, eps)
+        self.chi = lambda w: conditional(lt(w, 0.0), 1.0, 0.0)
+        self.sign = lambda w: conditional(lt(w, 0.0), 1.0, -1.0)
+
+    def lfunc(self, u):
+
+        l_in = sum([dot(g, u) * dsg for g, dsg in zip(self.g_in, self.ds_in)])
+        l_out = sum([dot(g, u) * dsg for g, dsg in zip(self.g_out, self.ds_out)])
+
+        return l_in + l_out
+
+    def dlfunc(self, du):
+
+        l_in = sum([dot(g, du) * dsg for g, dsg in zip(self.g_in, self.ds_in)])
+        l_out = sum([dot(g, du) * dsg for g, dsg in zip(self.g_out, self.ds_out)])
+        return l_in + l_out
+
+    @qtty_to_eval("Volume")
+    def Volume(self, phi, U, P):
+        return self.chi(phi) * self.dx
+
+    @qtty_to_eval("InDisp")
+    def InDisp(self, phi, U, P):
+        u = U[0]
+        return sum([dot(g, u) * dsg for g, dsg in zip(self.g_in, self.ds_in)])
+
+    @qtty_to_eval("OutDisp")
+    def OutDisp(self, phi, U, P):
+        u = U[0]
+        return sum([dot(g, u) * dsg for g, dsg in zip(self.g_out, self.ds_out)])
+
+    @func_to_eval("Displacement")
+    def normDisplacement(self, phi, U, P):
+        u = U[0]
+        return self.chi(phi) * sqrt(dot(u, u))
+
+    @func_to_eval("VonMises")
+    def stressVonMises(self, phi, U, P):
+        # Von Mises stress calculated using Cauchy stress
+        u = U[0]
+        sigma = self.em.stress(self.F(u))
+        s = sigma - (1.0 / 3.0) * tr(sigma) * self.Id
+
+        return self.chi(phi) * sqrt(1.5 * inner(s, sigma))
+
+    def _DW(self, phi, F, dF):
+        # First derivative of strain energy density
+        return self.A(phi) * inner(dF, self.em.hatQ1(F))
+
+    def _D2W(self, phi, F, dF1, dF2):
+        # Second derivative of strain energy density
+        return self.A(phi) * inner(dF1, self.em.hatQ2(F, dF2))
+
+    def pde(self, phi):
+
+        if self.em.lineal:
+            u = TrialFunction(self.space)
+            v = TestFunction(self.space)
+
+            # Weak formulation of state problem
+            Wf = self._DW(phi, self.F(u), grad(v)) * self.dx
+            # Robin boundary conditions
+            for k, d_out in zip(self.kappa, self.ds_out):
+                Wf += k * dot(u, v) * d_out
+            # Applied forces
+            x = SpatialCoordinate(self.domain)
+            traction_scalar = conditional(
+                lt(abs(x[1] - 0.5), 0.02), 0.05 / (2 * 0.02), 0.0
+            )
+            # as_vector((traction_scalar, 0.0))
+            for g, d_in in zip(self.g_in, self.ds_in):
+                Wf -= dot(g, v) * d_in
+
+            return [(Wf, self.bc)]
+
+        else:
+            u = Coefficient(self.space)
+            v = TestFunction(self.space)
+            du = TrialFunction(self.space)
+            l = Constant(self.domain)
+            F = self.F(u)
+
+            # Weak formulation of state problem
+            Wf = self._DW(phi, F, grad(v)) * self.dx
+            # Robin boundary conditions
+            for k, d_out in zip(self.kappa, self.ds_out):
+                Wf += k * dot(u, v) * d_out
+            # Applied forces (multiplied by a factor)
+            for g, d_in in zip(self.g_in, self.ds_in):
+                Wf -= l * dot(g, v) * d_in
+
+            # Jacobian
+            Jc = self._D2W(phi, F, grad(du), grad(v)) * self.dx
+
+            return [(Wf, self.bc, Jc, u, self.u0, (l, self.nN))]
+
+    def adjoint(self, phi, U):
+
+        p = TrialFunction(self.space)
+        q = TestFunction(self.space)
+        u = U[0]
+
+        # Weak formulation of adjoint problem
+        Wf = self._D2W(phi, self.F(u), grad(p), grad(q)) * self.dx
+        Wf += self.dlfunc(q)
+
+        return [(Wf, self.bc)]
+
+    def cost(self, phi, U):
+        # Cost functional
+        u = U[0]
+        return self.lfunc(u) + self.alpha * self.chi(phi) * self.dx
+
+    def constraint(self, phi, U):
+        # There is no constraints
+        return []
+
+    def derivative(self, phi, U, P):
+        # Shape derivatives components
+        u = U[0]
+        p = P[0]
+        Fu = self.F(u)
+        # S0 component of the cost functional
+        # S0_J = self.zero_vec
+        # # S1 component of the cost functional
+        # Q1 = -grad(p).T * self.em.hatQ1(Fu)
+        # Q2 = -grad(u).T * self.em.hatQ2(Fu, grad(p))
+        # S1_J = self._DW(phi, Fu, grad(p)) * self.Id
+        # S1_J += self.alpha * self.chi(phi) * self.Id
+        # S1_J += self.A(phi) * (Q1 + Q2)
+
+        S0_J = self.zero_vec
+        Q1 = grad(p).T * self.em.hatQ1(Fu)
+        Q2 = grad(u).T * self.em.hatQ2(Fu, grad(p))
+        S1_J = (self._DW(phi, Fu, grad(p)) + self.alpha * self.chi(phi)) * self.Id
+        S1_J -= self.A(phi) * (Q1 + Q2)
+
+        return (S0_J, []), (S1_J, [])
+
+    def bilinear_form(self, th, xi):
+
+        nv = FacetNormal(self.domain)
+        B = dot(th, xi) * self.dx
+        B += 0.1 * inner(grad(th), grad(xi)) * self.dx
+        B += 1e4 * dot(th, nv) * dot(xi, nv) * self.ds
         for sb in self.sub:
             B += 1e4 * sb * dot(th, xi) * self.dx
 
