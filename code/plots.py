@@ -162,7 +162,7 @@ def plot_lv2(test_path, niter, limits, title=None, figsize=None):
         colors=["black", (1, 1, 1)],
     )
 
-    ax.tricontour(triang, phi, levels=[0], colors="k", linewidths=1)
+    ax.tricontour(triang, phi, levels=[0], colors="k", linewidths=2)
     ax.set_title(title)
     ax.set_aspect("equal")
     ax.set_xlim(limits[0])
@@ -207,7 +207,7 @@ def plot_lv(
         colors=["black", (1, 1, 1)],
     )
 
-    ax.tricontour(triang, phi, levels=[0], colors="k", linewidths=1)
+    ax.tricontour(triang, phi, levels=[0], colors="k", linewidths=2)
 
     ax.set_aspect("equal")
     ax.set_xlim(limits[0])

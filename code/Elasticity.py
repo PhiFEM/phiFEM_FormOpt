@@ -6,8 +6,8 @@ from Elasticity_models import (
     Compliance,
     Mechanism,
     Mechanism2,
-    MechanismKV,
     MechanismRobin,
+    KohnVogelius,
 )
 
 import numpy as np
@@ -160,7 +160,7 @@ def cantilever(mod, test_path, load, alpha, nM=0):
     md.create_initial_level(centers, radii)
 
     md.runDP(
-        niter=150,
+        niter=200,
         dfactor=1e-2,
         lv_iter=(12, 24),
         lv_time=(1e-3, 1.0),
@@ -720,7 +720,7 @@ def i2(mod, test_path, kappa, alpha, beta, eps, nM=0):
     )
 
 
-def inverterKV(mod, test_path, kappa, alpha, eps, niter, elastic_pars, forces, nM=0):
+def KVtest(mod, test_path, kappa, alpha, eps, niter, elastic_pars, forces, nM=0):
 
     dim, rank_dim, mesh_size = 2, 2, 0.008
     a, b = 0.05, 0.05
@@ -754,7 +754,7 @@ def inverterKV(mod, test_path, kappa, alpha, eps, niter, elastic_pars, forces, n
     domain, nbr_tri, boundary_tags = output
 
     if rank == 0:
-        print("Inverter mechanism")
+        print("Kohn-Vogelius")
         print(f"> Path = {test_path}")
         print(f"> Nbr of triangles = {nbr_tri}")
 
@@ -766,7 +766,7 @@ def inverterKV(mod, test_path, kappa, alpha, eps, niter, elastic_pars, forces, n
 
     Ym, Pr = elastic_pars
     force_in, force_out = forces
-    g_in, g_out = [(force_in, 0.0)], [(force_out, 0.0)]
+    g_in, g_out = [force_in], [force_out]
 
     if mod == "Hooke":
         elast_model = Hookecomponents(Ym, Pr)
@@ -775,7 +775,7 @@ def inverterKV(mod, test_path, kappa, alpha, eps, niter, elastic_pars, forces, n
     elif mod == "MR":
         elast_model = MRcomponents()
 
-    md = MechanismKV(
+    md = KohnVogelius(
         dim,
         domain,
         space,
@@ -842,6 +842,57 @@ def inverterKV(mod, test_path, kappa, alpha, eps, niter, elastic_pars, forces, n
         reinit_pars=(6, 0.01),
         random_pars=(26, 0.05),
     )
+
+
+def KVdeformations(test_path, niter, forces):
+
+    dim = 2
+    rank_dim = 2
+    dir_idx, dir_mkr = [6], 1
+    neu_idx, neu_mkr = [3], 2
+    alpha = 0.25
+    load = -25.0
+
+    filename = test_path / "domain.msh"
+    domain, _, boundary_tags = fop.read_gmsh(filename, comm, 2)
+    fop.all_connectivities(domain)
+
+    phi = fop.read_level_set_function(test_path, domain, niter)
+    space = fop.create_space(domain, "CG", rank_dim)
+
+    dirichlet_bcs = fop.homogeneous_dirichlet(
+        domain, space, boundary_tags, [dir_mkr], rank_dim
+    )
+    ds_g = fop.marked_ds(domain, boundary_tags, [neu_mkr])
+    force_in, force_out = forces
+    g = [force_in]
+
+    elast_model = Hookecomponents()
+
+    md = Compliance(
+        dim,
+        domain,
+        space,
+        test_path,
+        elast_model,
+        [g],
+        [ds_g],
+        dirichlet_bcs,
+        alpha,
+    )
+
+    md.nN = 200
+
+    names = [f"u{i:03}" for i in range(1, md.nN)]
+    factor = np.linspace(0.0, 1.0, md.nN)[1:]
+
+    uhs = []
+    for fc, nm in zip(factor, names):
+        print(f"> Factor = {fc}")
+        md.update_gs([[(0.0, fc * load)]])
+        uhs.append(fop.SolveLinearProblem(space, md.pde(phi)[0], nm))
+
+    fop.save_functions(comm, domain, [phi] + uhs, test_path / "deformations.xdmf")
 
 
 def inverterRobin(mod, test_path, kappa, alpha, eps, niter, elastic_pars, forces, nM=0):
@@ -968,14 +1019,36 @@ def inverterRobin(mod, test_path, kappa, alpha, eps, niter, elastic_pars, forces
 
 
 test_functions = {
-    "01": lambda: cantilever("Hooke", Path("../results/t101/"), load=-10.0, alpha=0.25),
+    "01": lambda: cantilever(
+        "Hooke", Path("../results/Elasticity/t01/"), load=-10.0, alpha=0.25
+    ),
     "02": lambda: cantilever(
-        "SVK", Path("../results/t102/"), load=-10.0, alpha=0.25, nM=8
+        "SVK", Path("../results/Elasticity/t02/"), load=-10.0, alpha=0.25, nM=8
     ),
     "03": lambda: cantilever(
-        "MR", Path("../results/t103/"), load=-10.0, alpha=0.25, nM=16
+        "MR", Path("../results/Elasticity/t03/"), load=-10.0, alpha=0.25, nM=16
     ),
-    "04": lambda: inverter(
+    "04": lambda: cantilever(
+        "Hooke",
+        Path("../results/Elasticity/t04/"),
+        load=-(10.0 * 1.8),
+        alpha=(1.8**2) * 0.25,
+    ),
+    "05": lambda: cantilever(
+        "SVK",
+        Path("../results/Elasticity/t05/"),
+        load=-(10.0 * 1.8),
+        alpha=(1.8**2) * 0.25,
+        nM=20,
+    ),
+    "06": lambda: cantilever(
+        "MR",
+        Path("../results/Elasticity/t06/"),
+        load=-(10.0 * 1.8),
+        alpha=(1.8**2) * 0.25,
+        nM=48,
+    ),
+    "201": lambda: inverter(
         mod="Hooke",
         test_path=Path("../results/t201/"),
         kappa=5.0,
@@ -985,7 +1058,7 @@ test_functions = {
         elastic_pars=(300.0, 0.4),
         forces=(4.0, 2.0),
     ),
-    "05": lambda: inverter(
+    "202": lambda: inverter(
         mod="Hooke",
         test_path=Path("../results/t202/"),
         kappa=12.0,
@@ -995,7 +1068,7 @@ test_functions = {
         elastic_pars=(300.0, 0.4),
         forces=(4.0, 2.0),
     ),
-    "06": lambda: inverter(
+    "203": lambda: inverter(
         mod="Hooke",
         test_path=Path("../results/t203/"),
         kappa=7.0,
@@ -1005,17 +1078,7 @@ test_functions = {
         elastic_pars=(250.0, 0.3),
         forces=(1.0, 0.5),
     ),
-    "07": lambda: inverterKV(
-        mod="Hooke",
-        test_path=Path("../results/t204/"),
-        kappa=1.0,
-        alpha=0.075,
-        eps=3e-3,
-        niter=300,
-        elastic_pars=(300.0, 0.4),
-        forces=(6.0, -6.0),
-    ),
-    "08": lambda: inverterRobin(
+    "205": lambda: inverterRobin(
         mod="Hooke",
         test_path=Path("../results/t205/"),
         kappa=[1.0],
@@ -1047,6 +1110,36 @@ test_functions = {
         alpha=0.5,
         beta=1.5,
         eps=1e-3,
+    ),
+    "41": lambda: KVtest(
+        mod="Hooke",
+        test_path=Path("../results/Elasticity/t41/"),
+        kappa=1.0,
+        alpha=0.075,
+        eps=3e-3,
+        niter=300,
+        elastic_pars=(300.0, 0.4),
+        forces=((6.0, 0.0), (-6.0, 0.0)),
+    ),
+    "42": lambda: KVtest(
+        mod="Hooke",
+        test_path=Path("../results/Elasticity/t42/"),
+        kappa=1.0,
+        alpha=0.075,
+        eps=3e-3,
+        niter=300,
+        elastic_pars=(300.0, 0.4),
+        forces=((6.0, 0.0), (0.0, -6.0)),
+    ),
+    "43": lambda: KVtest(
+        mod="Hooke",
+        test_path=Path("../results/Elasticity/t43/"),
+        kappa=1.0,
+        alpha=0.075,
+        eps=3e-3,
+        niter=300,
+        elastic_pars=(300.0, 0.4),
+        forces=((6.0, 0.0), (6.0, 0.0)),
     ),
 }
 

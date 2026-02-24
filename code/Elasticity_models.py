@@ -755,7 +755,7 @@ class Mechanism2(Model):
         return B, False
 
 
-class MechanismKV(Model):
+class KohnVogelius(Model):
 
     def __init__(
         self,
