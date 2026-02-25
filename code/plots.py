@@ -139,16 +139,18 @@ def plot_lv_with_control_pts(
     return np.array(ls).T
 
 
-def plot_lv2(test_path, niter, limits, title=None, figsize=None):
+def plot_deformations(
+    test_path, name, limits, title=None, figsize=None, boundaries=None, lw=2
+):
 
     points, cells, phi = None, None, None
 
-    with h5py.File(test_path / "phi_functions.h5", "r") as f:
+    with h5py.File(test_path / "deformations.h5", "r") as f:
         points = f["/Mesh/mesh/geometry"][:]
         cells = f["/Mesh/mesh/topology"][:]
         phi_group = f["/Function/phi"]
         phi = phi_group[str(0)][:, 0]
-        u0_group = f["/Function/u" + str(niter)]
+        u0_group = f["/Function/" + name]
         u0 = u0_group[str(0)][:, [0, 1]]
         points = points + u0
 
@@ -158,11 +160,11 @@ def plot_lv2(test_path, niter, limits, title=None, figsize=None):
     ax.tricontourf(
         triang,
         phi,
-        levels=[min(phi), 0.0, max(phi)],
-        colors=["black", (1, 1, 1)],
+        levels=[min(phi), 1e-4, max(phi)],
+        colors=["gray", (1, 1, 1)],
     )
 
-    ax.tricontour(triang, phi, levels=[0], colors="k", linewidths=2)
+    ax.tricontour(triang, phi, levels=[0], colors="k", linewidths=1)
     ax.set_title(title)
     ax.set_aspect("equal")
     ax.set_xlim(limits[0])
@@ -172,6 +174,10 @@ def plot_lv2(test_path, niter, limits, title=None, figsize=None):
     ax.tick_params(bottom=False, left=False)
     for spine in ax.spines.values():
         spine.set_visible(False)
+
+    if boundaries:
+        for xy, cl in boundaries:
+            ax.plot(xy[:, 0], xy[:, 1], color=cl, linewidth=lw)
 
 
 def plot_lv(
@@ -203,11 +209,11 @@ def plot_lv(
     ax.tricontourf(
         triang,
         phi,
-        levels=[min(phi), 0.0, max(phi)],
-        colors=["black", (1, 1, 1)],
+        levels=[min(phi), 1e-4, max(phi)],
+        colors=["gray", (1, 1, 1)],
     )
 
-    ax.tricontour(triang, phi, levels=[0], colors="k", linewidths=2)
+    ax.tricontour(triang, phi, levels=[0], colors="black", linewidths=1)
 
     ax.set_aspect("equal")
     ax.set_xlim(limits[0])

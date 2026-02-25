@@ -19,76 +19,19 @@ rank = comm.rank
 size = comm.size
 
 
-def deformation(mod, test_path, niter):
-
-    dim = 2
-    rank_dim = 2
-    dir_idx, dir_mkr = [6], 1
-    neu_idx, neu_mkr = [3], 2
-    alpha = 0.25
-    load = -25.0
-
-    filename = test_path / "domain.msh"
-    domain, _, boundary_tags = fop.read_gmsh(filename, comm, 2)
-    fop.all_connectivities(domain)
-
-    phi = fop.read_level_set_function(test_path, domain, niter)
-    space = fop.create_space(domain, "CG", rank_dim)
-
-    dirichlet_bcs = fop.homogeneous_dirichlet(
-        domain, space, boundary_tags, [dir_mkr], rank_dim
-    )
-    ds_g = fop.marked_ds(domain, boundary_tags, [neu_mkr])
-    g = [(0.0, load)]
-
-    if mod == "Hooke":
-        elast_model = Hookecomponents()
-    elif mod == "SVK":
-        elast_model = SVKcomponents()
-    elif mod == "MR":
-        elast_model = MRcomponents()
-
-    md = Compliance(
-        dim,
-        domain,
-        space,
-        test_path,
-        elast_model,
-        [g],
-        [ds_g],
-        dirichlet_bcs,
-        alpha,
-    )
-
-    md.nN = 200
-
-    names = [f"u{i:03}" for i in range(1, md.nN)]
-    factor = np.linspace(0.0, 1.0, md.nN)[1:]
-
-    if mod == "Hooke":
-        uhs = []
-        for fc, nm in zip(factor, names):
-            print(f"> Factor = {fc}")
-            md.update_gs([[(0.0, fc * load)]])
-            uhs.append(fop.SolveLinearProblem(space, md.pde(phi)[0], nm))
-
-    if mod == "SVK":
-        uhs = fop.SolveNonlinearOnce(domain, space, md.pde(phi)[0], names)
-
-    if mod == "MR":
-        # We consider fewer iterations due to the lack of convergence in the last iterations.
-        N = 8
-        md.update_gs([[(0.0, load * (md.nN - N) / (md.nN - 1))]])
-        md.nN = md.nN - (N - 1)
-        names = names[: -(N - 1)]
-        uhs = fop.SolveNonlinearOnce(domain, space, md.pde(phi)[0], names)
-
-    fop.save_functions(comm, domain, [phi] + uhs, test_path / "phi_functions.xdmf")
-
-
 def cantilever(mod, test_path, load, alpha, nM=0):
     """
-    Cantilever with one load
+    Cantilever with one load.
+
+    Numerical tests:
+
+    Hooke model
+    `cantilever("Hooke", Path("../results/Elasticity/t01/"), load=-10.0, alpha=0.25)`
+    Saint-Venant-Kirchhoff model
+    `cantilever("SVK", Path("../results/Elasticity/t02/"), load=-10.0, alpha=0.25, nM=8)`
+    Mooney-Rivlin model
+    `cantilever("MR", Path("../results/Elasticity/t03/"), load=-10.0, alpha=0.25, nM=16)`
+
     """
     dim = 2
     rank_dim = 2
@@ -160,7 +103,7 @@ def cantilever(mod, test_path, load, alpha, nM=0):
     md.create_initial_level(centers, radii)
 
     md.runDP(
-        niter=200,
+        niter=300,
         dfactor=1e-2,
         lv_iter=(12, 24),
         lv_time=(1e-3, 1.0),
@@ -170,6 +113,80 @@ def cantilever(mod, test_path, load, alpha, nM=0):
         reinit_pars=(6, 0.01),
         random_pars=(26, 0.075),
     )
+
+
+def deformation_cantilever(mod, test_path, last_iter):
+
+    dim = 2
+    rank_dim = 2
+    dir_idx, dir_mkr = [6], 1
+    neu_idx, neu_mkr = [3], 2
+    alpha = 0.25
+    load = -25.0  # maximum load
+
+    # read the domain
+    filename = test_path / "domain.msh"
+    domain, _, boundary_tags = fop.read_gmsh(filename, comm, 2)
+    fop.all_connectivities(domain)
+
+    # read the level set function
+    phi = fop.read_level_set_function(test_path, domain, last_iter)
+
+    space = fop.create_space(domain, "CG", rank_dim)
+    dirichlet_bcs = fop.homogeneous_dirichlet(
+        domain, space, boundary_tags, [dir_mkr], rank_dim
+    )
+
+    ds_g = fop.marked_ds(domain, boundary_tags, [neu_mkr])
+    g = [(0.0, load)]
+
+    if mod == "Hooke":
+        elast_model = Hookecomponents()
+    elif mod == "SVK":
+        elast_model = SVKcomponents()
+    elif mod == "MR":
+        elast_model = MRcomponents()
+
+    md = Compliance(
+        dim,
+        domain,
+        space,
+        test_path,
+        elast_model,
+        [g],
+        [ds_g],
+        dirichlet_bcs,
+        alpha,
+    )
+
+    md.nN = 200
+
+    # We consider fewer iterations due to
+    # the lack of convergence of the Moneey-Rivlin model
+    # at the last iterations.
+    k = 7
+    md.nN = md.nN - k
+    names = [f"u{i:03}" for i in range(1, md.nN)]
+    factor = np.linspace(0.0, 1.0, md.nN)[1:]
+    load = load * (md.nN - 1) / (md.nN + k - 1)
+
+    if mod == "Hooke":
+        uhs = []
+        for fc, nm in zip(factor, names):
+            load_i = fc * load
+            print(f"> Factor = {fc:6.4f}, Load = {load_i:7.4f}, Function = {nm}")
+            md.update_gs([[(0.0, load_i)]])
+            uhs.append(fop.SolveLinearProblem(space, md.pde(phi)[0], nm))
+
+    if mod == "SVK":
+        md.update_gs([[(0.0, load)]])
+        uhs = fop.SolveNonlinearOnce(domain, space, md.pde(phi)[0], names)
+
+    if mod == "MR":
+        md.update_gs([[(0.0, load)]])
+        uhs = fop.SolveNonlinearOnce(domain, space, md.pde(phi)[0], names)
+
+    fop.save_functions(comm, domain, [phi] + uhs, test_path / "deformations.xdmf")
 
 
 def inverter(mod, test_path, kappa, alpha, eps, niter, elastic_pars, forces, nM=0):
@@ -844,14 +861,14 @@ def KVtest(mod, test_path, kappa, alpha, eps, niter, elastic_pars, forces, nM=0)
     )
 
 
-def KVdeformations(test_path, niter, forces):
+def KVdeformations(test_path, niter, forces, alpha):
 
     dim = 2
     rank_dim = 2
-    dir_idx, dir_mkr = [6], 1
-    neu_idx, neu_mkr = [3], 2
-    alpha = 0.25
-    load = -25.0
+    dirB_idx, dirB_mkr = [10], 1
+    dirT_idx, dirT_mkr = [6], 2
+    neuL_idx, neuL_mkr = [8], 3
+    neuR_idx, neuR_mkr = [3], 4
 
     filename = test_path / "domain.msh"
     domain, _, boundary_tags = fop.read_gmsh(filename, comm, 2)
@@ -861,36 +878,54 @@ def KVdeformations(test_path, niter, forces):
     space = fop.create_space(domain, "CG", rank_dim)
 
     dirichlet_bcs = fop.homogeneous_dirichlet(
-        domain, space, boundary_tags, [dir_mkr], rank_dim
+        domain, space, boundary_tags, [dirB_mkr, dirT_mkr], rank_dim
     )
-    ds_g = fop.marked_ds(domain, boundary_tags, [neu_mkr])
+    ds_g = fop.marked_ds(domain, boundary_tags, [neuL_mkr, neuR_mkr])
     force_in, force_out = forces
-    g = [force_in]
+    g_in, g_out = [force_in], [force_out]
 
     elast_model = Hookecomponents()
 
-    md = Compliance(
+    md1 = Compliance(
         dim,
         domain,
         space,
         test_path,
         elast_model,
-        [g],
-        [ds_g],
+        [g_in],
+        [[ds_g[0]]],
         dirichlet_bcs,
         alpha,
     )
 
-    md.nN = 200
+    md2 = Compliance(
+        dim,
+        domain,
+        space,
+        test_path,
+        elast_model,
+        [g_out],
+        [[ds_g[1]]],
+        dirichlet_bcs,
+        alpha,
+    )
 
-    names = [f"u{i:03}" for i in range(1, md.nN)]
-    factor = np.linspace(0.0, 1.0, md.nN)[1:]
+    nN = 20
 
+    names_in = [f"uin{i:02}" for i in range(1, nN)]
+    names_out = [f"uout{i:02}" for i in range(1, nN)]
+    factor = np.linspace(0.0, 1.0, nN)[1:]
     uhs = []
-    for fc, nm in zip(factor, names):
+
+    for fc, nm in zip(factor, names_in):
         print(f"> Factor = {fc}")
-        md.update_gs([[(0.0, fc * load)]])
-        uhs.append(fop.SolveLinearProblem(space, md.pde(phi)[0], nm))
+        md1.update_gs([[(fc * force_in[0], fc * force_in[1])]])
+        uhs.append(fop.SolveLinearProblem(space, md1.pde(phi)[0], nm))
+
+    for fc, nm in zip(factor, names_out):
+        print(f"> Factor = {fc}")
+        md2.update_gs([[(fc * force_out[0], fc * force_out[1])]])
+        uhs.append(fop.SolveLinearProblem(space, md2.pde(phi)[0], nm))
 
     fop.save_functions(comm, domain, [phi] + uhs, test_path / "deformations.xdmf")
 
@@ -1028,26 +1063,32 @@ test_functions = {
     "03": lambda: cantilever(
         "MR", Path("../results/Elasticity/t03/"), load=-10.0, alpha=0.25, nM=16
     ),
+    "defo_cant_01": lambda: deformation_cantilever(
+        "Hooke", Path("../results/Elasticity/t01/"), 119
+    ),
+    "defo_cant_02": lambda: deformation_cantilever(
+        "SVK", Path("../results/Elasticity/t02/"), 115
+    ),
+    "defo_cant_03": lambda: deformation_cantilever(
+        "MR", Path("../results/Elasticity/t03/"), 130
+    ),
     "04": lambda: cantilever(
-        "Hooke",
+        "SVK",
         Path("../results/Elasticity/t04/"),
-        load=-(10.0 * 1.8),
-        alpha=(1.8**2) * 0.25,
+        load=-(10.0 * 1.633),
+        alpha=(1.633**2) * 0.25,
+        nM=8,
     ),
     "05": lambda: cantilever(
-        "SVK",
-        Path("../results/Elasticity/t05/"),
-        load=-(10.0 * 1.8),
-        alpha=(1.8**2) * 0.25,
-        nM=20,
-    ),
-    "06": lambda: cantilever(
         "MR",
-        Path("../results/Elasticity/t06/"),
-        load=-(10.0 * 1.8),
-        alpha=(1.8**2) * 0.25,
-        nM=48,
+        Path("../results/Elasticity/t05/"),
+        load=-(10.0 * 1.7588),
+        alpha=(1.7588**2) * 0.25,
+        nM=18,
     ),
+    "11": lambda: print("Mechanism"),
+    "12": lambda: print("Mechanism"),
+    "13": lambda: print("Mechanism"),
     "201": lambda: inverter(
         mod="Hooke",
         test_path=Path("../results/t201/"),
@@ -1100,9 +1141,6 @@ test_functions = {
         eps=3e-3,
         nM=16,
     ),
-    "def1": lambda: deformation("Hooke", Path("../results/t101/"), 119),
-    "def2": lambda: deformation("SVK", Path("../results/t102/"), 115),
-    "def3": lambda: deformation("MR", Path("../results/t103/"), 130),
     "i2": lambda: i2(
         "Hooke",
         Path("../results/t202/"),
@@ -1140,6 +1178,12 @@ test_functions = {
         niter=300,
         elastic_pars=(300.0, 0.4),
         forces=((6.0, 0.0), (6.0, 0.0)),
+    ),
+    "defo_KV": lambda: KVdeformations(
+        Path("../results/Elasticity/t41/"),
+        206,
+        ((15.0, 0.0), (-15.0, 0.0)),
+        alpha=0.075,
     ),
 }
 

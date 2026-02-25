@@ -2790,9 +2790,19 @@ def read_level_set_function(path: Path, domain: Mesh, niter: int) -> Function:
     return None
 
 
-def phifem_solver(a, L, bcs, uh, phi, rank_dim, comm):
+def phifem_solver(
+    a: Expr,
+    L: Expr,
+    bcs: Sequence[DirichletBC],
+    uh: Function,
+    phi: Function,
+    rank_dim: int,
+    comm: MPI.Comm,
+) -> None:
     """
     This function was created to use phiFem method in formopt.
+    It solves the linear system using LU and compute the phiFem
+    solution.
     """
     A = assemble_matrix(form(a), bcs=bcs)
     A.assemble()
@@ -2817,7 +2827,14 @@ def phifem_solver(a, L, bcs, uh, phi, rank_dim, comm):
     uh.x.scatter_forward()
 
 
-def phifem_solve(nbr_eq, equations, solutions, phi, rank_dim, comm):
+def phifem_solve(
+    nbr_eq: int,
+    equations: List[Tuple[Expr, Sequence[DirichletBC]]],
+    solutions: List[Function],
+    phi: Function,
+    rank_dim: int,
+    comm: MPI.Comm,
+):
     """
     This function was created to use phiFem method in formopt.
     """
@@ -2827,9 +2844,15 @@ def phifem_solve(nbr_eq, equations, solutions, phi, rank_dim, comm):
         phifem_solver(bi, li, bcs, solutions[i], phi, rank_dim, comm)
 
 
-def get_initial_level(domain, centers, radii, factor=1.0, ord=2):
+def get_initial_level(
+    domain: Mesh,
+    centers: npt.NDArray[np.float64],
+    radii: npt.NDArray[np.float64],
+    factor: float = 1.0,
+    ord: int = 2,
+):
     """
-    This function was created to use phiFem method in formopt.
+    This function was created to use phiFem method in `formopt`.
     """
     ini_lvl = InitialLevel(centers, radii, factor, ord)
     sp_lset = create_space(domain, "CG", 1)
