@@ -5,8 +5,6 @@ from Elasticity_models import (
     MRcomponents,
     Compliance,
     Mechanism,
-    Mechanism2,
-    MechanismRobin,
     KohnVogelius,
 )
 
@@ -189,24 +187,104 @@ def deformation_cantilever(mod, test_path, last_iter):
     fop.save_functions(comm, domain, [phi] + uhs, test_path / "deformations.xdmf")
 
 
-def inverter(mod, test_path, kappa, alpha, eps, niter, elastic_pars, forces, nM=0):
-    """
-    Inverter mechanism examples
+def inverter_nonlinear():
 
-    inverter(
-        mod="Hooke",
-        test_path=Path("../results/t203/"),
-        kappa=5.0,
-        alpha=0.01,
-        eps=1e-3,
-        niter=400,
-        elastic_pars=(200.0, 0.3),
-        forces=(1.0, 0.5),
+    path_origin = Path("../results/Elasticity/t12/")
+    last_iter = 180
+
+    test_path = Path("../results/Elasticity/t13/")
+    kappa = [16.0]
+    alpha = 0.36
+    eps = 1e-2
+    niter = 300
+    forces = (8.0, 14.0)
+    nN = 10
+
+    a, b = 0.05, 0.05
+    dim = 2
+    rank_dim = 2
+    dirB_idx, dirB_mkr = [10], 1
+    dirT_idx, dirT_mkr = [6], 2
+    neuL_idx, neuL_mkr = [8], 3
+    neuR_idx, neuR_mkr = [3], 4
+
+    # read the domain
+    filename = path_origin / "domain.msh"
+    domain, _, boundary_tags = fop.read_gmsh(filename, comm, 2)
+    fop.all_connectivities(domain)
+
+    # read the level set function
+    phi = fop.read_level_set_function(path_origin, domain, last_iter)
+
+    space = fop.create_space(domain, "CG", rank_dim)
+    dirichlet_bcs = fop.homogeneous_dirichlet(
+        domain, space, boundary_tags, [dirB_mkr, dirT_mkr], rank_dim
+    )
+    ds_g = fop.marked_ds(domain, boundary_tags, [neuL_mkr, neuR_mkr])
+
+    force_in, force_out = forces
+    g_in, g_out = [(force_in, 0.0)], [(force_out, 0.0)]
+
+    elast_model = MRcomponents()
+
+    md = Mechanism(
+        dim,
+        domain,
+        space,
+        test_path,
+        elast_model,
+        g_in,
+        [ds_g[0]],
+        g_out,
+        [ds_g[1]],
+        dirichlet_bcs,
+        kappa,
+        alpha,
+        eps,
     )
 
-    inverter("Hooke", Path("../results/t203/"), 0.5, 0.01, 1e-3, 300, (200.0, 0.3), (0.1*10.0, 0.1*5.0))
+    md.nN = nN
+
+    @fop.region_of(domain)
+    def sub_dom_L(x):
+        # x < 2*eps and 0.5 - a - eps < y < 0.5 + a + eps
+        eps2 = a / 2.0
+        return [2.0 * eps2 - x[0], x[1] - 0.5 + a + eps2, 0.5 + a + eps2 - x[1]]
+
+    @fop.region_of(domain)
+    def sub_dom_R(x):
+        # x > 1.0 - 2*eps and 0.5 - a - eps < y < 0.5 + a + eps
+        eps2 = a / 2.0
+        return [x[0] - 1.0 + 2.0 * eps2, x[1] - 0.5 + a + eps2, 0.5 + a + eps2 - x[1]]
+
+    md.sub = [sub_dom_L.expression(), sub_dom_R.expression()]
+    md.set_initial_level(phi)
+    md.runDP(
+        niter=niter,
+        dfactor=1e-2,
+        lv_iter=(10, 24),
+        lv_time=(1e-3, 0.1),
+        cost_tol=1e-3,
+        smooth=True,
+        reinit_step=4,
+        reinit_pars=(10, 5e-3),
+        random_pars=(123, 0.05),
+    )
+
+
+def inverter(mod, test_path, kappa, alpha, eps, niter, elastic_pars, forces, nM=0):
     """
-    dim, rank_dim, mesh_size = 2, 2, 0.008
+    mod="Hooke",
+    test_path=Path("../results/t205/"),
+    kappa=[0.01],
+    alpha=0.01,
+    eps=0.01,
+    niter=300,
+    elastic_pars=(20.0, 0.3),
+    forces=(2.0, 1.0),
+    """
+
+    dim, rank_dim, mesh_size = 2, 2, 0.009
     a, b = 0.05, 0.05
     vertices = np.array(
         [
@@ -253,10 +331,13 @@ def inverter(mod, test_path, kappa, alpha, eps, niter, elastic_pars, forces, nM=
     g_in, g_out = [(force_in, 0.0)], [(force_out, 0.0)]
 
     if mod == "Hooke":
+        print("> Hooke model")
         elast_model = Hookecomponents(Ym, Pr)
     elif mod == "SVK":
+        print("> Saint-Venant-Kirchhoff model")
         elast_model = SVKcomponents(Ym, Pr)
     elif mod == "MR":
+        print("> Moony-Rivlin Hooke model")
         elast_model = MRcomponents()
 
     md = Mechanism(
@@ -289,16 +370,6 @@ def inverter(mod, test_path, kappa, alpha, eps, niter, elastic_pars, forces, nM=
         eps2 = a / 2.0
         return [x[0] - 1.0 + 2.0 * eps2, x[1] - 0.5 + a + eps2, 0.5 + a + eps2 - x[1]]
 
-    @fop.region_of(domain)
-    def sub_dom_T(x):
-        eps = a / 2.0
-        return [2.0 * eps - x[0], x[1] - 1.0 + b + eps]
-
-    @fop.region_of(domain)
-    def sub_dom_B(x):
-        eps = a / 2.0
-        return [2.0 * eps - x[0], b + eps - x[1]]
-
     md.sub = [sub_dom_L.expression(), sub_dom_R.expression()]
 
     centers = [(0.0, 0.25), (0.0, 0.75)]
@@ -309,7 +380,6 @@ def inverter(mod, test_path, kappa, alpha, eps, niter, elastic_pars, forces, nM=
     centers += [(i * 1.0 / 5.0, 1.0 / 3.0) for i in range(6)]
     centers += [(0.1 + i * 0.2, 1.0 / 6.0) for i in range(5)]
     centers += [(i * 1.0 / 5.0, 0.0) for i in range(1, 6)]
-
     centers = np.array(centers)
     radii = np.repeat(0.05, centers.shape[0])
     md.create_initial_level(centers, radii)
@@ -318,422 +388,13 @@ def inverter(mod, test_path, kappa, alpha, eps, niter, elastic_pars, forces, nM=
     md.runDP(
         niter=niter,
         dfactor=1e-2,
-        lv_iter=(10, 20),
+        lv_iter=(10, 24),
         lv_time=(1e-3, 0.1),
         cost_tol=1e-3,
         smooth=True,
         reinit_step=4,
-        reinit_pars=(6, 0.01),
-        random_pars=(26, 0.05),
-    )
-
-
-def gripping(mod, test_path, alpha, beta, kappa, eps, nM=0):
-    """
-    Gripping mechanism
-    """
-    dim = 2
-    rank_dim = 2
-    mesh_size = 0.009
-    a, b, c, d = 0.1, 0.015, 0.1, 0.4
-    vertices = np.array(
-        [
-            (0.0, 0.0),
-            (1.0 - a, 0.0),
-            (1.0, 0.0),
-            (1.0, 0.5 - b),
-            (1.0, 0.5 + b),
-            (1.0, 1.0),
-            (1.0 - a, 1.0),
-            (0.0, 1.0),
-            (0.0, 1.0 - d),
-            (c, 1.0 - d),
-            (c, 0.5 + b),
-            (c, 0.5 - b),
-            (c, d),
-            (0.0, d),
-        ]
-    )
-
-    dirR_idx, dirR_mkr = [4], 1
-    dirL_idx, dirL_mkr = [11], 2
-    neuRT_idx, neuRT_mkr = [6], 3
-    neuRB_idx, neuRB_mkr = [2], 4
-    neuLT_idx, neuLT_mkr = [9], 5
-    neuLB_idx, neuLB_mkr = [13], 6
-
-    boundary_parts = [
-        (dirR_idx, dirR_mkr, "dir_right"),
-        (dirL_idx, dirL_mkr, "dir_left"),
-        (neuRT_idx, neuRT_mkr, "neu_right_top"),
-        (neuRB_idx, neuRB_mkr, "neu_right_bottom"),
-        (neuLT_idx, neuLT_mkr, "neu_left_top"),
-        (neuLB_idx, neuLB_mkr, "neu_left_bottom"),
-    ]
-
-    output = fop.create_domain_2d_DP(
-        vertices, boundary_parts, mesh_size, path=test_path, plot=False
-    )
-
-    domain, nbr_tri, boundary_tags = output
-
-    if rank == 0:
-        print(f"> Nbr of triangles = {nbr_tri}")
-
-    space = fop.create_space(domain, "CG", rank_dim)
-    dirichlet_bcs = fop.homogeneous_dirichlet(
-        domain, space, boundary_tags, [dirR_mkr, dirL_mkr], rank_dim
-    )
-    ds_g = fop.marked_ds(
-        domain, boundary_tags, [neuRT_mkr, neuRB_mkr, neuLT_mkr, neuLB_mkr]
-    )
-
-    factor = 1.0
-    g_in = [(0.0, -factor * 10.0), (0.0, factor * 10.0)]
-    g_out = [(0.0, factor * 1.0), (0.0, -factor * 1.0)]
-
-    if mod == "Hooke":
-        elast_model = Hookecomponents(Ym=200.0, Pr=0.3)
-    elif mod == "SVK":
-        elast_model = SVKcomponents(Ym=200.0, Pr=0.3)
-    elif mod == "MR":
-        elast_model = MRcomponents()
-
-    md = Mechanism(
-        dim,
-        domain,
-        space,
-        test_path,
-        elast_model,
-        g_in,
-        [ds_g[0], ds_g[1]],
-        g_out,
-        [ds_g[2], ds_g[3]],
-        dirichlet_bcs,
-        kappa,
-        alpha,
-        beta,
-        eps,
-    )
-
-    md.nN = nM
-
-    @fop.region_of(domain)
-    def sub_dom_neuRT(x):
-        # 1-a < x, (1-a/4) < y
-        ineqs = [x[0] - (1.0 - a), x[1] - (1.0 - a / 4.0)]
-        return ineqs
-
-    @fop.region_of(domain)
-    def sub_dom_neuRB(x):
-        # 1-a < x, y < (a / 4.0)
-        ineqs = [x[0] - (1.0 - a), (a / 4.0) - x[1]]
-        return ineqs
-
-    @fop.region_of(domain)
-    def sub_dom_neuLT(x):
-        # x < c, (1-d) - 1e-3 < y < (1-d) + (c/4)
-        ineqs = [x[0], x[1] - (1.0 - d) + 1e-3, (1.0 - d) + (c / 4.0) - x[1]]
-        return ineqs
-
-    @fop.region_of(domain)
-    def sub_dom_neuLB(x):
-        # x < c, d - (c/4) < y < d + 1e-3
-        ineqs = [x[0], x[1] - d + (c / 4.0), d + 1e-3 - x[1]]
-        return ineqs
-
-    md.sub = [
-        sub_dom_neuRT.expression(),
-        sub_dom_neuRB.expression(),
-        sub_dom_neuLT.expression(),
-        sub_dom_neuLB.expression(),
-    ]
-
-    centers = [(0.0, 0.25), (0.0, 0.75)]
-    centers += [(i * 1.0 / 5.0, 1.0) for i in range(5)]
-    centers += [(0.1 + i * 0.2, 5.0 / 6.0) for i in range(5)]
-    centers += [(i * 1.0 / 5.0, 2.0 / 3.0) for i in range(1, 6)]
-    centers += [(0.1 + i * 0.2, 0.5) for i in range(5)]
-    centers += [(i * 1.0 / 5.0, 1.0 / 3.0) for i in range(1, 6)]
-    centers += [(0.1 + i * 0.2, 1.0 / 6.0) for i in range(5)]
-    centers += [(i * 1.0 / 5.0, 0.0) for i in range(5)]
-    centers += [(1.0, 0.5)]
-
-    centers = np.array(centers)
-    radii = np.repeat(0.05, centers.shape[0])
-    radii[-1] = 0.07
-    md.create_initial_level(centers, radii)
-    md.save_initial_level(comm)
-
-    md.runDP(
-        niter=300,
-        dfactor=1e-2,
-        lv_iter=(10, 20),
-        lv_time=(1e-3, 0.1),
-        cost_tol=1e-3,
-        smooth=True,
-        reinit_step=4,
-        reinit_pars=(6, 0.01),
-    )
-
-
-def inverter2(mod, test_path, kappa, alpha, beta, eps, nM=0):
-    """
-    inverter2(
-        "Hooke",
-        Path("../results/t105/"),
-        kappa=5.0,
-        alpha=0.05,
-        beta=5e-3,
-        eps=3e-3,
-    )
-    """
-    dim = 2
-    rank_dim = 2
-    mesh_size = 0.009
-    a, b = 0.05, 0.05
-    vertices = np.array(
-        [
-            (0.0, 0.5),
-            (1.0, 0.5),
-            (1.0, 0.5 + a),
-            (1.0, 1.0),
-            (0.0, 1.0),
-            (0.0, 1.0 - b),
-            (0.0, 0.5 + a),
-        ]
-    )
-
-    dir_base_idx, dir_base_mkr = [1], 1  # base
-    dirC_idx, dirC_mkr = [5], 2  # corner
-    neuL_idx, neuL_mkr = [7], 3  # left
-    neuR_idx, neuR_mkr = [2], 4  # right
-
-    boundary_parts = [
-        (dir_base_idx, dir_base_mkr, "dir_base"),
-        (dirC_idx, dirC_mkr, "dir_corner"),
-        (neuL_idx, neuL_mkr, "neu_left"),
-        (neuR_idx, neuR_mkr, "neu_right"),
-    ]
-
-    output = fop.create_domain_2d_DP(
-        vertices, boundary_parts, mesh_size, path=test_path
-    )
-
-    domain, nbr_tri, boundary_tags = output
-
-    if rank == 0:
-        print(f"> Nbr of triangles = {nbr_tri}")
-
-    space = fop.create_space(domain, "CG", rank_dim)
-    dir_bc = fop.homogeneous_dirichlet(
-        domain, space, boundary_tags, [dirC_mkr], rank_dim
-    )
-    dir_bc_y = fop.homogeneous_dirichlet_y_coord(
-        domain, space, boundary_tags, [dir_base_mkr]
-    )
-    ds_g = fop.marked_ds(domain, boundary_tags, [neuL_mkr, neuR_mkr])
-
-    factor = 0.4
-    g_in = [(factor * 10.0, 0.0)]
-    g_out = [(factor * 5.0, 0.0)]
-
-    if mod == "Hooke":
-        elast_model = Hookecomponents(Ym=300.0, Pr=0.4)
-    elif mod == "SVK":
-        elast_model = SVKcomponents(Ym=300.0, Pr=0.4)
-    elif mod == "MR":
-        elast_model = MRcomponents()
-
-    md = Mechanism(
-        dim,
-        domain,
-        space,
-        test_path,
-        elast_model,
-        g_in,
-        [ds_g[0]],
-        g_out,
-        [ds_g[1]],
-        [dir_bc[0], dir_bc_y[0]],
-        kappa,
-        alpha,
-        beta,
-        eps,
-    )
-
-    md.nN = nM
-
-    @fop.region_of(domain)
-    def sub_dom_L(x):
-        # x < 2*eps
-        # 0.5 - a < y < 0.5 + a
-        return [a / 2.0 - x[0], x[1] - 0.5 + a, 0.5 + a - x[1]]
-
-    @fop.region_of(domain)
-    def sub_dom_R(x):
-        # x > 1.0 - 2*eps
-        # 0.5 - a < y < 0.5 + a
-        return [x[0] - 1.0 + a / 2.0, x[1] - 0.5 + a, 0.5 + a - x[1]]
-
-    md.sub = [sub_dom_L.expression(), sub_dom_R.expression()]
-
-    centers = [(0.0, 0.25), (0.0, 0.75)]
-    centers += [(i * 1.0 / 5.0, 1.0) for i in range(1, 6)]
-    centers += [(0.1 + i * 0.2, 5.0 / 6.0) for i in range(5)]
-    centers += [(i * 1.0 / 5.0, 2.0 / 3.0) for i in range(6)]
-    centers += [(0.1 + i * 0.2, 0.5) for i in range(1, 4)]
-    centers += [(i * 1.0 / 5.0, 1.0 / 3.0) for i in range(6)]
-    centers += [(0.1 + i * 0.2, 1.0 / 6.0) for i in range(5)]
-    centers += [(i * 1.0 / 5.0, 0.0) for i in range(1, 6)]
-    centers = np.array(centers)
-    radii = np.repeat(0.05, centers.shape[0])
-    md.create_initial_level(centers, radii)
-    md.save_initial_level(comm)
-
-    md.runDP(
-        niter=500,
-        dfactor=1e-2,
-        lv_iter=(10, 20),
-        lv_time=(1e-3, 0.1),
-        cost_tol=1e-3,
-        smooth=True,
-        reinit_step=4,
-        reinit_pars=(6, 0.01),
-        random_pars=(26, 0.1),
-    )
-
-
-def i2(mod, test_path, kappa, alpha, beta, eps, nM=0):
-    """
-    Inverter mechanism
-    """
-    dim = 2
-    rank_dim = 2
-    mesh_size = 0.008
-    a, b = 0.05, 0.05
-    vertices = np.array(
-        [
-            (0.0, 0.0),
-            (1.0, 0.0),
-            (1.0, 0.5 - a),
-            (1.0, 0.5 + a),
-            (1.0, 1.0),
-            (0.0, 1.0),
-            (0.0, 1.0 - b),
-            (0.0, 0.5 + a),
-            (0.0, 0.5 - a),
-            (0.0, b),
-        ]
-    )
-
-    dirB_idx, dirB_mkr = [10], 1
-    dirT_idx, dirT_mkr = [6], 2
-    neuL_idx, neuL_mkr = [8], 3
-    neuR_idx, neuR_mkr = [3], 4
-
-    boundary_parts = [
-        (dirB_idx, dirB_mkr, "dir_bottom"),
-        (dirT_idx, dirT_mkr, "dir_top"),
-        (neuL_idx, neuL_mkr, "neu_left"),
-        (neuR_idx, neuR_mkr, "neu_right"),
-    ]
-
-    output = fop.create_domain_2d_DP(
-        vertices, boundary_parts, mesh_size, path=test_path, plot=False
-    )
-
-    domain, nbr_tri, boundary_tags = output
-
-    if rank == 0:
-        print(f"> Nbr of triangles = {nbr_tri}")
-
-    space = fop.create_space(domain, "CG", rank_dim)
-    dirichlet_bcs = fop.homogeneous_dirichlet(
-        domain, space, boundary_tags, [dirB_mkr, dirT_mkr], rank_dim
-    )
-    ds_g = fop.marked_ds(domain, boundary_tags, [neuL_mkr, neuR_mkr])
-
-    factor = 0.4
-    g_in = [(0.25, 0.0)]
-    g_out = [(1.0, 0.0)]
-
-    if mod == "Hooke":
-        elast_model = Hookecomponents(Ym=1.0, Pr=0.3)
-    elif mod == "SVK":
-        elast_model = SVKcomponents(Ym=1.0, Pr=0.3)
-    elif mod == "MR":
-        elast_model = MRcomponents()
-
-    md = Mechanism2(
-        dim,
-        domain,
-        space,
-        test_path,
-        elast_model,
-        g_in,
-        [ds_g[0]],
-        g_out,
-        [ds_g[1]],
-        dirichlet_bcs,
-        kappa,
-        alpha,
-        beta,
-        eps,
-    )
-
-    md.nN = nM
-
-    @fop.region_of(domain)
-    def sub_dom_L(x):
-        # x < 2*eps
-        # 0.5 - a - eps < y < 0.5 + a + eps
-        eps2 = a / 2.0
-        return [2.0 * eps2 - x[0], x[1] - 0.5 + a + eps2, 0.5 + a + eps2 - x[1]]
-
-    @fop.region_of(domain)
-    def sub_dom_R(x):
-        # x > 1.0 - 2*eps
-        # 0.5 - a - eps < y < 0.5 + a + eps
-        eps2 = a / 2.0
-        return [x[0] - 1.0 + 2.0 * eps2, x[1] - 0.5 + a + eps2, 0.5 + a + eps2 - x[1]]
-
-    @fop.region_of(domain)
-    def sub_dom_T(x):
-        eps = a / 2.0
-        return [2.0 * eps - x[0], x[1] - 1.0 + b + eps]
-
-    @fop.region_of(domain)
-    def sub_dom_B(x):
-        eps = a / 2.0
-        return [2.0 * eps - x[0], b + eps - x[1]]
-
-    md.sub = [sub_dom_L.expression(), sub_dom_R.expression()]
-
-    centers = [(0.0, 0.25), (0.0, 0.75)]
-    centers += [(i * 1.0 / 5.0, 1.0) for i in range(1, 6)]
-    centers += [(0.1 + i * 0.2, 5.0 / 6.0) for i in range(5)]
-    centers += [(i * 1.0 / 5.0, 2.0 / 3.0) for i in range(6)]
-    centers += [(0.1 + i * 0.2, 0.5) for i in range(1, 4)]
-    centers += [(i * 1.0 / 5.0, 1.0 / 3.0) for i in range(6)]
-    centers += [(0.1 + i * 0.2, 1.0 / 6.0) for i in range(5)]
-    centers += [(i * 1.0 / 5.0, 0.0) for i in range(1, 6)]
-
-    centers = np.array(centers)
-    radii = np.repeat(0.05, centers.shape[0])
-    md.create_initial_level(centers, radii)
-    md.save_initial_level(comm)
-
-    md.runDP(
-        niter=100,
-        dfactor=1e-2,
-        lv_iter=(10, 20),
-        lv_time=(1e-3, 0.1),
-        cost_tol=1e-3,
-        smooth=True,
-        reinit_step=4,
-        reinit_pars=(6, 0.01),
-        random_pars=(26, 0.05),
+        reinit_pars=(10, 5e-3),
+        random_pars=(125, 0.1),
     )
 
 
@@ -930,129 +591,6 @@ def KVdeformations(test_path, niter, forces, alpha):
     fop.save_functions(comm, domain, [phi] + uhs, test_path / "deformations.xdmf")
 
 
-def inverterRobin(mod, test_path, kappa, alpha, eps, niter, elastic_pars, forces, nM=0):
-    """
-    mod="Hooke",
-    test_path=Path("../results/t205/"),
-    kappa=[0.01],
-    alpha=0.01,
-    eps=0.01,
-    niter=300,
-    elastic_pars=(20.0, 0.3),
-    forces=(2.0, 1.0),
-    """
-
-    dim, rank_dim, mesh_size = 2, 2, 0.009
-    a, b = 0.05, 0.05
-    vertices = np.array(
-        [
-            (0.0, 0.0),
-            (1.0, 0.0),
-            (1.0, 0.5 - a),
-            (1.0, 0.5 + a),
-            (1.0, 1.0),
-            (0.0, 1.0),
-            (0.0, 1.0 - b),
-            (0.0, 0.5 + a),
-            (0.0, 0.5 - a),
-            (0.0, b),
-        ]
-    )
-    dirB_idx, dirB_mkr = [10], 1
-    dirT_idx, dirT_mkr = [6], 2
-    neuL_idx, neuL_mkr = [8], 3
-    neuR_idx, neuR_mkr = [3], 4
-    boundary_parts = [
-        (dirB_idx, dirB_mkr, "dir_bottom"),
-        (dirT_idx, dirT_mkr, "dir_top"),
-        (neuL_idx, neuL_mkr, "neu_left"),
-        (neuR_idx, neuR_mkr, "neu_right"),
-    ]
-    output = fop.create_domain_2d_DP(
-        vertices, boundary_parts, mesh_size, path=test_path, plot=False
-    )
-    domain, nbr_tri, boundary_tags = output
-
-    if rank == 0:
-        print("Inverter mechanism")
-        print(f"> Path = {test_path}")
-        print(f"> Nbr of triangles = {nbr_tri}")
-
-    space = fop.create_space(domain, "CG", rank_dim)
-    dirichlet_bcs = fop.homogeneous_dirichlet(
-        domain, space, boundary_tags, [dirB_mkr, dirT_mkr], rank_dim
-    )
-    ds_g = fop.marked_ds(domain, boundary_tags, [neuL_mkr, neuR_mkr])
-
-    Ym, Pr = elastic_pars
-    force_in, force_out = forces
-    g_in, g_out = [(force_in, 0.0)], [(force_out, 0.0)]
-
-    if mod == "Hooke":
-        elast_model = Hookecomponents(Ym, Pr)
-    elif mod == "SVK":
-        elast_model = SVKcomponents(Ym, Pr)
-    elif mod == "MR":
-        elast_model = MRcomponents()
-
-    md = MechanismRobin(
-        dim,
-        domain,
-        space,
-        test_path,
-        elast_model,
-        g_in,
-        [ds_g[0]],
-        g_out,
-        [ds_g[1]],
-        dirichlet_bcs,
-        kappa,
-        alpha,
-        eps,
-    )
-
-    md.nN = nM
-
-    @fop.region_of(domain)
-    def sub_dom_L(x):
-        # x < 2*eps and 0.5 - a - eps < y < 0.5 + a + eps
-        eps2 = a / 2.0
-        return [2.0 * eps2 - x[0], x[1] - 0.5 + a + eps2, 0.5 + a + eps2 - x[1]]
-
-    @fop.region_of(domain)
-    def sub_dom_R(x):
-        # x > 1.0 - 2*eps and 0.5 - a - eps < y < 0.5 + a + eps
-        eps2 = a / 2.0
-        return [x[0] - 1.0 + 2.0 * eps2, x[1] - 0.5 + a + eps2, 0.5 + a + eps2 - x[1]]
-
-    md.sub = [sub_dom_L.expression(), sub_dom_R.expression()]
-
-    centers = [(0.0, 0.25), (0.0, 0.75)]
-    centers += [(i * 1.0 / 5.0, 1.0) for i in range(1, 6)]
-    centers += [(0.1 + i * 0.2, 5.0 / 6.0) for i in range(5)]
-    centers += [(i * 1.0 / 5.0, 2.0 / 3.0) for i in range(6)]
-    centers += [(0.1 + i * 0.2, 0.5) for i in range(1, 4)]
-    centers += [(i * 1.0 / 5.0, 1.0 / 3.0) for i in range(6)]
-    centers += [(0.1 + i * 0.2, 1.0 / 6.0) for i in range(5)]
-    centers += [(i * 1.0 / 5.0, 0.0) for i in range(1, 6)]
-    centers = np.array(centers)
-    radii = np.repeat(0.05, centers.shape[0])
-    md.create_initial_level(centers, radii)
-    md.save_initial_level(comm)
-
-    md.runDP(
-        niter=niter,
-        dfactor=1e-2,
-        lv_iter=(10, 20),
-        lv_time=(1e-3, 0.1),
-        cost_tol=1e-3,
-        smooth=True,
-        reinit_step=4,
-        reinit_pars=(6, 0.01),
-        random_pars=(26, 0.05),
-    )
-
-
 test_functions = {
     "01": lambda: cantilever(
         "Hooke", Path("../results/Elasticity/t01/"), load=-10.0, alpha=0.25
@@ -1086,68 +624,66 @@ test_functions = {
         alpha=(1.7588**2) * 0.25,
         nM=18,
     ),
-    "11": lambda: print("Mechanism"),
-    "12": lambda: print("Mechanism"),
-    "13": lambda: print("Mechanism"),
-    "201": lambda: inverter(
+    "11": lambda: inverter(
         mod="Hooke",
-        test_path=Path("../results/t201/"),
-        kappa=5.0,
+        test_path=Path("../results/Elasticity/t11/"),
+        kappa=[4.0],
         alpha=0.05,
-        eps=3e-3,
-        niter=300,
-        elastic_pars=(300.0, 0.4),
-        forces=(4.0, 2.0),
-    ),
-    "202": lambda: inverter(
-        mod="Hooke",
-        test_path=Path("../results/t202/"),
-        kappa=12.0,
-        alpha=0.05,
-        eps=6e-3,
-        niter=400,
-        elastic_pars=(300.0, 0.4),
-        forces=(4.0, 2.0),
-    ),
-    "203": lambda: inverter(
-        mod="Hooke",
-        test_path=Path("../results/t203/"),
-        kappa=7.0,
-        alpha=0.05,
-        eps=1e-3,
-        niter=400,
-        elastic_pars=(250.0, 0.3),
-        forces=(1.0, 0.5),
-    ),
-    "205": lambda: inverterRobin(
-        mod="Hooke",
-        test_path=Path("../results/t205/"),
-        kappa=[1.0],
-        alpha=0.075,
         eps=5e-3,
-        niter=150,
-        elastic_pars=(30.0, 0.4),
-        forces=(1.0, 2.5),
+        niter=400,
+        elastic_pars=(50.0, 0.4),
+        forces=(2.0, 3.0),
     ),
-    "09": lambda: gripping(
-        "Hooke", Path("../results/t108/"), kappa=40.0, alpha=5e-1, beta=1e-3, eps=1e-2
+    "12": lambda: inverter(
+        mod="Hooke",
+        test_path=Path("../results/Elasticity/t12/"),
+        kappa=[1.0],
+        alpha=0.3,
+        eps=1e-2,
+        niter=200,
+        elastic_pars=(200.0, 0.3),
+        forces=(8.0, 14.0),
     ),
-    "10": lambda: inverter2(
-        "SVK",
-        Path("../results/t109/"),
-        kappa=5.0,
-        alpha=0.05,
-        beta=5e-3,
-        eps=3e-3,
-        nM=16,
+    "13": lambda: inverter(
+        mod="Hooke",
+        test_path=Path("../results/Elasticity/t13/"),
+        kappa=[2.0],
+        alpha=0.25,
+        eps=1e-2,
+        niter=200,
+        elastic_pars=(200.0, 0.3),
+        forces=(8.0, 14.0),
     ),
-    "i2": lambda: i2(
-        "Hooke",
-        Path("../results/t202/"),
-        kappa=1.0,
-        alpha=0.5,
-        beta=1.5,
-        eps=1e-3,
+    "14": lambda: inverter(
+        mod="Hooke",
+        test_path=Path("../results/Elasticity/t14/"),
+        kappa=[3.0],
+        alpha=0.25,
+        eps=1e-2,
+        niter=200,
+        elastic_pars=(200.0, 0.3),
+        forces=(10.0, 12.0),
+    ),
+    "15": lambda: inverter(
+        mod="Hooke",
+        test_path=Path("../results/Elasticity/t15/"),
+        kappa=[18.0],
+        alpha=0.1,
+        eps=1e-2,
+        niter=200,
+        elastic_pars=(200.0, 0.3),
+        forces=(2.0, 4.0),
+    ),
+    "16": lambda: inverter(
+        mod="SVK",
+        test_path=Path("../results/Elasticity/t16/"),
+        kappa=[2.0],
+        alpha=0.25,
+        eps=1e-2,
+        niter=200,
+        elastic_pars=(200.0, 0.3),
+        forces=(8.0, 14.0),
+        nM=12,
     ),
     "41": lambda: KVtest(
         mod="Hooke",

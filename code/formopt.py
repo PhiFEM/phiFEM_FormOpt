@@ -2627,6 +2627,7 @@ class NonlinearSolverbySteeping:
         self.ini = initial
         self.factor = factor
         self.vals = np.linspace(0, 1.0, nbr_steps)[1:]
+        self.vals = self.vals**2
         self.max_niter = 0
         self.func = func
 
@@ -2637,18 +2638,83 @@ class NonlinearSolverbySteeping:
 
         for fc in self.vals:
             self.factor.value = PETSc.ScalarType(fc)
-            niter, converged = self.solver.solve(self.u)
+            try:
+                niter, converged = self.solver.solve(self.u)
+            except RuntimeError as e:
+                print(f"Solver failed at load factor {fc}")
+                print(f"Max iterations so far: {self.max_niter}")
+                raise
+
             if self.func is not None:
-                print(f"> Factor = {fc}")
                 self.func(self.u)
-            if niter > self.max_niter:
-                self.max_niter = niter
+
+            self.max_niter = max(self.max_niter, niter)
 
     def see(self) -> str:
         """
         Returns a string with maximum number of iterations
         """
         return (f"newt = {self.max_niter:2.0f} | ",)[0]
+
+
+class NonlinearSolverbyIniLinAndSteeping:
+    """
+    Experimental
+    """
+
+    def __init__(self, solver, u, ini_linear, factor, nbr_steps, bcs):
+        self.solver = solver
+        self.u = u
+        self.factor = factor
+        self.vals = np.linspace(0, 1.0, nbr_steps)[1:]
+        self.max_niter = 0
+
+        bi, li = system(ini_linear)
+        self.ini_solver = create_solver(form(bi), form(li), bcs, self.u)
+        print("Here!")
+
+    def solve(self):
+
+        self.u.interpolate(lambda x: 0.0 * x[:2])
+
+        for fc in self.vals:
+            self.factor.value = PETSc.ScalarType(fc)
+            try:
+                niter, converged = self.solver.solve(self.u)
+                print(converged, niter)
+            except RuntimeError as e:
+                # if converged == False:
+                print(f"> Linear solution!, fc={fc}")
+                self.ini_solver.solve()
+                break
+
+
+def create_nonlinear_solver_with_ini_linear_and_factor(
+    comm, F, bcs, J, u, ini_linear, factor, nbr_steps, func=None
+):
+    problem = NonlinearProblem(F, u, bcs=bcs, J=J)
+    solver = NewtonSolver(comm, problem)
+    solver.convergence_criterion = "incremental"
+    solver.rtol = np.sqrt(np.finfo(default_real_type).eps) * 1e-2
+    solver.max_it = 40
+
+    ksp = solver.krylov_solver
+    opts = PETSc.Options()
+    option_prefix = ksp.getOptionsPrefix()
+
+    # Lower computational cost
+    opts[f"{option_prefix}ksp_type"] = "gmres"
+    opts[f"{option_prefix}ksp_rtol"] = 1.0e-8
+    opts[f"{option_prefix}pc_type"] = "hypre"
+    opts[f"{option_prefix}pc_hypre_type"] = "boomeramg"
+    opts[f"{option_prefix}pc_hypre_boomeramg_max_iter"] = 1
+    opts[f"{option_prefix}pc_hypre_boomeramg_cycle_type"] = "v"
+
+    ksp.setFromOptions()
+
+    return NonlinearSolverbyIniLinAndSteeping(
+        solver, u, ini_linear, factor, nbr_steps, bcs
+    )
 
 
 def create_nonlinear_solver_with_factor(
@@ -2996,20 +3062,33 @@ def phifem_run(
 
     phi.interpolate(model._get_initial_level())
 
+    #######################################################################
+    # Update model.dx, model.dS, model.ds_out
+    cells_tags, facets_tags, _, model.ds_out, _, _ = compute_tags_measures(
+        domain, phi, 1, box_mode=True
+    )
+    model.dx = Measure("dx", domain=domain, subdomain_data=cells_tags)
+    model.dS = Measure("dS", domain=domain, subdomain_data=facets_tags)
+
+    #######################################################################
+
     cls_smt = Smooth(domain, sp_lset, phi, diam2)
     cls_smt.run(phi)
 
+    ste_eqs = model.pde(phi)
     phifem_solve(nbr_ste, ste_eqs, ste_fcs, phi, rank_dim, comm)
     comm.barrier()
 
     cost = global_scalar(form(model.cost(phi, ste_fcs)), comm)
 
     if nbr_ctr > 0:
-        ctrs = global_scalar_list(C, comm)
+        eq_ctrs = model.constraint(phi, ste_fcs)
+        ctrs = global_scalar_list([form(c) for c in eq_ctrs], comm)
         if rank == 0:
             cls_meth = PPL(nbr_ctr, cost, ctrs)
 
     if nbr_adj > 0:
+        adj_eqs = model.adjoint(phi, ste_fcs)
         phifem_solve(nbr_adj, adj_eqs, adj_fcs, phi, rank_dim, comm)
         comm.barrier()
 
@@ -3272,6 +3351,29 @@ def runDP(
             ste_pbs.append(
                 create_nonlinear_solver(
                     comm, true_weak_form, bcs, true_jacobian, ste_fcs[i], ini_func
+                )
+            )
+        elif model.ini_linear:
+            print("Here!")
+            weak_form, bcs, jacobian, seudo_state, ini_linear, factor_pars = ste_problem
+            factor, nbr_newton_steps = factor_pars
+            true_factor = const(domain, 0.0)
+            true_weak_form = replace(
+                weak_form, {seudo_state: ste_fcs[i], factor: true_factor}
+            )
+            true_jacobian = replace(
+                jacobian, {seudo_state: ste_fcs[i], factor: true_factor}
+            )
+            ste_pbs.append(
+                create_nonlinear_solver_with_ini_linear_and_factor(
+                    comm,
+                    true_weak_form,
+                    bcs,
+                    true_jacobian,
+                    ste_fcs[i],
+                    ini_linear,
+                    true_factor,
+                    nbr_newton_steps,
                 )
             )
         else:

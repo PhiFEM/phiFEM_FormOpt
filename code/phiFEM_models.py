@@ -22,9 +22,13 @@ from ufl import (
 )
 
 
+class ComplianceElasticity(Model):
+    pass
+
+
 class LaplacianEnergy(Model):
 
-    def __init__(self, dim, domain, space, path, rank_dim, mesh_data, vol):
+    def __init__(self, dim, domain, space, path, rank_dim, vol):
 
         self.dim = dim
         self.domain = domain
@@ -32,9 +36,9 @@ class LaplacianEnergy(Model):
         self.path = path
         self.rank_dim = rank_dim
 
-        cells_tags, facets_tags, self.ds_out = mesh_data
-        self.dx = Measure("dx", domain=domain, subdomain_data=cells_tags)
-        self.dS = Measure("dS", domain=domain, subdomain_data=facets_tags)
+        self.dx = Measure("dx", domain=domain)
+        self.dS = Measure("dS", domain=domain)
+        self.ds_out = Measure("ds", domain=domain)
 
         self.vol = vol
         self.zero_vec = as_vector(dim * [0.0])

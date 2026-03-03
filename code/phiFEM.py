@@ -4,7 +4,6 @@ from mpi4py import MPI
 
 import formopt as fop
 from phiFEM_models import LaplacianEnergy
-from mesh_scripts import compute_tags_measures
 
 
 def test_01():
@@ -16,23 +15,16 @@ def test_01():
     vertices = np.array([(0.0, 0.0), (10.0, 0.0), (10.0, 10.0), (0.0, 10.0)])
     domain, _, _ = fop.create_domain_2d_DP(vertices, [], mesh_size, path=test_path)
 
+    # Space for the PDE solution
+    space = fop.create_space(domain, "CG", rank_dim)
+    # Model Problem
+    md = LaplacianEnergy(dim, domain, space, test_path, rank_dim, 25.0)
+
     # Initial level set function
     centers = [(0.3, 0.5), (0.5, 0.5), (0.7, 0.5), (0.5, 0.6), (0.7, 0.3), (0.4, 0.7)]
     centers = 10.0 * np.array(centers)
     radii = np.repeat(1.5, centers.shape[0])
-    phi0 = fop.get_initial_level(domain, centers, radii, -1.0, 2)
-
-    cells_tags, facets_tags, _, ds, _, _ = compute_tags_measures(
-        domain, phi0, 1, box_mode=True
-    )
-
-    # Space for the PDE solution
-    space = fop.create_space(domain, "CG", rank_dim)
-    # Model Problem
-    md = LaplacianEnergy(
-        dim, domain, space, test_path, rank_dim, (cells_tags, facets_tags, ds), 25.0
-    )
-    md.set_initial_level(phi0)
+    md.create_initial_level(centers, radii, factor=-1.0, ord=2)
 
     md.phifem_run(
         niter=700,
