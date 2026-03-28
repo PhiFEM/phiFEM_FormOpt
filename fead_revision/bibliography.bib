@@ -1,0 +1,1025 @@
+@inproceedings{Kambampati2018,
+  title = {OpenLSTO: Open-Source Software for Level Set Topology Optimization},
+  url = {http://dx.doi.org/10.2514/6.2018-3882},
+  DOI = {10.2514/6.2018-3882},
+  booktitle = {2018 Multidisciplinary Analysis and Optimization Conference},
+  publisher = {American Institute of Aeronautics and Astronautics},
+  author = {Kambampati,  Sandilya and Du,  Zongliang and Chung,  Hayoung and Kim,  Hyunsun A. and Jauregui,  Carolina and Townsend,  Scott and Picelli,  Renato and Zhou,  Xiao-Yi and Hedges,  Lester},
+  year = {2018},
+  month = jun 
+}
+
+
+
+@article{LI2021103561,
+title = {Full-scale 3D structural topology optimization using adaptive mesh refinement based on the level-set method},
+journal = {Finite Elements in Analysis and Design},
+volume = {194},
+pages = {103561},
+year = {2021},
+issn = {0168-874X},
+doi = {https://doi.org/10.1016/j.finel.2021.103561},
+url = {https://www.sciencedirect.com/science/article/pii/S0168874X21000457},
+author = {Hao Li and Takayuki Yamada and Pierre Jolivet and Kozo Furuta and Tsuguo Kondoh and Kazuhiro Izui and Shinji Nishiwaki},
+keywords = {Topology optimization, Parallel computing, Adaptive unstrucuted mesh, Level-set method, Implicit domain mesh},
+abstract = {We propose a parallel distributed and open-source framework for full-scale 3D structural topology optimization (TO). This can be achieved by properly combining parallel computing and mesh adaption techniques by adopting a reaction–diffusion equation (RDE) based level-set method. Mesh adaptivity which discretizes and optimizes an implicitly defined surface (level-set interface) can allow us to reach an optimal solution with high-resolution and clear boundaries. Our framework can be easily extended to design real world engineering products which have complex geometries, and optimized structures represented by body-fitted tetrahedral meshes can be efficiently post-processed. Furthermore, the proposed optimization algorithm can mitigate dependency to initial guess and mesh resolution to some extent. Our numerical implementation uses FreeFEM for finite element analysis (FEA), PETSc for distributed linear algebra, and Mmg for mesh adaption. Several numerical examples and 3D printed prototypes support these remarkable features.}
+}
+
+
+@article{Schmidt1,
+author = {Schmidt, Stephan},
+title = {Weak and Strong Form Shape Hessians and Their Automatic Generation},
+journal = {SIAM Journal on Scientific Computing},
+volume = {40},
+number = {2},
+pages = {C210-C233},
+year = {2018},
+doi = {10.1137/16M1099972},
+URL = {https://doi.org/10.1137/16M1099972},
+eprint = {https://doi.org/10.1137/16M1099972},
+abstract = { By analyzing variational problems formulated in the Unified Form Language, a structure-aware differentiation tool is presented which can automatically generate both the classical boundary representation and the weak or “volume” formulation of first and second order shape derivatives. Where applicable, the tool can either automatically apply the divergence theorem in tangent spaces for the strong form or calculate discrete material derivatives for the weak form. Furthermore, additional assumptions and simplifications can also be automatically applied, such that a repeated application leads to symmetric shape Hessians. The resulting expression can then be processed by the FEniCS environment, resulting in the semiautomatic creation of shape optimization chains from a user-supplied Lagrangian only. The methodology is tested by conducting shape Newton optimization using examples from geometry and CFD. The respective software is released as open source, available from https://bitbucket.org/Epoxid/femorph. }
+}
+
+
+
+@article{ShahanWalker,
+url = {https://doi.org/10.1515/jnma-2024-0113},
+title = {Exact shape derivatives with unfitted finite element methods},
+title = {},
+author = {Jeremy T. Shahan and Shawn W. Walker},
+pages = {91--124},
+volume = {34},
+number = {1},
+journal = {Journal of Numerical Mathematics},
+doi = {doi:10.1515/jnma-2024-0113},
+year = {2026},
+lastchecked = {2026-03-26}
+}
+
+
+
+
+@article{Duprez1,
+author = {Duprez, Michel and Lozinski, Alexei},
+title = {$\phi$-FEM: A Finite Element Method on Domains Defined by Level-Sets},
+journal = {SIAM Journal on Numerical Analysis},
+volume = {58},
+number = {2},
+pages = {1008-1028},
+year = {2020},
+doi = {10.1137/19M1248947},
+URL = {https://doi.org/10.1137/19M1248947},
+eprint = {https://doi.org/10.1137/19M1248947},
+    abstract = { We propose a new fictitious domain finite element method, well suited for elliptic problems posed in a domain given by a level-set function without requiring a mesh fitting the boundary. To impose the Dirichlet boundary conditions, we search the approximation to the solution as a product of a finite element function with the given level-set function, which is also approximated by finite elements. Unlike other recent fictitious domain-type methods (XFEM, CutFEM), our approach does not need any nonstandard numerical integration (on cut mesh elements or on the actual boundary). We consider the Poisson equation discretized with piecewise polynomial Lagrange finite elements of any order and prove the optimal convergence of our method in the \$H^1\$ norm. Moreover, the discrete problem is proven to be well conditioned, i.e., the condition number of the associated finite element matrix is of the same order as that of a standard finite element method on a comparable conforming mesh. Numerical results confirm the optimal convergence in both $H^1$ and $L^2$ norms. }
+}
+
+
+@article{Gross,
+	author = {{Gross, Sven} and {Olshanskii, Maxim A.} and {Reusken, Arnold}},
+	title = {A trace finite element method for a class of coupled
+          bulk-interface transport problems},
+	DOI= "10.1051/m2an/2015013",
+	url= "https://doi.org/10.1051/m2an/2015013",
+	journal = {ESAIM: M2AN},
+	year = 2015,
+	volume = 49,
+	number = 5,
+	pages = "1303-1330",
+	month = "",
+}
+
+
+
+
+
+@article{YAMADA20102876,
+title = {A topology optimization method based on the level set method incorporating a fictitious interface energy},
+journal = {Computer Methods in Applied Mechanics and Engineering},
+volume = {199},
+number = {45},
+pages = {2876-2891},
+year = {2010},
+issn = {0045-7825},
+doi = {https://doi.org/10.1016/j.cma.2010.05.013},
+url = {https://www.sciencedirect.com/science/article/pii/S0045782510001623},
+author = {Takayuki Yamada and Kazuhiro Izui and Shinji Nishiwaki and Akihiro Takezawa},
+keywords = {Topology optimization, Finite element method, Level set method, Phase field method, Tikhonov regularization method},
+abstract = {This paper proposes a new topology optimization method, which can adjust the geometrical complexity of optimal configurations, using the level set method and incorporating a fictitious interface energy derived from the phase field method. First, a topology optimization problem is formulated based on the level set method, and the method of regularizing the optimization problem by introducing fictitious interface energy is explained. Next, the reaction–diffusion equation that updates the level set function is derived and an optimization algorithm is then constructed, which uses the finite element method to solve the equilibrium equations and the reaction–diffusion equation when updating the level set function. Finally, several optimum design examples are shown to confirm the validity and utility of the proposed topology optimization method.}
+}
+
+
+
+@article {MR732102,
+    AUTHOR = {Crandall, M. G. and Evans, L. C. and Lions, P.-L.},
+     TITLE = {Some properties of viscosity solutions of {H}amilton-{J}acobi
+              equations},
+   JOURNAL = {Trans. Amer. Math. Soc.},
+  FJOURNAL = {Transactions of the American Mathematical Society},
+    VOLUME = {282},
+      YEAR = {1984},
+    NUMBER = {2},
+     PAGES = {487--502},
+      ISSN = {0002-9947,1088-6850},
+   MRCLASS = {35F20 (35L60)},
+  MRNUMBER = {732102},
+       DOI = {10.2307/1999247},
+       URL = {https://doi.org/10.2307/1999247},
+}
+
+
+
+@article{Andreassen2010,
+  title = {Efficient topology optimization in MATLAB using 88 lines of code},
+  volume = {43},
+  ISSN = {1615-1488},
+  url = {http://dx.doi.org/10.1007/s00158-010-0594-7},
+  DOI = {10.1007/s00158-010-0594-7},
+  number = {1},
+  journal = {Structural and Multidisciplinary Optimization},
+  publisher = {Springer Science and Business Media LLC},
+  author = {Andreassen,  Erik and Clausen,  Anders and Schevenels,  Mattias and Lazarov,  Boyan S. and Sigmund,  Ole},
+  year = {2010},
+  month = nov,
+  pages = {1–16}
+}
+
+@article{Eigel04032018,
+author = {M. Eigel and K. Sturm},
+title = {Reproducing kernel Hilbert spaces and variable metric algorithms in PDE-constrained shape optimization},
+journal = {Optimization Methods and Software},
+volume = {33},
+number = {2},
+pages = {268--296},
+year = {2018},
+publisher = {Taylor \& Francis},
+doi = {10.1080/10556788.2017.1314471},
+URL = {https://doi.org/10.1080/10556788.2017.1314471},
+eprint = {https://doi.org/10.1080/10556788.2017.1314471}
+}
+
+
+@article {MR2225309,
+    AUTHOR = {de Gournay, Fr\'ed\'eric},
+     TITLE = {Velocity extension for the level-set method and multiple
+              eigenvalues in shape optimization},
+   JOURNAL = {SIAM J. Control Optim.},
+  FJOURNAL = {SIAM Journal on Control and Optimization},
+    VOLUME = {45},
+      YEAR = {2006},
+    NUMBER = {1},
+     PAGES = {343--367},
+      ISSN = {0363-0129,1095-7138},
+   MRCLASS = {74P10 (49Q12 74H99 74S30 90C90)},
+  MRNUMBER = {2225309},
+MRREVIEWER = {Andrzej\ M.\ My\'sli\'nski},
+       DOI = {10.1137/050624108},
+       URL = {https://doi.org/10.1137/050624108},
+}
+
+@article {MR1998617,
+    AUTHOR = {Burger, Martin},
+     TITLE = {A framework for the construction of level set methods for
+              shape optimization and reconstruction},
+   JOURNAL = {Interfaces Free Bound.},
+  FJOURNAL = {Interfaces and Free Boundaries. Mathematical Analysis,
+              Computation and Applications},
+    VOLUME = {5},
+      YEAR = {2003},
+    NUMBER = {3},
+     PAGES = {301--329},
+      ISSN = {1463-9963,1463-9971},
+   MRCLASS = {49Q10 (35R30)},
+  MRNUMBER = {1998617},
+MRREVIEWER = {Thomas\ Slawig},
+       DOI = {10.4171/IFB/81},
+       URL = {https://doi.org/10.4171/IFB/81},
+}
+
+
+@article {MR3840889,
+    AUTHOR = {Laurain, Antoine},
+     TITLE = {Analyzing smooth and singular domain perturbations in level
+              set methods},
+   JOURNAL = {SIAM J. Math. Anal.},
+  FJOURNAL = {SIAM Journal on Mathematical Analysis},
+    VOLUME = {50},
+      YEAR = {2018},
+    NUMBER = {4},
+     PAGES = {4327--4370},
+      ISSN = {0036-1410,1095-7154},
+   MRCLASS = {49Q10 (49Q12 65K10)},
+  MRNUMBER = {3840889},
+MRREVIEWER = {Andrzej\ M.\ My\'sli\'nski},
+       DOI = {10.1137/17M1118956},
+       URL = {https://doi.org/10.1137/17M1118956},
+}
+
+
+
+
+
+@article {MR2278190,
+    AUTHOR = {Zhuang, ChunGang and Xiong, ZhenHua and Ding, Han},
+     TITLE = {A level set method for topology optimization of heat
+              conduction problem under multiple load cases},
+   JOURNAL = {Comput. Methods Appl. Mech. Engrg.},
+  FJOURNAL = {Computer Methods in Applied Mechanics and Engineering},
+    VOLUME = {196},
+      YEAR = {2007},
+    NUMBER = {4-6},
+     PAGES = {1074--1084},
+       DOI = {10.1016/j.cma.2006.08.005}
+}
+
+@article{Allaire2024,
+  AUTHOR = {Allaire,  Gr\'egoire and Gfrerer,  Michael H.},
+  TITLE = {Autofreefem: automatic code generation with FreeFEM
+  			and LaTex output for shape and topology optimization
+			of non-linear multi-physics problems},
+   JOURNAL = {Struct. Multidiscip. Optim.},
+  FJOURNAL = {Structural and Multidisciplinary Optimization},
+  VOLUME = {67},
+  YEAR = {2024},
+  NUMBER = {12},
+  ISSN = {1615-1488},
+  DOI = {10.1007/s00158-024-03917-5}
+}
+
+@misc{fenicsx,
+  TITLE = {{DOLFINx}: the next generation {FEniCS} problem solving environment},
+  AUTHOR = {Baratta, Igor A. and Dean, Joseph P. and Dokken, J{\o}rgen S. and Habera, Michal and Hale, Jack S. and Richardson, Chris N. and Rognes, Marie E. and Scroggs, Matthew W. and Sime, Nathan and Wells, Garth N.},
+  DOI = {10.5281/zenodo.10447666},
+  YEAR = {2023},
+  howpublished = {preprint}
+}
+
+@article {MR3334238,
+    AUTHOR = {Aage, Niels and Andreassen, Erik and Lazarov, Boyan Stefanov},
+     TITLE = {Topology optimization using {PETS}c: an easy-to-use, fully
+              parallel, open source topology optimization framework},
+   JOURNAL = {Struct. Multidiscip. Optim.},
+  FJOURNAL = {Structural and Multidisciplinary Optimization},
+    VOLUME = {51},
+      YEAR = {2015},
+    NUMBER = {3},
+     PAGES = {565--572},
+      ISSN = {1615-147X,1615-1488},
+   MRCLASS = {74P15},
+  MRNUMBER = {3334238},
+       DOI = {10.1007/s00158-014-1157-0}
+}
+
+@article {MR4034755,
+    AUTHOR = {Ham, David A. and Mitchell, Lawrence and Paganini, Alberto and
+              Wechsung, Florian},
+     TITLE = {Automated shape differentiation in the unified form language},
+   JOURNAL = {Struct. Multidiscip. Optim.},
+  FJOURNAL = {Structural and Multidisciplinary Optimization},
+    VOLUME = {60},
+      YEAR = {2019},
+    NUMBER = {5},
+     PAGES = {1813--1820},
+      ISSN = {1615-147X,1615-1488},
+   MRCLASS = {68W30 (49Q12 65K10)},
+  MRNUMBER = {4034755},
+       DOI = {10.1007/s00158-019-02281-z}
+}
+
+@article {MR739921,
+    AUTHOR = {Kohn, Robert and Vogelius, Michael},
+     TITLE = {Determining conductivity by boundary measurements},
+   JOURNAL = {Comm. Pure Appl. Math.},
+  FJOURNAL = {Communications on Pure and Applied Mathematics},
+    VOLUME = {37},
+      YEAR = {1984},
+    NUMBER = {3},
+     PAGES = {289--298},
+      ISSN = {0010-3640,1097-0312},
+   MRCLASS = {80A20 (35R30)},
+  MRNUMBER = {739921},
+MRREVIEWER = {J.\ R.\ Ockendon},
+       DOI = {10.1002/cpa.3160370302}
+}
+
+@article {MR2522826,
+    AUTHOR = {Morassi, Antonino and Rosset, Edi},
+     TITLE = {Uniqueness and stability in determining a rigid inclusion in
+              an elastic body},
+   JOURNAL = {Mem. Amer. Math. Soc.},
+  FJOURNAL = {Memoirs of the American Mathematical Society},
+    VOLUME = {200},
+      YEAR = {2009},
+    NUMBER = {938},
+     PAGES = {viii+58},
+      ISSN = {0065-9266,1947-6221},
+      ISBN = {978-0-8218-4325-3},
+   MRCLASS = {35R30 (35J25 74B05 74G75)},
+  MRNUMBER = {2522826},
+MRREVIEWER = {Hideo\ Soga},
+       DOI = {10.1090/memo/0938}
+}
+
+@article {MR4261115,
+    AUTHOR = {Albuquerque, Yuri F. and Laurain, Antoine and Yousept, Irwin},
+     TITLE = {Level set-based shape optimization approach for
+              sharp-interface reconstructions in time-domain full waveform
+              inversion},
+   JOURNAL = {SIAM J. Appl. Math.},
+  FJOURNAL = {SIAM Journal on Applied Mathematics},
+    VOLUME = {81},
+      YEAR = {2021},
+    NUMBER = {3},
+     PAGES = {939--964},
+      ISSN = {0036-1399},
+   MRCLASS = {35Q93 (35R05 35R30 86A15)},
+  MRNUMBER = {4261115},
+       DOI = {10.1137/20M1378090}
+}
+
+
+
+@book {MR3013681,
+    AUTHOR = {Novotny, Antonio Andr\'e{} and Soko{\l}owski, Jan},
+     TITLE = {Topological derivatives in shape optimization},
+    SERIES = {Interaction of Mechanics and Mathematics},
+ PUBLISHER = {Springer},
+   ADDRESS = {Heidelberg},
+      YEAR = {2013},
+     PAGES = {xxii+412},
+       DOI = {10.1007/978-3-642-35245-4}
+}
+
+@article {MR3107583,
+    AUTHOR = {van Dijk, N. P. and Maute, K. and Langelaar, M. and van
+              Keulen, F.},
+     TITLE = {Level-set methods for structural topology optimization: a
+              review},
+   JOURNAL = {Struct. Multidiscip. Optim.},
+  FJOURNAL = {Structural and Multidisciplinary Optimization},
+    VOLUME = {48},
+      YEAR = {2013},
+    NUMBER = {3},
+     PAGES = {437--472},
+      ISSN = {1615-147X,1615-1488},
+   MRCLASS = {74P15 (49Q12)},
+  MRNUMBER = {3107583},
+       DOI = {10.1007/s00158-013-0912-y}
+}
+
+@article {belytschko2001arbitrary,
+    AUTHOR = {Belytschko, Ted and Mo{\"e}s, Nicolas and Usui, Shigeru and
+              Parimi, Satyendra},
+     TITLE = {Arbitrary discontinuities in finite elements},
+   JOURNAL = {International Journal for Numerical Methods in Engineering},
+    VOLUME = {50},
+      YEAR = {2001},
+    NUMBER = {4},
+     PAGES = {993--1013},
+      DOI = {10.1002/1097-0207(20010210)50:4<993::AID-NME164>3.0.CO;2-M}
+}
+
+@article {MR3416285,
+    AUTHOR = {Burman, Erik and Claus, Susanne and Hansbo, Peter and Larson,
+              Mats G. and Massing, Andr\'e},
+     TITLE = {Cut{FEM}: discretizing geometry and partial differential
+              equations},
+   JOURNAL = {Internat. J. Numer. Methods Engrg.},
+  FJOURNAL = {International Journal for Numerical Methods in Engineering},
+    VOLUME = {104},
+      YEAR = {2015},
+    NUMBER = {7},
+     PAGES = {472--501},
+      ISSN = {0029-5981,1097-0207},
+   MRCLASS = {65N50 (65N12 65N30)},
+  MRNUMBER = {3416285},
+       DOI = {10.1002/nme.4823}
+}
+
+@article{Mo2021,
+    AUTHOR = {Mo, Xiaobao and Zhi, Hui and Xiao, Yizhi and Hua, Haiyu and
+	          He, Liang},
+     TITLE = {Topology optimization of cooling plates for battery thermal management},
+   JOURNAL = {International Journal of Heat and Mass Transfer},
+    VOLUME = {178},
+     PAGES = {121612},
+      YEAR = {2021},
+       DOI = {10.1016/j.ijheatmasstransfer.2021.121612}
+}
+
+
+@article{LamarcheGagnon2024,
+  title = {Additively manufactured conformal cooling channels through topology optimization},
+  volume = {67},
+  ISSN = {1615-1488},
+  DOI = {10.1007/s00158-024-03846-3},
+  number = {8},
+  journal = {Structural and Multidisciplinary Optimization},
+  publisher = {Springer Science and Business Media LLC},
+  author = {Lamarche-Gagnon,  Marc-{\'E}tienne and Molavi-Zarandi,  Marjan and Raymond,  Vincent and Ilinca,  Florin},
+  year = {2024},
+  month = jul 
+}
+
+
+@book{10.5555/2789330,
+author = {Ayachit, Utkarsh},
+title = {The ParaView Guide: A Parallel Visualization Application},
+year = {2015},
+isbn = {1930934300},
+publisher = {Kitware, Inc.},
+address = {Clifton Park, NY, USA}
+}
+
+
+@article{GAO2008805,
+title = {Topology optimization of heat conduction problem involving design-dependent heat load effect},
+journal = {Finite Elements in Analysis and Design},
+volume = {44},
+number = {14},
+pages = {805--813},
+year = {2008},
+doi = {10.1016/j.finel.2008.06.001},
+author = {T. Gao and W.H. Zhang and J.H. Zhu and Y.J. Xu and D.H. Bassir},
+}
+
+@article{BLAUTH2021100646,
+title = {cashocs: A Computational, Adjoint-Based Shape Optimization and Optimal Control Software},
+journal = {SoftwareX},
+volume = {13},
+pages = {100646},
+year = {2021},
+issn = {2352-7110},
+doi = {10.1016/j.softx.2020.100646},
+author = {Sebastian Blauth},
+keywords = {PDE constrained optimization, Adjoint approach, Shape optimization, Optimal control}
+}
+
+@article{BLAUTH2023101577,
+title = {Version 2.0 - cashocs: A Computational, Adjoint-Based Shape Optimization and Optimal Control Software},
+journal = {SoftwareX},
+volume = {24},
+pages = {101577},
+year = {2023},
+issn = {2352-7110},
+doi = {10.1016/j.softx.2023.101577},
+author = {Sebastian Blauth},
+keywords = {PDE constrained optimization, Shape optimization, Topology optimization, Space mapping}
+}
+
+
+
+
+@article{MEFTAHI20151554,
+title = {Sensitivity analysis for some inverse problems in linear elasticity via minimax differentiability},
+journal = {Applied Mathematical Modelling},
+volume = {39},
+number = {5},
+pages = {1554--1576},
+year = {2015},
+issn = {0307-904X},
+doi = {10.1016/j.apm.2014.09.026},
+author = {H. Meftahi and J.-P. Zol\'esio},
+keywords = {Inverse problem, Shape optimization, Shape derivative, Minimax differentiability, Lineaire elasticity, Lamé parameters}
+}
+
+@article {MR4244971,
+    AUTHOR = {Paganini, Alberto and Wechsung, Florian},
+     TITLE = {Fireshape: a shape optimization toolbox for {F}iredrake},
+   JOURNAL = {Struct. Multidiscip. Optim.},
+  FJOURNAL = {Structural and Multidisciplinary Optimization},
+    VOLUME = {63},
+      YEAR = {2021},
+    NUMBER = {5},
+     PAGES = {2553--2569},
+      ISSN = {1615-147X,1615-1488},
+   MRCLASS = {74P20 (49-04 49Q10)},
+  MRNUMBER = {4244971},
+       DOI = {10.1007/s00158-020-02813-y}
+}
+
+@article {MR4233697,
+    AUTHOR = {Gangl, Peter and Sturm, Kevin and Neunteufel, Michael and
+              Sch\"oberl, Joachim},
+     TITLE = {Fully and semi-automated shape differentiation in {\tt
+              {NGS}olve}},
+   JOURNAL = {Struct. Multidiscip. Optim.},
+  FJOURNAL = {Structural and Multidisciplinary Optimization},
+    VOLUME = {63},
+      YEAR = {2021},
+    NUMBER = {3},
+     PAGES = {1579--1607},
+      ISSN = {1615-147X,1615-1488},
+   MRCLASS = {49Q10 (49Q12 65N30 65Y15)},
+  MRNUMBER = {4233697},
+       DOI = {10.1007/s00158-020-02742-w}
+}
+
+
+@book {MR2104179,
+    AUTHOR = {Toselli, Andrea and Widlund, Olof},
+     TITLE = {Domain decomposition methods---algorithms and theory},
+    SERIES = {Springer Series in Computational Mathematics},
+    VOLUME = {34},
+ PUBLISHER = {Springer-Verlag},
+   ADDRESS = {Berlin},
+      YEAR = {2005},
+     PAGES = {xvi+450},
+      ISBN = {3-540-20696-5},
+       DOI = {10.1007/b137868}
+}
+
+
+@article {MR1772729,
+    AUTHOR = {Ang, Dang Dinh and Trong, Dang Duc and Yamamoto, Masahiro},
+     TITLE = {Identification of cavities inside two-dimensional
+              heterogeneous isotropic elastic bodies},
+   JOURNAL = {J. Elasticity},
+  FJOURNAL = {Journal of Elasticity. The Physical and Mathematical Science
+              of Solids},
+    VOLUME = {56},
+      YEAR = {1999},
+    NUMBER = {3},
+     PAGES = {199--212},
+      ISSN = {0374-3535,1573-2681},
+   MRCLASS = {74G75 (35R30)},
+  MRNUMBER = {1772729},
+MRREVIEWER = {Giovanni\ Franco\ Crosta},
+       DOI = {10.1023/A:1007661505879}
+}
+
+
+@article{LAURAIN2020328,
+author = "Laurain, A.",
+title = "Distributed and boundary expressions of first and second order shape derivatives in nonsmooth domains",
+journal = "Journal de Math{\'e}matiques Pures et Appliqu{\'e}es",
+volume = "134",
+pages = "328--368",
+year = "2020",
+doi = "10.1016/j.matpur.2019.09.002",
+}
+
+@article{LL2024,
+author = {Laurain, Antoine  and Lopes, Pedro T. P. },
+title = {On second-order tensor representation of derivatives in shape optimization},
+journal = {Philosophical Transactions of the Royal Society A: Mathematical, Physical and Engineering Sciences},
+volume = {382},
+number = {2277},
+pages = {20230300},
+year = {2024},
+doi = {10.1098/rsta.2023.0300}
+}
+
+
+@article {MR4531392,
+    AUTHOR = {Laurain, A. and Lopes, P. T. P. and Nakasato, J. C.},
+     TITLE = {An abstract {L}agrangian framework for computing shape
+              derivatives},
+   JOURNAL = {ESAIM. Control, Optimisation and Calculus of Variations},
+    VOLUME = {29},
+      YEAR = {2023},
+     PAGES = {article 5},
+      ISSN = {1292-8119,1262-3377},
+   MRCLASS = {49Q10 (35Q93 35R37 49Q12)},
+  MRNUMBER = {4531392},
+       DOI = {10.1051/cocv/2022078}
+}
+
+
+
+@book {MR3791463,
+    AUTHOR = {Henrot, Antoine and Pierre, Michel},
+     TITLE = {Shape variation and optimization},
+    SERIES = {EMS Tracts in Mathematics},
+    VOLUME = {28},
+      NOTE = {A geometrical analysis,
+              English version of the French publication [ MR2512810] with
+              additions and updates},
+ PUBLISHER = {European Mathematical Society (EMS), Z\"{u}rich},
+      YEAR = {2018},
+     PAGES = {xi+365},
+      ISBN = {978-3-03719-178-1},
+   MRCLASS = {49Q10 (31B15 35J20 35R35 49Q12 58E25 65J05)},
+  MRNUMBER = {3791463},
+       DOI = {10.4171/178},
+       URL = {https://doi.org/10.4171/178},
+}
+
+
+@book {MR2512810,
+    AUTHOR = {Henrot, A. and Pierre, M.},
+     TITLE = {Variation et optimisation de formes},
+    SERIES = {Math\'ematiques \& Applications (Berlin) [Mathematics \&
+              Applications]},
+    VOLUME = {48},
+      NOTE = {Une analyse g{\'e}om{\'e}trique. [A geometric analysis]},
+ PUBLISHER = {Springer},
+   ADDRESS = {Berlin},
+      YEAR = {2005},
+     PAGES = {xii+334},
+      ISBN = {978-3-540-26211-4; 3-540-26211-3},
+   MRCLASS = {49-02 (35A15 35J20 35R35 49K20 49Q05 49Q10 74P10)},
+  MRNUMBER = {2512810 (2009m:49003)},
+}
+
+
+@article {MR2108636,
+    AUTHOR = {Wang, Michael Yu and Zhou, Shiwei},
+     TITLE = {Phase field: a variational method for structural topology
+              optimization},
+   JOURNAL = {CMES Comput. Model. Eng. Sci.},
+  FJOURNAL = {CMES. Computer Modeling in Engineering \& Sciences},
+    VOLUME = {6},
+      YEAR = {2004},
+    NUMBER = {6},
+     PAGES = {547--566},
+      ISSN = {1526-1492},
+   MRCLASS = {74P15 (49S05 74G15 74N99 74Q05 90C90)},
+  MRNUMBER = {2108636},
+	   DOI = {10.3970/cmes.2004.006.547}
+}
+
+
+
+@article {MR1951408,
+    AUTHOR = {Wang, Michael Yu and Wang, Xiaoming and Guo, Dongming},
+     TITLE = {A level set method for structural topology optimization},
+   JOURNAL = {Comput. Methods Appl. Mech. Engrg.},
+  FJOURNAL = {Computer Methods in Applied Mechanics and Engineering},
+    VOLUME = {192},
+      YEAR = {2003},
+    NUMBER = {1-2},
+     PAGES = {227--246},
+      ISSN = {0045-7825},
+     CODEN = {CMMECC},
+   MRCLASS = {74S30 (49Q10 65M99 74P05)},
+  MRNUMBER = {1951408},
+MRREVIEWER = {Michal Ko{\v{c}}vara},
+       DOI = {10.1016/S0045-7825(02)00559-5}
+}
+
+
+@article {MR2235384,
+    AUTHOR = {Amstutz, Samuel and Andr{\"a}, Heiko},
+     TITLE = {A new algorithm for topology optimization using a level-set
+              method},
+   JOURNAL = {J. Comput. Phys.},
+  FJOURNAL = {Journal of Computational Physics},
+    VOLUME = {216},
+      YEAR = {2006},
+    NUMBER = {2},
+     PAGES = {573--588},
+      ISSN = {0021-9991},
+     CODEN = {JCTPAH},
+   MRCLASS = {65K10 (49Q10 74P05 74P10)},
+  MRNUMBER = {2235384},
+       DOI = {10.1016/j.jcp.2005.12.015}
+}
+
+
+
+@article {MR965860,
+    AUTHOR = {Osher, Stanley and Sethian, James A.},
+     TITLE = {Fronts propagating with curvature-dependent speed: algorithms
+              based on {H}amilton-{J}acobi formulations},
+   JOURNAL = {J. Comput. Phys.},
+  FJOURNAL = {Journal of Computational Physics},
+    VOLUME = {79},
+      YEAR = {1988},
+    NUMBER = {1},
+     PAGES = {12--49},
+      ISSN = {0021-9991},
+     CODEN = {JCTPAH},
+   MRCLASS = {80A25 (80-08)},
+  MRNUMBER = {MR965860 (89h:80012)},
+  DOI = {10.1016/0021-9991(88)90002-2}
+}
+
+
+
+
+
+@article {MR3348199,
+    AUTHOR = {Hiptmair, R. and Paganini, A. and Sargheini, S.},
+     TITLE = {Comparison of approximate shape gradients},
+   JOURNAL = {BIT},
+  FJOURNAL = {BIT. Numerical Mathematics},
+    VOLUME = {55},
+      YEAR = {2015},
+    NUMBER = {2},
+     PAGES = {459--485},
+      ISSN = {0006-3835},
+   MRCLASS = {65N30 (49Q12)},
+  MRNUMBER = {3348199},
+       DOI = {10.1007/s10543-014-0515-z}
+}
+
+
+@incollection {MR2642680,
+    AUTHOR = {Berggren, Martin},
+     TITLE = {A unified discrete-continuous sensitivity analysis method for
+              shape optimization},
+ BOOKTITLE = {Applied and numerical partial differential equations},
+    SERIES = {Comput. Methods Appl. Sci.},
+    VOLUME = {15},
+     PAGES = {25--39},
+ PUBLISHER = {Springer},
+      YEAR = {2010},
+   ADDRESS = {New York},
+       DOI = {10.1007/978-90-481-3239-3_4}
+}
+
+
+@article {MR3535238,
+    AUTHOR = {Laurain, A. and Sturm, K.},
+     TITLE = {Distributed shape derivative {\it via} averaged adjoint method
+              and applications},
+   JOURNAL = {ESAIM. Mathematical Modelling and Numerical Analysis},
+    VOLUME = {50},
+      YEAR = {2016},
+    NUMBER = {4},
+     PAGES = {1241--1267},
+      ISSN = {0764-583X},
+   MRCLASS = {49Q10 (35R30)},
+  MRNUMBER = {3535238},
+MRREVIEWER = {Faustino Maestre},
+       DOI = {10.1051/m2an/2015075}
+}
+
+
+@article {MR2459656,
+    AUTHOR = {Fulma{\'n}ski, Piotr and Laurain, Antoine and Scheid,
+              Jean-Fran{\c{c}}ois and Soko{\l}owski, Jan},
+     TITLE = {Level set method with topological derivatives in shape
+              optimization},
+   JOURNAL = {Int. J. Comput. Math.},
+  FJOURNAL = {International Journal of Computer Mathematics},
+    VOLUME = {85},
+      YEAR = {2008},
+    NUMBER = {10},
+     PAGES = {1491--1514},
+      ISSN = {0020-7160},
+   MRCLASS = {49Q10 (35J05 35J20 65K10 74P15)},
+  MRNUMBER = {2459656},
+       DOI = {10.1080/00207160802033350}
+}
+
+
+@Article{Challis2009,
+author="Challis, Vivien J.",
+title="A discrete level-set topology optimization code written in Matlab",
+JOURNAL = {Struct. Multidiscip. Optim.},
+FJOURNAL="Structural and Multidisciplinary Optimization",
+year="2009",
+volume="41",
+number="3",
+pages="453--464",
+doi = "10.1007/s00158-009-0430-0"
+}
+
+@book {MR1215733,
+    AUTHOR = {Soko{\l}owski, Jan and Zol\'esio, Jean-Paul},
+     TITLE = {Introduction to shape optimization},
+    SERIES = {Springer Series in Computational Mathematics},
+    VOLUME = {16},
+      NOTE = {Shape sensitivity analysis},
+ PUBLISHER = {Springer},
+   ADDRESS = {Berlin},
+      YEAR = {1992},
+     PAGES = {ii+250},
+      ISBN = {3-540-54177-2},
+       DOI = {10.1007/978-3-642-58106-9}
+}
+
+@book {MR2731611,
+    AUTHOR = {Delfour, M. C. and Zol{\'e}sio, J.-P.},
+     TITLE = {Shapes and geometries},
+    SERIES = {Advances in Design and Control},
+    VOLUME = {22},
+   EDITION = {Second},
+      NOTE = {Metrics, analysis, differential calculus, and optimization},
+ PUBLISHER = {Society for Industrial and Applied Mathematics (SIAM)},
+   ADDRESS = {Philadelphia, PA},
+      YEAR = {2011},
+     PAGES = {xxiv+622},
+      ISBN = {978-0-898719-36-9},
+   MRCLASS = {49-02 (26-02 54-02)},
+  MRNUMBER = {2731611 (2012c:49002)},
+MRREVIEWER = {Jan Soko{\l}owski},
+       DOI = {10.1137/1.9780898719826}
+}
+
+
+@article {MR2033390,
+    AUTHOR = {Allaire, Gr{\'e}goire and Jouve, Fran{\c{c}}ois and Toader,
+              Anca-Maria},
+     TITLE = {Structural optimization using sensitivity analysis and a
+              level-set method},
+   JOURNAL = {J. Comput. Phys.},
+  FJOURNAL = {Journal of Computational Physics},
+    VOLUME = {194},
+      YEAR = {2004},
+    NUMBER = {1},
+     PAGES = {363--393},
+      ISSN = {0021-9991},
+     CODEN = {JCTPAH},
+   MRCLASS = {74P15 (49Q12 65M06 74G15)},
+  MRNUMBER = {2033390},
+MRREVIEWER = {Andrzej M. My{\'s}li{\'n}ski},
+       DOI = {10.1016/j.jcp.2003.09.032}
+}
+
+@article {MR1911658,
+    AUTHOR = {Allaire, Gr{\'e}goire and Jouve, Fran{\c{c}}ois and Toader,
+              Anca-Maria},
+     TITLE = {A level-set method for shape optimization},
+   JOURNAL = {C. R. Math. Acad. Sci. Paris},
+  FJOURNAL = {Comptes Rendus Math\'ematique. Acad\'emie des Sciences. Paris},
+    VOLUME = {334},
+      YEAR = {2002},
+    NUMBER = {12},
+     PAGES = {1125--1130},
+      ISSN = {1631-073X},
+   MRCLASS = {49Q10 (74G15 74P10)},
+  MRNUMBER = {1911658},
+       DOI = {10.1016/S1631-073X(02)02412-3}
+}
+
+
+
+@article {MR2252743,
+    AUTHOR = {Allaire, G. and Pantz, O.},
+     TITLE = {Structural optimization with {F}ree{F}em++},
+   JOURNAL = {Struct. Multidiscip. Optim.},
+  FJOURNAL = {Structural and Multidisciplinary Optimization},
+    VOLUME = {32},
+      YEAR = {2006},
+    NUMBER = {3},
+     PAGES = {173--181},
+      ISSN = {1615-147X},
+   MRCLASS = {74P05 (74P15 74Q05 74S05)},
+  MRNUMBER = {2252743},
+       DOI = {10.1007/s00158-006-0017-y}
+}﻿
+
+
+﻿@Article{Gain2013,
+author="Gain, Arun L.
+and Paulino, Glaucio H.",
+title="A critical comparative assessment of differential equation-driven methods for structural topology optimization",
+journal="Structural and Multidisciplinary Optimization",
+year="2013",
+volume="48",
+number="4",
+pages="685--710",
+issn="1615-1488",
+doi="10.1007/s00158-013-0935-4"
+}
+
+
+
+
+@article{Sigmund2014,
+author="Sigmund, O.",
+title="A 99 line topology optimization code written in Matlab",
+journal = "Struct. Multidiscip. Optim.",
+fjournal="Structural and Multidisciplinary Optimization",
+year="2014",
+volume="21",
+number="2",
+pages="120--127",
+doi = "10.1007/s001580050176"
+}
+
+
+@book {MR2008524,
+    AUTHOR = {Bends{\o}e, M. P. and Sigmund, O.},
+     TITLE = {Topology optimization},
+      NOTE = {Theory, methods and applications},
+ PUBLISHER = {Springer},
+      YEAR = {2003},
+     PAGES = {xiv+370},
+      ISBN = {3-540-42992-1},
+   ADDRESS = {Berlin}
+}
+
+
+@article {MR4686093,
+    AUTHOR = {Feppon, Florian},
+     TITLE = {Density-based topology optimization with the null space
+              optimizer: a tutorial and a comparison},
+   JOURNAL = {Struct. Multidiscip. Optim.},
+  FJOURNAL = {Structural and Multidisciplinary Optimization},
+    VOLUME = {67},
+      YEAR = {2024},
+    NUMBER = {1},
+     PAGES = {Paper No. 4, 34},
+      ISSN = {1615-147X,1615-1488},
+   MRCLASS = {74P15},
+  MRNUMBER = {4686093},
+       DOI = {10.1007/s00158-023-03710-w}
+}
+
+
+@article {MR4916810,
+    AUTHOR = {Filho, J. M. M. Luz and Gomes, A. T. A. and Novotny, A. A.},
+     TITLE = {A parallel {F}ree{FEM} framework for topology optimization of
+              structures into three spatial dimensions},
+   JOURNAL = {Finite Elem. Anal. Des.},
+  FJOURNAL = {Finite Elements in Analysis and Design},
+    VOLUME = {250},
+      YEAR = {2025},
+     PAGES = {Paper No. 104384},
+      ISSN = {0168-874X,1872-6925},
+   MRCLASS = {65M60 (65Y05)},
+  MRNUMBER = {4916810},
+       DOI = {10.1016/j.finel.2025.104384}
+}
+
+
+@article {MR1640142,
+    AUTHOR = {Barth, Timothy J. and Sethian, James A.},
+     TITLE = {Numerical schemes for the {H}amilton-{J}acobi and level set
+              equations on triangulated domains},
+   JOURNAL = {J. Comput. Phys.},
+  FJOURNAL = {Journal of Computational Physics},
+    VOLUME = {145},
+      YEAR = {1998},
+    NUMBER = {1},
+     PAGES = {1--40},
+      ISSN = {0021-9991,1090-2716},
+   MRCLASS = {65M60},
+  MRNUMBER = {1640142},
+       DOI = {10.1006/jcph.1998.6007}
+}
+
+@article {MR3843884,
+    AUTHOR = {Laurain, A.},
+     TITLE = {A level set-based structural optimization code using
+              {FE}ni{CS}},
+   JOURNAL = {Structural and Multidisciplinary Optimization},
+    VOLUME = {58},
+      YEAR = {2018},
+    NUMBER = {3},
+     PAGES = {1311--1334},
+      ISSN = {1615-147X,1615-1488},
+   MRCLASS = {74P05},
+  MRNUMBER = {3843884},
+       DOI = {10.1007/s00158-018-1950-2}
+}
+
+
+@article{Jia2024,
+  title = {FEniTop: a simple FEniCSx implementation for 2D and 3D topology optimization supporting parallel computing},
+  volume = {67},
+  ISSN = {1615-1488},
+  DOI = {10.1007/s00158-024-03818-7},
+  number = {8},
+  journal = {Structural and Multidisciplinary Optimization},
+  publisher = {Springer Science and Business Media LLC},
+  author = {Jia,  Yingqi and Wang,  Chao and Zhang,  Xiaojia Shelly},
+  year = {2024}
+}
+
+
+@article{Wegert2025,
+  title = {GridapTopOpt.jl: a scalable Julia toolbox for level set-based topology optimisation},
+  volume = {68},
+  ISSN = {1615-1488},
+  DOI = {10.1007/s00158-024-03927-3},
+  number = {1},
+  journal = {Structural and Multidisciplinary Optimization},
+  publisher = {Springer Science and Business Media LLC},
+  author = {Wegert,  Zachary J. and Manyer,  Jordi and Mallon,  Connor N. and Badia,  Santiago and Challis,  Vivien J.},
+  year = {2025},
+  month = jan 
+}
+
+@article {MR4589221,
+    AUTHOR = {Kim, Jong Gwang},
+     TITLE = {A new {L}agrangian-based first-order method for nonconvex
+              constrained optimization},
+   JOURNAL = {Oper. Res. Lett.},
+  FJOURNAL = {Operations Research Letters},
+    VOLUME = {51},
+      YEAR = {2023},
+    NUMBER = {3},
+     PAGES = {357--363},
+      ISSN = {0167-6377,1872-7468},
+   MRCLASS = {90C26 (49M29 65K10)},
+  MRNUMBER = {4589221},
+       DOI = {10.1016/j.orl.2023.04.006}
+}
+
+@book {MR1908418,
+    AUTHOR = {Murray, J. D.},
+     TITLE = {Mathematical biology. {I}},
+    SERIES = {Interdisciplinary Applied Mathematics},
+    VOLUME = {17},
+   EDITION = {Third},
+      NOTE = {An introduction},
+ PUBLISHER = {Springer},
+   ADDRESS = {New York},
+      YEAR = {2002},
+     PAGES = {xxiv+551},
+      ISBN = {0-387-95223-3}
+}
