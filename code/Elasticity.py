@@ -284,7 +284,7 @@ def inverter(mod, test_path, kappa, alpha, eps, niter, elastic_pars, forces, nM=
     forces=(2.0, 1.0),
     """
 
-    dim, rank_dim, mesh_size = 2, 2, 0.009
+    dim, rank_dim, mesh_size = 2, 2, 0.008
     a, b = 0.05, 0.05
     vertices = np.array(
         [
@@ -372,6 +372,48 @@ def inverter(mod, test_path, kappa, alpha, eps, niter, elastic_pars, forces, nM=
 
     md.sub = [sub_dom_L.expression(), sub_dom_R.expression()]
 
+    # Initial guess I
+    # centers = []
+    # centers += [(i * 1.0 / 5.0, 1.0) for i in range(1, 6) if i != 4]
+    # centers += [(i * 1.5 / 5.0, 0.78) for i in range(2)]
+    # centers += [(0.1 + i * 0.2, 0.5) for i in range(1, 4)]
+    # centers += [(i * 1.5 / 5.0, 0.22) for i in range(2)]
+    # centers += [(i * 1.0 / 5.0, 0.0) for i in range(1, 6) if i != 4]
+    # centers += [(1.02, 1.02), (1.02, -0.02)]
+    # centers += [(i * 1.0 / 20.0, 1.04) for i in range(21) if i > 3]
+    # centers += [(i * 1.0 / 20.0, -0.04) for i in range(21) if i > 3]
+    # centers += [(1.04, 1.0 - 0.22 * i * 1.0 / 10.0) for i in range(11)]
+    # centers += [(1.04, 0.22 * i * 1.0 / 10.0) for i in range(11)]
+    # centers = np.array(centers)
+    # radii = np.repeat(0.06, centers.shape[0])
+
+    # Initial guess II
+    # centers = []
+    # centers += [(i * 1.5 / 5.0, 0.78) for i in range(2)]
+    # centers += [(i * 0.2, 0.5) for i in range(2, 5)]
+    # centers += [(i * 1.5 / 5.0, 0.22) for i in range(2)]
+    # centers += [(1.0, 1.0), (1.0, 0.0)]
+    # centers += [(i * 1.0 / 20.0, 1.04) for i in range(21) if i > 3]
+    # centers += [(i * 1.0 / 20.0, -0.04) for i in range(21) if i > 3]
+    # centers += [(1.04, 1.0 - 0.22 * i * 1.0 / 5.0) for i in range(6)]
+    # centers += [(1.04, 0.22 * i * 1.0 / 5.0) for i in range(6)]
+    # centers = np.array(centers)
+    # radii = np.repeat(0.06, centers.shape[0])
+
+    # Initial guess III
+    # centers = []
+    # centers += [(i * 1.5 / 5.0, 0.78) for i in range(2)]
+    # centers += [(i * 0.2, 0.5) for i in range(2, 4)]
+    # centers += [(i * 1.5 / 5.0, 0.22) for i in range(2)]
+    # centers += [(1.0, 1.0), (1.0, 0.0)]
+    # centers += [(i * 1.0 / 20.0, 1.04) for i in range(21) if i > 3]
+    # centers += [(i * 1.0 / 20.0, -0.04) for i in range(21) if i > 3]
+    # centers += [(1.04, 1.0 - 0.22 * i * 1.0 / 5.0) for i in range(6)]
+    # centers += [(1.04, 0.22 * i * 1.0 / 5.0) for i in range(6)]
+    # centers = np.array(centers)
+    # radii = np.repeat(0.06, centers.shape[0])
+
+    # Initial guess IV
     centers = [(0.0, 0.25), (0.0, 0.75)]
     centers += [(i * 1.0 / 5.0, 1.0) for i in range(1, 6)]
     centers += [(0.1 + i * 0.2, 5.0 / 6.0) for i in range(5)]
@@ -382,6 +424,7 @@ def inverter(mod, test_path, kappa, alpha, eps, niter, elastic_pars, forces, nM=
     centers += [(i * 1.0 / 5.0, 0.0) for i in range(1, 6)]
     centers = np.array(centers)
     radii = np.repeat(0.05, centers.shape[0])
+
     md.create_initial_level(centers, radii)
     md.save_initial_level(comm)
 
@@ -627,63 +670,130 @@ test_functions = {
     "11": lambda: inverter(
         mod="Hooke",
         test_path=Path("../results/Elasticity/t11/"),
-        kappa=[4.0],
-        alpha=0.05,
-        eps=5e-3,
-        niter=400,
-        elastic_pars=(50.0, 0.4),
-        forces=(2.0, 3.0),
-    ),
-    "12": lambda: inverter(
-        mod="Hooke",
-        test_path=Path("../results/Elasticity/t12/"),
-        kappa=[1.0],
+        kappa=[0.75],
         alpha=0.3,
         eps=1e-2,
         niter=200,
         elastic_pars=(200.0, 0.3),
         forces=(8.0, 14.0),
     ),
+    "12": lambda: inverter(
+        mod="SVK",
+        test_path=Path("../results/Elasticity/t12/"),
+        kappa=[0.75],
+        alpha=0.3,
+        eps=1e-2,
+        niter=165,
+        elastic_pars=(200.0, 0.3),
+        forces=(8.0, 14.0),
+        nM=8,
+    ),
     "13": lambda: inverter(
-        mod="Hooke",
+        mod="MR",
         test_path=Path("../results/Elasticity/t13/"),
-        kappa=[2.0],
-        alpha=0.25,
+        kappa=[0.75],
+        alpha=0.3,
         eps=1e-2,
         niter=200,
         elastic_pars=(200.0, 0.3),
         forces=(8.0, 14.0),
+        nM=16,
     ),
     "14": lambda: inverter(
         mod="Hooke",
         test_path=Path("../results/Elasticity/t14/"),
-        kappa=[3.0],
-        alpha=0.25,
-        eps=1e-2,
-        niter=200,
-        elastic_pars=(200.0, 0.3),
-        forces=(10.0, 12.0),
-    ),
-    "15": lambda: inverter(
-        mod="Hooke",
-        test_path=Path("../results/Elasticity/t15/"),
-        kappa=[18.0],
-        alpha=0.1,
-        eps=1e-2,
-        niter=200,
-        elastic_pars=(200.0, 0.3),
-        forces=(2.0, 4.0),
-    ),
-    "16": lambda: inverter(
-        mod="SVK",
-        test_path=Path("../results/Elasticity/t16/"),
-        kappa=[2.0],
-        alpha=0.25,
+        kappa=[0.75],
+        alpha=0.3,
         eps=1e-2,
         niter=200,
         elastic_pars=(200.0, 0.3),
         forces=(8.0, 14.0),
-        nM=12,
+    ),
+    "15": lambda: inverter(
+        mod="SVK",
+        test_path=Path("../results/Elasticity/t15/"),
+        kappa=[0.75],
+        alpha=0.3,
+        eps=1e-2,
+        niter=127,
+        elastic_pars=(200.0, 0.3),
+        forces=(8.0, 14.0),
+        nM=8,
+    ),
+    "16": lambda: inverter(
+        mod="MR",
+        test_path=Path("../results/Elasticity/t16/"),
+        kappa=[0.75],
+        alpha=0.3,
+        eps=1e-2,
+        niter=200,
+        elastic_pars=(200.0, 0.3),
+        forces=(8.0, 14.0),
+        nM=16,
+    ),
+    "17": lambda: inverter(
+        mod="Hooke",
+        test_path=Path("../results/Elasticity/t17/"),
+        kappa=[0.75],
+        alpha=0.3,
+        eps=1e-2,
+        niter=200,
+        elastic_pars=(200.0, 0.3),
+        forces=(8.0, 14.0),
+    ),
+    "18": lambda: inverter(
+        mod="SVK",
+        test_path=Path("../results/Elasticity/t18/"),
+        kappa=[0.75],
+        alpha=0.3,
+        eps=1e-2,
+        niter=123,
+        elastic_pars=(200.0, 0.3),
+        forces=(8.0, 14.0),
+        nM=8,
+    ),
+    "19": lambda: inverter(
+        mod="MR",
+        test_path=Path("../results/Elasticity/t19/"),
+        kappa=[0.75],
+        alpha=0.3,
+        eps=1e-2,
+        niter=200,
+        elastic_pars=(200.0, 0.3),
+        forces=(8.0, 14.0),
+        nM=16,
+    ),
+    "20": lambda: inverter(
+        mod="Hooke",
+        test_path=Path("../results/Elasticity/t20/"),
+        kappa=[0.75],
+        alpha=0.3,
+        eps=1e-2,
+        niter=200,
+        elastic_pars=(200.0, 0.3),
+        forces=(8.0, 14.0),
+    ),
+    "21": lambda: inverter(
+        mod="SVK",
+        test_path=Path("../results/Elasticity/t21/"),
+        kappa=[0.75],
+        alpha=0.3,
+        eps=1e-2,
+        niter=54,
+        elastic_pars=(200.0, 0.3),
+        forces=(8.0, 14.0),
+        nM=8,
+    ),
+    "22": lambda: inverter(
+        mod="MR",
+        test_path=Path("../results/Elasticity/t22/"),
+        kappa=[0.75],
+        alpha=0.3,
+        eps=1e-2,
+        niter=200,
+        elastic_pars=(200.0, 0.3),
+        forces=(8.0, 14.0),
+        nM=16,
     ),
     "41": lambda: KVtest(
         mod="Hooke",

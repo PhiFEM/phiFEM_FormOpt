@@ -123,6 +123,11 @@ class MRcomponents:
     def stress(self, F):
         return self.hatQ1(F) * F.T / det(F)
 
+    def Dstress(self, F, dF):
+        Ds1 = (self.hatQ1(F) * dF.T + self.hatQ2(F, dF) * F.T) / det(F)
+        Ds2 = (inner(self.Cof(F), dF) * self.hatQ1(F) * F.T) / (det(F) ** 2)
+        return Ds1 - Ds2
+
 
 class Hookecomponents:
     """
@@ -151,8 +156,14 @@ class Hookecomponents:
         # First Piola-Kirchhoff tangent
         return self.S(sym(dF))
 
+    def hatQ3(self, L, F):
+        return self.S(sym(L))
+
     def stress(self, F):
         return self.S(sym(F) - self.Id)
+
+    def Dstress(self, F, dF):
+        return self.S(sym(dF))
 
 
 class SVKcomponents:
@@ -173,14 +184,23 @@ class SVKcomponents:
         # Pr : Poisson's ratio
         lmbda = Ym * Pr / (1.0 + Pr) / (1.0 - 2.0 * Pr)
         mu = Ym / 2.0 / (1.0 + Pr)
-        Id = Identity(dim)
-        self.S = lambda M: lmbda * inner(M, Id) * Id + 2.0 * mu * M
-        self.E = lambda M: 0.5 * (M.T * M - Id)
+        self.Id = Identity(dim)
+        self.S = lambda M: lmbda * inner(M, self.Id) * self.Id + 2.0 * mu * M
+        self.E = lambda M: 0.5 * (M.T * M - self.Id)
         self.lineal = False
 
     def W(self, F):
         # Strain energy density
         return 0.5 * inner(self.S(self.E(F)), self.E(F))
+
+    def Cof(self, F):
+        if self.dim == 2:
+            return tr(F) * self.Id - F.T
+        if self.dim == 3:
+            cf = 0.5 * (tr(F) ** 2 - tr(F * F)) * self.Id
+            cf -= tr(F) * F
+            cf += F * F
+            return cf.T
 
     def hatQ1(self, F):
         # First Piola-Kirchhoff stress
@@ -190,8 +210,20 @@ class SVKcomponents:
         # First Piola-Kirchhoff tangent
         return dF * self.S(self.E(F)) + F * self.S(sym(F.T * dF))
 
+    def hatQ3(self, L, F):
+        q3 = L.T * self.hatQ1(F) / det(F)
+        q3 -= inner(L, self.hatQ1(F) * F.T) * self.Cof(F) / (det(F) ** 2)
+        q3 += L * F * self.S(self.E(F))
+        q3 += F * self.S(sym(F.T * L * F))
+        return q3
+
     def stress(self, F):
         return self.hatQ1(F) * F.T / det(F)
+
+    def Dstress(self, F, dF):
+        Ds1 = (self.hatQ1(F) * dF.T + self.hatQ2(F, dF) * F.T) / det(F)
+        Ds2 = (inner(self.Cof(F), dF) * self.hatQ1(F) * F.T) / (det(F) ** 2)
+        return Ds1 - Ds2
 
 
 class Compliance(Model):
@@ -415,6 +447,9 @@ class Mechanism(Model):
         self.u0 = lambda x: 0.0 * x[:dim]
         self.kappa = kappa
         self.alpha = alpha
+        self.beta = 2.0
+        self.pow_q = 32
+        self.trs_st = 50.0
         self.nN = -1
         self.sub = []
         self.ini_linear = False
@@ -430,7 +465,6 @@ class Mechanism(Model):
 
         self.A = lambda w: conditional(lt(w, 0.0), 1.0, eps)
         self.chi = lambda w: conditional(lt(w, 0.0), 1.0, 0.0)
-        self.sign = lambda w: conditional(lt(w, 0.0), 1.0, -1.0)
 
     def lfunc(self, u):
 
@@ -449,15 +483,18 @@ class Mechanism(Model):
     def Volume(self, phi, U, P):
         return self.chi(phi) * self.dx
 
+    def desp(self, g, u):
+        return (1.0 / sqrt(dot(g, g))) * dot(g, u)
+
     @qtty_to_eval("InDisp")
     def InDisp(self, phi, U, P):
         u = U[0]
-        return sum([dot(g, u) * dsg for g, dsg in zip(self.g_in, self.ds_in)])
+        return sum([self.desp(g, u) * dsg for g, dsg in zip(self.g_in, self.ds_in)])
 
     @qtty_to_eval("OutDisp")
     def OutDisp(self, phi, U, P):
         u = U[0]
-        return sum([dot(g, u) * dsg for g, dsg in zip(self.g_out, self.ds_out)])
+        return sum([self.desp(g, u) * dsg for g, dsg in zip(self.g_out, self.ds_out)])
 
     @func_to_eval("Displacement")
     def normDisplacement(self, phi, U, P):
@@ -470,8 +507,10 @@ class Mechanism(Model):
         u = U[0]
         sigma = self.em.stress(self.F(u))
         s = sigma - (1.0 / 3.0) * tr(sigma) * self.Id
-
         return self.chi(phi) * sqrt(1.5 * inner(s, sigma))
+
+    def _W(self, phi, F):
+        return self.A(phi) * self.em.W(F)
 
     def _DW(self, phi, F, dF):
         # First derivative of strain energy density
@@ -480,6 +519,38 @@ class Mechanism(Model):
     def _D2W(self, phi, F, dF1, dF2):
         # Second derivative of strain energy density
         return self.A(phi) * inner(dF1, self.em.hatQ2(F, dF2))
+
+    def Phi(self, t):
+        return (1.0 + t**self.pow_q) ** (1.0 / self.pow_q) - 1.0
+
+    def DPhi(self, t):
+        dphi = (1.0 + t**self.pow_q) ** ((1.0 / self.pow_q) - 1.0)
+        return dphi * (t ** (self.pow_q - 1.0))
+
+    def vms_func(self, u):
+        sigma = self.em.stress(self.F(u)) / self.trs_st
+        Bsigma = 3.0 * sigma - tr(sigma) * self.Id
+        return sqrt(0.5 * inner(Bsigma, sigma))
+
+    def _L(self, u):
+        sigma = self.em.stress(self.F(u)) / self.trs_st
+        Bsigma = 3.0 * sigma - tr(sigma) * self.Id
+        vms = sqrt(0.5 * inner(Bsigma, sigma))
+        return self.DPhi(vms**2) * Bsigma
+
+    def linear_model(self, phi):
+        u = TrialFunction(self.space)
+        v = TestFunction(self.space)
+        md = Hookecomponents()
+        Wf = self.A(phi) * inner(self.F(u), md.hatQ1(grad(v))) * self.dx
+        # Robin boundary conditions
+        for k, d_out in zip(self.kappa, self.ds_out):
+            Wf += k * dot(u, v) * d_out
+        # Applied forces (multiplied by a factor)
+        for g, d_in in zip(self.g_in, self.ds_in):
+            Wf -= dot(g, v) * d_in
+
+        return Wf
 
     def pde(self, phi):
 
@@ -497,61 +568,33 @@ class Mechanism(Model):
                 Wf -= dot(g, v) * d_in
 
             return [(Wf, self.bc)]
-        elif self.ini_linear:
-            u = Coefficient(self.space)
-            v = TestFunction(self.space)
-            du = TrialFunction(self.space)
-            l = Constant(self.domain)
-            F = self.F(u)
 
-            uli = TrialFunction(self.space)
-            Ym, Pr = 200.0, 0.3
-            lmbda = Ym * Pr / (1.0 + Pr) / (1.0 - 2.0 * Pr)
-            mu = Ym / 2.0 / (1.0 + Pr)
-            su = lmbda * nabla_div(uli) * self.Id + 2.0 * mu * sym(grad(uli))
-            Wf_lin = self.A(phi) * inner(su, sym(grad(v))) * self.dx
-            # Robin boundary conditions
-            for k, d_out in zip(self.kappa, self.ds_out):
-                Wf_lin += k * dot(uli, v) * d_out
-            # Applied forces (multiplied by a factor)
-            for g, d_in in zip(self.g_in, self.ds_in):
-                Wf_lin -= dot(g, v) * d_in
-
-            # Weak formulation of state problem
-            Wf = self._DW(phi, F, grad(v)) * self.dx
-            # Robin boundary conditions
-            for k, d_out in zip(self.kappa, self.ds_out):
-                Wf += k * dot(u, v) * d_out
-            # Applied forces (multiplied by a factor)
-            for g, d_in in zip(self.g_in, self.ds_in):
-                Wf -= l * dot(g, v) * d_in
-
-            # Jacobian
-            Jc = self._D2W(phi, F, grad(du), grad(v)) * self.dx
-
-            return [(Wf, self.bc, Jc, u, Wf_lin, (l, self.nN))]
         else:
             u = Coefficient(self.space)
             v = TestFunction(self.space)
             du = TrialFunction(self.space)
             l = Constant(self.domain)
-            F = self.F(u)
 
             # Weak formulation of state problem
-            Wf = self._DW(phi, F, grad(v)) * self.dx
+            Wf = self._DW(phi, self.F(u), grad(v)) * self.dx
             # Robin boundary conditions
             for k, d_out in zip(self.kappa, self.ds_out):
                 Wf += k * dot(u, v) * d_out
-            # Applied forces (multiplied by a factor)
+            # Applied forces
             for g, d_in in zip(self.g_in, self.ds_in):
                 Wf -= l * dot(g, v) * d_in
 
             # Jacobian
-            Jc = self._D2W(phi, F, grad(du), grad(v)) * self.dx
+            Jc = self._D2W(phi, self.F(u), grad(du), grad(v)) * self.dx
             for k, d_out in zip(self.kappa, self.ds_out):
                 Jc += k * dot(du, v) * d_out
 
-            return [(Wf, self.bc, Jc, u, self.u0, (l, self.nN))]
+            if self.ini_linear:
+                ini_par = self.linear_model(phi)
+            else:
+                ini_par = self.u0
+
+            return [(Wf, self.bc, Jc, u, ini_par, (l, self.nN))]
 
     def adjoint(self, phi, U):
 
@@ -566,36 +609,58 @@ class Mechanism(Model):
             Wf += k * dot(p, q) * d_out
         Wf += self.dlfunc(q)
 
+        # Energy penalization
+        # Wf += self.beta * inner(self.em.hatQ1(self.F(u)), grad(q)) * self.dx
+        # for k, d_out in zip(self.kappa, self.ds_out):
+        #     Wf += self.beta * k * dot(u, q) * d_out
+
+        # Stress penalization
+        # Dst = self.em.Dstress(self.F(u), grad(q)) / self.trs_st
+        # Wf += self.beta * inner(self._L(u), Dst) * self.dx
+
         return [(Wf, self.bc)]
 
     def cost(self, phi, U):
         # Cost functional
         u = U[0]
-        return self.lfunc(u) + self.alpha * self.chi(phi) * self.dx
+        Jfunc = self.lfunc(u)
+        Jfunc += self.alpha * self.chi(phi) * self.dx
+
+        # Energy cost functional
+        # Jfunc += self.beta * self.em.W(self.F(u)) * self.dx
+        # for k, d_out in zip(self.kappa, self.ds_out):
+        #     Jfunc += self.beta * 0.5 * k * dot(u, u) * d_out
+
+        # Stress penalization
+        # Jfunc += self.beta * self.Phi(self.vms_func(u) ** 2) * self.dx
+
+        return Jfunc
 
     def constraint(self, phi, U):
         # There is no constraints
         return []
 
     def derivative(self, phi, U, P):
-        # Shape derivatives components
+        # Shape derivative components
         u = U[0]
         p = P[0]
         Fu = self.F(u)
-        # S0 component of the cost functional
-        # S0_J = self.zero_vec
-        # # S1 component of the cost functional
-        # Q1 = -grad(p).T * self.em.hatQ1(Fu)
-        # Q2 = -grad(u).T * self.em.hatQ2(Fu, grad(p))
-        # S1_J = self._DW(phi, Fu, grad(p)) * self.Id
-        # S1_J += self.alpha * self.chi(phi) * self.Id
-        # S1_J += self.A(phi) * (Q1 + Q2)
 
         S0_J = self.zero_vec
-        Q1 = grad(p).T * self.em.hatQ1(Fu)
-        Q2 = grad(u).T * self.em.hatQ2(Fu, grad(p))
-        S1_J = (self._DW(phi, Fu, grad(p)) + self.alpha * self.chi(phi)) * self.Id
-        S1_J -= self.A(phi) * (Q1 + Q2)
+
+        S1_J = self._DW(phi, Fu, grad(p)) * self.Id
+        S1_J += self.alpha * self.chi(phi) * self.Id
+        S1_J -= self.A(phi) * grad(p).T * self.em.hatQ1(Fu)
+        S1_J -= self.A(phi) * grad(u).T * self.em.hatQ2(Fu, grad(p))
+
+        # Energy derivative components
+        # S1_J += self.beta * self.em.W(Fu) * self.Id
+        # S1_J -= self.beta * grad(u).T * self.em.hatQ1(Fu)
+
+        # Stress derivative components
+        # S1_J += self.beta * self.Phi(self.vms_func(u) ** 2) * self.Id
+        # S1_J -= self.beta * grad(u).T * self.em.hatQ3(self._L(u), Fu)
+        #
 
         return (S0_J, []), (S1_J, [])
 

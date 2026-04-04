@@ -7,11 +7,11 @@ from phiFEM_models import LaplacianEnergy
 
 
 def test_01():
-
+    # Path
     test_path = Path("../results/phiFem/t01/")
-    dim, rank_dim, mesh_size = 2, 1, 0.12
 
     # Domain
+    dim, rank_dim, mesh_size = 2, 1, 0.12
     vertices = np.array([(0.0, 0.0), (10.0, 0.0), (10.0, 10.0), (0.0, 10.0)])
     domain, _, _ = fop.create_domain_2d_DP(vertices, [], mesh_size, path=test_path)
 
@@ -38,7 +38,26 @@ def test_01():
 
 
 def test_02():
-    pass
+    test_path = Path("../results/phiFem/t02/")
+
+    # Domain
+    dim, rank_dim, mesh_size = 2, 1, 0.08
+    vertices = np.array([(0.0, 0.0), (2.0, 0.0), (2.0, 1.0), (0.0, 1.0)])
+    domain, _, _ = fop.create_domain_2d_DP(
+        vertices, [], mesh_size, path=test_path, plot=True
+    )
+
+    centers = [(i * 0.1, 0.5) for i in range(20)]
+    centers = np.array(centers)
+    radii = np.repeat(0.1, centers.shape[0])
+
+    phi = fop.get_initial_level(domain, centers, radii)
+    from mesh_scripts import compute_tags_measures
+
+    print(domain.topology.cell_name())
+    cells_tags, facets_tags, _, ds_out, _, _ = compute_tags_measures(
+        domain, phi, 1, box_mode=True
+    )
 
 
 test_functions = {

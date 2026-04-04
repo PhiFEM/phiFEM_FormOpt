@@ -102,6 +102,8 @@ from plots import plot_domain
 
 from mesh_scripts import compute_tags_measures  # phiFem
 
+from basix.ufl import element, mixed_element
+
 comm = MPI.COMM_WORLD
 rank = comm.rank
 size = comm.size
@@ -372,6 +374,10 @@ class Model(ABC):
         """
 
         self.ini_lvl = InitialLevel(centers, radii, factor, ord)
+
+    @final
+    def add_paths_to_ini_lvl(self, list_of_paths):
+        self.ini_lvl.add_paths(list_of_paths)
 
     @final
     def save_initial_level(self, comm: MPI.Comm) -> None:
@@ -1081,6 +1087,7 @@ class InitialLevel:
         self.dim = self.centers.shape[1]
         self.factor = factor
         self.ord = ord
+        self.paths = False
 
     def func(self, x):
         """
@@ -1096,6 +1103,12 @@ class InitialLevel:
         values = np.max(distances, axis=0)
 
         return self.factor * values
+
+    def add_paths(self, list_of_paths):
+        for ini, end, r in list_of_paths:
+            distance = Norm(end - ini)
+            np.linspace(ini, end, distance % r + 1)
+            # pendiente
 
     def save(self, comm, domain, save_path):
         """
@@ -1740,6 +1753,10 @@ def create_space(
         raise ValueError("The 'rank' argument must be an integer or a tuple.")
 
     return functionspace(domain, element)
+
+
+def create_mixed_space(domain, family1, rank1, degree1, family2, rank2, degree2):
+    pass
 
 
 def build_solver(
@@ -2627,7 +2644,7 @@ class NonlinearSolverbySteeping:
         self.ini = initial
         self.factor = factor
         self.vals = np.linspace(0, 1.0, nbr_steps)[1:]
-        self.vals = self.vals**2
+        # self.vals = self.vals**2.5
         self.max_niter = 0
         self.func = func
 
