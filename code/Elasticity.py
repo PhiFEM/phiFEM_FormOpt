@@ -20,16 +20,6 @@ size = comm.size
 def cantilever(mod, test_path, load, alpha, nM=0):
     """
     Cantilever with one load.
-
-    Numerical tests:
-
-    Hooke model
-    `cantilever("Hooke", Path("../results/Elasticity/t01/"), load=-10.0, alpha=0.25)`
-    Saint-Venant-Kirchhoff model
-    `cantilever("SVK", Path("../results/Elasticity/t02/"), load=-10.0, alpha=0.25, nM=8)`
-    Mooney-Rivlin model
-    `cantilever("MR", Path("../results/Elasticity/t03/"), load=-10.0, alpha=0.25, nM=16)`
-
     """
     dim = 2
     rank_dim = 2
@@ -769,7 +759,7 @@ test_functions = {
         kappa=[0.75],
         alpha=0.3,
         eps=1e-2,
-        niter=200,
+        niter=250,
         elastic_pars=(200.0, 0.3),
         forces=(8.0, 14.0),
     ),
@@ -790,7 +780,7 @@ test_functions = {
         kappa=[0.75],
         alpha=0.3,
         eps=1e-2,
-        niter=200,
+        niter=250,
         elastic_pars=(200.0, 0.3),
         forces=(8.0, 14.0),
         nM=16,

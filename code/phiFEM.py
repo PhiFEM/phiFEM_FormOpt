@@ -3,7 +3,7 @@ from pathlib import Path
 from mpi4py import MPI
 
 import formopt as fop
-from phiFEM_models import LaplacianEnergy
+from phiFEM_models import LaplacianEnergy, ComplianceElasticity
 
 
 def test_01():
@@ -38,25 +38,84 @@ def test_01():
 
 
 def test_02():
+
     test_path = Path("../results/phiFem/t02/")
 
     # Domain
-    dim, rank_dim, mesh_size = 2, 1, 0.08
-    vertices = np.array([(0.0, 0.0), (2.0, 0.0), (2.0, 1.0), (0.0, 1.0)])
-    domain, _, _ = fop.create_domain_2d_DP(
-        vertices, [], mesh_size, path=test_path, plot=True
+    dim, rank_dim, mesh_size = 2, 2, 0.01
+    vertices = np.array(
+        [(0.0, 0.0), (2.0, 0.0), (2.0, 0.46), (2.0, 0.54), (2.0, 1.0), (0.0, 1.0)]
     )
 
-    centers = [(i * 0.1, 0.5) for i in range(20)]
+    dir_idx, dir_mkr = [6], 1
+    neu_idx, neu_mkr = [3], 2
+    boundary_parts = [(dir_idx, dir_mkr, "dir"), (neu_idx, neu_mkr, "neu")]
+
+    output = fop.create_domain_2d_DP(
+        vertices, boundary_parts, mesh_size, path=test_path, plot=False
+    )
+
+    domain, nbr_tri, boundary_tags = output
+    print(f"> Nbr of triangles = {nbr_tri}")
+
+    mix_space = fop.create_mixed_space(
+        domain,
+        ["CG", "CG", "DG"],
+        [(rank_dim,), (rank_dim, rank_dim), (rank_dim,)],
+        [1, 1, 0],
+    )
+
+    # Homogeneous Dirichlet boundary condition for the first subspace
+    dir_bc = fop.homogeneous_dirichlet_mixed(
+        domain, mix_space.sub(0), boundary_tags, [dir_mkr]
+    )
+
+    # Boundary to force application
+    dsg = fop.marked_ds(domain, boundary_tags, [neu_mkr])[0]
+
+    volume, g = 1.0, (0.0, -12.0)
+
+    md = ComplianceElasticity(
+        dim,
+        domain,
+        mix_space,
+        test_path,
+        rank_dim,
+        g,
+        dsg,
+        dir_bc,
+        volume,
+    )
+
+    @fop.region_of(domain)
+    def sub_domain(x):
+        return [x[1] - 0.44, 0.56 - x[1], x[0] - 1.9]
+
+    md.sub = [sub_domain.expression()]
+
+    dd = 0  # 1
+    h = 1.4 / (2.0 + dd)
+    centers = [(2.0, 0.35), (2.0, 0.65), (2.0, 0.0), (2.0, 1.0)]
+    centers += [(0.0, 0.25), (0.0, 0.5), (0.0, 0.75)]
+    centers += [(0.3 + i * h, 0.0) for i in range(3 + dd)]
+    centers += [(0.3 + h / 2.0 + i * h, 0.25) for i in range(2 + dd)]
+    centers += [(0.3 + i * h, 0.5) for i in range(3 + dd)]
+    centers += [(0.3 + h / 2.0 + i * h, 0.75) for i in range(2 + dd)]
+    centers += [(0.3 + i * h, 1.0) for i in range(3 + dd)]
+
     centers = np.array(centers)
-    radii = np.repeat(0.1, centers.shape[0])
+    radii = np.repeat(0.08, centers.shape[0])
+    md.create_initial_level(centers, radii)
 
-    phi = fop.get_initial_level(domain, centers, radii)
-    from mesh_scripts import compute_tags_measures
-
-    print(domain.topology.cell_name())
-    cells_tags, facets_tags, _, ds_out, _, _ = compute_tags_measures(
-        domain, phi, 1, box_mode=True
+    md.phifem_run(
+        niter=200,
+        dfactor=1e-2,
+        lv_iter=(12, 24),
+        lv_time=(1e-3, 1.0),
+        cost_tol=1e-3,
+        smooth=True,
+        reinit_step=4,
+        reinit_pars=(6, 0.01),
     )
 
 

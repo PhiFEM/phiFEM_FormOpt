@@ -242,6 +242,7 @@ def plot_vm(
     boundaries=None,
     lw=2,
     filename=None,
+    title="Von Mises stress",
 ):
     """
     Von Misses stress
@@ -265,7 +266,8 @@ def plot_vm(
     x_coords, y_coords = points[:, 0], points[:, 1]
     triang = mtri.Triangulation(x_coords, y_coords, cells)
     fig, ax = plt.subplots(figsize=figsize)
-    ax.set_title("Von Mises stress")
+    if title != "":
+        ax.set_title(title)
     cf = ax.tricontourf(
         triang,
         vm,
@@ -308,6 +310,7 @@ def plot_dp(
     boundaries=None,
     lw=2,
     filename=None,
+    title="Displacement (in norm)",
 ):
     """
     Displacement
@@ -331,7 +334,8 @@ def plot_dp(
     x_coords, y_coords = points[:, 0], points[:, 1]
     triang = mtri.Triangulation(x_coords, y_coords, cells)
     fig, ax = plt.subplots(figsize=figsize)
-    ax.set_title("Displacement (in norm)")
+    if title != "":
+        ax.set_title(title)
     cf = ax.tricontourf(
         triang,
         dp,
@@ -1033,12 +1037,13 @@ def plot2(values, title="values", figsize=None, filename=None):
     ax.plot(iterations, values, color="black", linewidth=2)
 
     ax.set_xlabel("Iterations")
-    ax.set_ylabel(title)
+    if title != "":
+        ax.set_ylabel(title)
     ax.grid(True, linestyle="--", alpha=0.7)
     fig.tight_layout()
 
     if filename:
-        plt.savefig(filename, format=filename.suffix[1:], dpi=300)
+        plt.savefig(filename, dpi=300, bbox_inches="tight")
         plt.close()
     else:
         plt.show()

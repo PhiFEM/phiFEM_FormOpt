@@ -57,6 +57,7 @@ from dolfinx.fem.petsc import (
     set_bc,
 )
 
+
 from dolfinx.fem import (
     FunctionSpace,
     Function,
@@ -86,6 +87,8 @@ from ufl import (
     sqrt,
     gt,
     lt,
+    MixedFunctionSpace,
+    extract_blocks,
 )
 
 from ufl.argument import Argument
@@ -1755,8 +1758,15 @@ def create_space(
     return functionspace(domain, element)
 
 
-def create_mixed_space(domain, family1, rank1, degree1, family2, rank2, degree2):
-    pass
+def create_mixed_space(
+    domain: Mesh, families: List[str], ranks: List[tuple], degrees: List[int]
+) -> FunctionSpace:
+    fe = domain.basix_cell()  # finite element
+    els = []
+    for fy, rk, dg in zip(families, ranks, degrees):
+        els.append(element(fy, fe, dg, dtype=default_real_type, shape=rk))
+    mix_el = mixed_element(els)
+    return functionspace(domain, mix_el)
 
 
 def build_solver(
@@ -1950,6 +1960,84 @@ class Velocity:
 
         self.solver.solve(L, theta.x.petsc_vec)
         theta.x.scatter_forward()
+
+
+class Velocity_Mixed:
+    """
+    This class build and solve the velocity equation.
+
+    Attributes
+    ----------
+    biform : Form
+        Bilinear form.
+    liform : Form
+        Linear functional.
+    bc : List[DirichletBC]
+        List with the homogeneous Dirichlet condition.
+    solver : PETSc.KSP
+        Krylov Subspace Solver
+
+    Methods
+    -------
+    run(theta: Function) -> None
+        Solves the velocity equation.
+    """
+
+    def __init__(
+        self,
+        dim: int,
+        domain: Mesh,
+        space: FunctionSpace,
+        biform: Callable[[Argument, Argument], Tuple[Expr, bool]],
+        S0: Expr,
+        S1: Expr,
+    ) -> None:
+        """
+        Sets up the linear system for the velocity.
+        Since the bilinear part remains unchanged,
+        it is compiled here.
+
+        Parameters
+        ----------
+        dim : int
+            Domain dimension.
+        domain : Mesh
+            Problem domain.
+        space : FunctionSpace
+            Space of functions.
+        biform : Callable[[Argument, Argument], Tuple[Expr, bool]]
+            Bilinear form method of a subclass of Model.
+        S0 : Expr
+            S0 component of the shape derivative.
+        S1 : Expr
+            S1 component of the shape derivative.
+        """
+
+        th = TrialFunction(space)
+        xi = TestFunction(space)
+        dx = Measure("dx", domain=domain)
+
+        b, dirbc = biform(th, xi)
+
+        self.biform = form(b)
+        self.bc = None
+
+        if dirbc == True:
+            self.bc = homogeneus_boundary(domain, space, dim, dim)
+        else:
+            self.bc = []
+        self.S0, self.S1, self.xi = S0, S1, xi
+        # self.solver = build_solver(domain, self.biform, self.bc)
+
+    def run(self, theta: Function, dx: Measure) -> None:
+        """
+        Solves the velocity equation.
+        Only the linear part must be updated.
+        """
+        liform = form(
+            -(dot(self.S0, self.xi) + inner(self.S1, grad(self.xi))) * dx((1, 2))
+        )
+        basic_solver(self.biform, liform, self.bc, theta)
 
 
 class Level:
@@ -2342,6 +2430,81 @@ def homogeneous_dirichlet(
             boundary_tags.indices[boundary_tags.values == mk],
         )
         bcs.append(dirichletbc(u_zero, dofs, space))
+    return bcs
+
+
+def homogeneous_dirichlet_mixed(
+    domain: Mesh,
+    subspace: FunctionSpace,
+    boundary_tags: MeshTags_int32,
+    markers: List[int],
+):
+    """
+    Create homogeneous Dirichlet boundary conditions for a subspace of a mixed space.
+
+    This function constructs zero Dirichlet boundary conditions on the facets
+    identified by the given boundary markers. It is intended for use with
+    subspaces extracted from a mixed finite element space in FEniCSx.
+
+    Parameters
+    ----------
+    domain : dolfinx.mesh.Mesh
+        The computational mesh.
+
+    subspace : dolfinx.fem.FunctionSpace
+        Subspace of a mixed function space (e.g., obtained via
+        ``mix_space.sub(i)``) on which the Dirichlet condition will be imposed.
+
+    boundary_tags : dolfinx.mesh.MeshTags
+        Mesh tags identifying boundary facets. Typically created with
+        ``meshtags`` and used to mark parts of the boundary.
+
+    markers : iterable of int
+        Boundary markers where the homogeneous Dirichlet condition should
+        be applied.
+
+    Returns
+    -------
+    list of dolfinx.fem.DirichletBC
+        List of Dirichlet boundary condition objects corresponding to the
+        specified boundary markers.
+
+    Notes
+    -----
+    The function internally collapses the given subspace to create a standalone
+    function space required for defining the boundary values. The zero boundary
+    function is then mapped back to the original mixed subspace when constructing
+    the Dirichlet boundary conditions.
+
+        Examples
+    --------
+    >>> bcs = homogeneous_dirichlet_mixed(
+    ...     domain,
+    ...     mix_space.sub(0),
+    ...     boundary_tags,
+    ...     [1, 3]
+    ... )
+    """
+
+    space, _ = subspace.collapse()
+
+    u0 = Function(space)
+    u0.x.array[:] = 0.0
+
+    facet_dim = domain.topology.dim - 1
+    bcs = []
+
+    for mk in markers:
+        facets = boundary_tags.indices[boundary_tags.values == mk]
+
+        dofs = locate_dofs_topological(
+            (subspace, space),
+            facet_dim,
+            facets,
+        )
+
+        bcs.append(dirichletbc(u0, dofs, subspace))
+
     return bcs
 
 
@@ -2873,6 +3036,24 @@ def read_level_set_function(path: Path, domain: Mesh, niter: int) -> Function:
     return None
 
 
+def phifem_solver_mixed(a, L, bcs, uh, map0):
+    problem = LinearProblem(
+        a,
+        L,
+        bcs=bcs,
+        petsc_options={
+            "ksp_type": "preonly",
+            "pc_type": "lu",
+            "pc_factor_mat_solver_type": "mumps",
+            "ksp_error_if_not_converged": True,
+            "mat_mumps_icntl_24": 1,
+            "mat_mumps_icntl_25": 0,
+        },
+    )
+    w = problem.solve()
+    uh.x.array[:] = w.x.array[map0]
+
+
 def phifem_solver(
     a: Expr,
     L: Expr,
@@ -2925,6 +3106,21 @@ def phifem_solve(
         weak_form, bcs = equations[i]
         bi, li = system(weak_form)
         phifem_solver(bi, li, bcs, solutions[i], phi, rank_dim, comm)
+
+
+def phifem_solve_mixed(
+    nbr_eq: int,
+    equations: List[Tuple[Expr, Sequence[DirichletBC]]],
+    solutions: List[Function],
+    map,
+):
+    """
+    This function was created to use phiFem method in formopt.
+    """
+    for i in range(nbr_eq):
+        weak_form, bcs = equations[i]
+        bi, li = system(weak_form)
+        phifem_solver_mixed(bi, li, bcs, solutions[i], map)
 
 
 def get_initial_level(
@@ -3062,7 +3258,7 @@ def phifem_run(
     nDJ = form((model.bilinear_form(tht, tht))[0])
 
     # To calculate the velocity field
-    cls_vlty = Velocity(dim, domain, sp_vlty, model.bilinear_form, S0, S1)
+    cls_vlty = Velocity_Mixed(dim, domain, sp_vlty, model.bilinear_form, S0, S1)
 
     # To calculate the level set function
     cls_lset = Level(domain, sp_lset, phi, tht, diam2, smooth)
@@ -3093,7 +3289,11 @@ def phifem_run(
     cls_smt.run(phi)
 
     ste_eqs = model.pde(phi)
-    phifem_solve(nbr_ste, ste_eqs, ste_fcs, phi, rank_dim, comm)
+    if not model.mixed_space:
+        phifem_solve(nbr_ste, ste_eqs, ste_fcs, phi, rank_dim, comm)
+    else:
+        phifem_solve_mixed(nbr_ste, ste_eqs, ste_fcs, model.map)
+
     comm.barrier()
 
     cost = global_scalar(form(model.cost(phi, ste_fcs)), comm)
@@ -3106,10 +3306,13 @@ def phifem_run(
 
     if nbr_adj > 0:
         adj_eqs = model.adjoint(phi, ste_fcs)
-        phifem_solve(nbr_adj, adj_eqs, adj_fcs, phi, rank_dim, comm)
+        if not model.mixed_space:
+            phifem_solve(nbr_adj, adj_eqs, adj_fcs, phi, rank_dim, comm)
+        else:
+            phifem_solve_mixed(nbr_adj, adj_eqs, adj_fcs, model.map)
         comm.barrier()
 
-    cls_vlty.run(tht)
+    cls_vlty.run(tht, model.dx)
     nder = global_scalar(nDJ, comm, np.sqrt)
 
     if rank == 0:
@@ -3174,10 +3377,14 @@ def phifem_run(
 
             #######################################################################
 
-            # cls_smt.run(phi)
+            # cls_smt.run(phi) # smooth
 
             ste_eqs = model.pde(phi)
-            phifem_solve(nbr_ste, ste_eqs, ste_fcs, phi, rank_dim, comm)
+            if not model.mixed_space:
+                phifem_solve(nbr_ste, ste_eqs, ste_fcs, phi, rank_dim, comm)
+            else:
+                phifem_solve_mixed(nbr_ste, ste_eqs, ste_fcs, model.map)
+
             comm.barrier()
 
             cost = global_scalar(form(model.cost(phi, ste_fcs)), comm)
@@ -3196,10 +3403,13 @@ def phifem_run(
 
             if nbr_adj > 0:
                 adj_eqs = model.adjoint(phi, ste_fcs)
-                phifem_solve(nbr_adj, adj_eqs, adj_fcs, phi, rank_dim, comm)
+                if not model.mixed_space:
+                    phifem_solve(nbr_adj, adj_eqs, adj_fcs, phi, rank_dim, comm)
+                else:
+                    phifem_solve_mixed(nbr_adj, adj_eqs, adj_fcs, model.map)
                 comm.barrier()
 
-            cls_vlty.run(tht)
+            cls_vlty.run(tht, model.dx)
 
             nder = global_scalar(nDJ, comm, np.sqrt)
 
