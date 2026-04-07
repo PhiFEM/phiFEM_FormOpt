@@ -24,7 +24,7 @@ fead2/
 *.log
 *.gz
 /home/antoine/Mathematics/Research_ongoing/Josue/fenics-parallel/distributed/fead_revision/
-code/Elasticity*
-code/phiFEM*
+code/Elasticity.*
+code/phiFEM.*
 results/Elasticity/
 results/phiFEM/
