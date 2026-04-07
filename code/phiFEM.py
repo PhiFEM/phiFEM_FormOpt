@@ -73,7 +73,7 @@ def test_02():
     # Boundary to force application
     dsg = fop.marked_ds(domain, boundary_tags, [neu_mkr])[0]
 
-    volume, g = 1.0, (0.0, -12.0)
+    volume, g = 1.0, (0.0, -25.0)
 
     md = ComplianceElasticity(
         dim,
@@ -93,15 +93,15 @@ def test_02():
 
     md.sub = [sub_domain.expression()]
 
-    dd = 0  # 1
-    h = 1.4 / (2.0 + dd)
+    h = 1.4 / 2.0
     centers = [(2.0, 0.35), (2.0, 0.65), (2.0, 0.0), (2.0, 1.0)]
-    centers += [(0.0, 0.25), (0.0, 0.5), (0.0, 0.75)]
-    centers += [(0.3 + i * h, 0.0) for i in range(3 + dd)]
-    centers += [(0.3 + h / 2.0 + i * h, 0.25) for i in range(2 + dd)]
-    centers += [(0.3 + i * h, 0.5) for i in range(3 + dd)]
-    centers += [(0.3 + h / 2.0 + i * h, 0.75) for i in range(2 + dd)]
-    centers += [(0.3 + i * h, 1.0) for i in range(3 + dd)]
+    # centers += [(0.0, 0.25), (0.0, 0.5), (0.0, 0.75)]
+    centers += [(0.0, 0.5)]
+    centers += [(0.3 + i * h, 0.0) for i in range(1, 3)]
+    centers += [(0.3 + h / 2.0 + i * h, 0.25) for i in range(2)]
+    centers += [(0.3 + i * h, 0.5) for i in range(3)]
+    centers += [(0.3 + h / 2.0 + i * h, 0.75) for i in range(2)]
+    centers += [(0.3 + i * h, 1.0) for i in range(1, 3)]
 
     centers = np.array(centers)
     radii = np.repeat(0.08, centers.shape[0])
@@ -110,12 +110,12 @@ def test_02():
     md.phifem_run(
         niter=200,
         dfactor=1e-2,
-        lv_iter=(12, 24),
-        lv_time=(1e-3, 1.0),
+        lv_iter=(16, 24),
+        lv_time=(1e-3, 0.1),
         cost_tol=1e-3,
         smooth=True,
         reinit_step=4,
-        reinit_pars=(6, 0.01),
+        reinit_pars=(10, 0.008),
     )
 
 

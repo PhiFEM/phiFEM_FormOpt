@@ -880,7 +880,9 @@ class PPL:
         n : int
             Number of constraint functions.
         ini_cost : float
-
+            Cost value at the first iteration.
+        ini_ctrs : float
+            Constraint values at the first iteration.
         """
 
         self.n = n
@@ -3258,7 +3260,7 @@ def phifem_run(
     nDJ = form((model.bilinear_form(tht, tht))[0])
 
     # To calculate the velocity field
-    cls_vlty = Velocity_Mixed(dim, domain, sp_vlty, model.bilinear_form, S0, S1)
+    cls_vlty = Velocity(dim, domain, sp_vlty, model.bilinear_form, S0, S1)
 
     # To calculate the level set function
     cls_lset = Level(domain, sp_lset, phi, tht, diam2, smooth)
@@ -3312,7 +3314,7 @@ def phifem_run(
             phifem_solve_mixed(nbr_adj, adj_eqs, adj_fcs, model.map)
         comm.barrier()
 
-    cls_vlty.run(tht, model.dx)
+    cls_vlty.run(tht)  # model.dx
     nder = global_scalar(nDJ, comm, np.sqrt)
 
     if rank == 0:
@@ -3409,7 +3411,7 @@ def phifem_run(
                     phifem_solve_mixed(nbr_adj, adj_eqs, adj_fcs, model.map)
                 comm.barrier()
 
-            cls_vlty.run(tht, model.dx)
+            cls_vlty.run(tht)  # model.dx
 
             nder = global_scalar(nDJ, comm, np.sqrt)
 

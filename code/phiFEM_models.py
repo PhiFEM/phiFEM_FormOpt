@@ -41,6 +41,7 @@ class ComplianceElasticity(Model):
         self.dx = Measure("dx", domain=self.domain)
         self.dS = Measure("dS", domain=self.domain)
         self.ds_out = Measure("ds", domain=self.domain)
+        self.ds = Measure("ds", domain=self.domain)
 
         E, nu = 200.0, 0.3
         lmbda = E * nu / (1.0 + nu) / (1.0 - 2.0 * nu)
@@ -59,6 +60,7 @@ class ComplianceElasticity(Model):
         )
         self.chi = lambda w: conditional(lt(w, 0.0), 1.0, 0.0)
         self.vol = volume
+        self.factor = 1.0
 
     @qtty_to_eval("Volume")
     def Volume(self, phi, U, P):
@@ -106,7 +108,7 @@ class ComplianceElasticity(Model):
         su = self.sigma(u)
         eu = self.epsilon(u)
 
-        return inner(su, eu) * self.dx((1, 2))
+        return self.factor * inner(su, eu) * self.dx((1, 2))
 
     def constraint(self, phi, U):
         # Volume constraint
@@ -126,16 +128,15 @@ class ComplianceElasticity(Model):
         S0_C = self.zero_vec
         S1_C = (1.0 / self.vol) * self.chi(phi) * self.Id
 
-        return (S0_J, [S0_C]), (S1_J, [S1_C])
+        return (S0_J, [S0_C]), (self.factor * self.chi(phi) * S1_J, [S1_C])
 
     def bilinear_form(self, th, xi):
         # Weighted H1-norm with penalty terms
         nv = FacetNormal(self.domain)
-        ds = Measure("ds", domain=self.domain)
 
-        B = dot(th, xi) * self.dx
-        B += 0.1 * inner(grad(th), grad(xi)) * self.dx
-        B += 1e4 * dot(th, nv) * dot(xi, nv) * ds
+        B = 0.1 * dot(th, xi) * self.dx
+        B += inner(grad(th), grad(xi)) * self.dx
+        B += 1e4 * dot(th, nv) * dot(xi, nv) * self.ds
         for sb in self.sub:
             B += 1e4 * sb * dot(th, xi) * self.dx
 
