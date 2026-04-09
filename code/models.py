@@ -235,9 +235,9 @@ class PhifemInterfaceCompliance(Model):
             self.primal_state_functions[i].x.array[:] = solution_uh_in.x.array[:] + solution_uh_out.x.array[:]
 
     def pde(self, phi):
-        cells_tags, facets_tags, _, self.d_bdy, _ = compute_tags_measures(self.domain, phi, self.detection_degree, self.box_mode, self.single_layer_cut)
-        self.dx = Measure("dx", domain=self.domain, subdomain_data=cells_tags)
-        self.dS = Measure("dS", domain=self.domain, subdomain_data=facets_tags)
+        self.cells_tags, self.facets_tags, _, self.d_bdy, _ = compute_tags_measures(self.domain, phi, self.detection_degree, self.box_mode, self.single_layer_cut)
+        self.dx = Measure("dx", domain=self.domain, subdomain_data=self.cells_tags)
+        self.dS = Measure("dS", domain=self.domain, subdomain_data=self.facets_tags)
 
         u_in, u_out, y_in, y_out, p = TrialFunctions(self.space)
         v_in, v_out, z_in, z_out, q = TestFunctions(self.space)
@@ -256,20 +256,20 @@ class PhifemInterfaceCompliance(Model):
             + inner(y_out + su_out, z_out + self.sigma_out(v_out)) * self.coef_in
             + self.cell_diameter ** (-2)
             * inner(
-                dot(y_in, grad(self.phi)) - dot(y_out, grad(self.phi)),
-                dot(z_in, grad(self.phi)) - dot(z_out, grad(self.phi)),
+                dot(y_in, grad(phi)) - dot(y_out, grad(phi)),
+                dot(z_in, grad(phi)) - dot(z_out, grad(phi)),
             )
             + self.cell_diameter ** (-2)
             * inner(
-                u_in - u_out + self.cell_diameter ** (-1) * p * self.phi,
-                v_in - v_out + self.cell_diameter ** (-1) * q * self.phi,
+                u_in - u_out + self.cell_diameter ** (-1) * p * phi,
+                v_in - v_out + self.cell_diameter ** (-1) * q * phi,
             )
         )
 
         stabilization_facets_in = (
             self.coef_stabilization
             * avg(self.cell_diameter)
-            * inner(jump(su_in), self.normal), jump(sv_in), self.normal)
+            * inner(jump(su_in, self.facet_normal), jump(sv_in, self.facet_normal)))
 
         stabilization_cells_in = (
             self.coef_stabilization * self.cell_diameter**2 * inner(div(y_in), div(z_in))
@@ -282,7 +282,7 @@ class PhifemInterfaceCompliance(Model):
         stabilization_facets_out = (
             self.coef_stabilization
             * avg(self.cell_diameter)
-            * inner(jump(su_out, self.normal), jump(sv_out, self.normal))
+            * inner(jump(su_out, self.facet_normal), jump(sv_out, self.facet_normal))
         )
 
         a = (
@@ -297,7 +297,7 @@ class PhifemInterfaceCompliance(Model):
             + boundary_out * self.d_bdy(101)
         )
 
-        W = a - dot(self.g, v_in) * self.ds_g
+        W = a - dot(self.g, v_in) * self.ds
 
         return [(W, self.bc)]
 
@@ -307,29 +307,28 @@ class PhifemInterfaceCompliance(Model):
     def cost(self, phi, U):
 
         u = U[0]
-        su = self.sigma(u)
+        su_in = self.sigma_in(u)
         eu = self.epsilon(u)
 
-        J = self.A(phi) * (inner(su, eu)) * self.dx
+        J = inner(su_in, eu) * self.dx(1)
 
         return J
 
     def constraint(self, phi, U):
 
-        C = (1.0 / self.vol) * self.chi(phi) * self.dx
+        C = (1.0 / self.vol) * self.chi(phi) * self.dx(1)
 
         return [C]
 
     def derivative(self, phi, U, P):
 
         u = U[0]
-        su = self.sigma(u)
+        su_in = self.sigma_in(u)
         eu = self.epsilon(u)
 
         S0_J = self.zero_vec
-        S1_J = 2.0 * grad(u).T * su
-        S1_J -= inner(su, eu) * self.Id
-        S1_J *= self.A(phi)
+        S1_J = 2.0 * grad(u).T * su_in
+        S1_J -= inner(su_in, eu) * self.Id
 
         S0_C = self.zero_vec
         S1_C = (1.0 / self.vol) * self.chi(phi) * self.Id

@@ -4,6 +4,7 @@ import formopt as fop
 from models import (
     Logistic,
     Compliance,
+    PhifemInterfaceCompliance,
     CompliancePlus,
     InverseElasticity,
     Heat,
@@ -16,6 +17,9 @@ from models import (
 
 import numpy as np
 from pathlib import Path  # To manage where results are saved
+
+from basix.ufl import element, mixed_element
+from dolfinx.fem import functionspace, Function, dirichletbc, locate_dofs_topological
 
 # Necessary for all parallelism modes
 from mpi4py import MPI
