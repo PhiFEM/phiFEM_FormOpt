@@ -103,7 +103,7 @@ from ufl.core.expr import Expr
 
 from plots import plot_domain
 
-from mesh_scripts import compute_tags_measures  # phiFem
+from phifem.mesh_scripts import compute_tags_measures  # phiFem
 
 from basix.ufl import element, mixed_element
 
@@ -3559,9 +3559,9 @@ def runDP(
     # State equations/functions
     ste_eqs = model.pde(phi)
     nbr_ste = len(ste_eqs)
-    ste_fcs = [Function(model.space) for _ in range(nbr_ste)]
+    model.set_state_functions(nbr_ste)
     for i in range(nbr_ste):
-        ste_fcs[i].name = "u" + str(i)
+        model.state_functions[i].name = "u" + str(i)
 
     # Solvers creation
     ste_pbs = []
@@ -3571,15 +3571,15 @@ def runDP(
             # linea problem
             weak_form, bcs = ste_problem
             bi, li = system(weak_form)
-            ste_pbs.append(create_solver(form(bi), form(li), bcs, ste_fcs[i]))
+            ste_pbs.append(create_solver(form(bi), form(li), bcs, model.state_functions[i]))
         elif len(ste_problem) == 5:
             # nonlinear: newton with initial guess
             weak_form, bcs, jacobian, seudo_state, ini_func = ste_problem
-            true_weak_form = replace(weak_form, {seudo_state: ste_fcs[i]})
-            true_jacobian = replace(jacobian, {seudo_state: ste_fcs[i]})
+            true_weak_form = replace(weak_form, {seudo_state: model.state_functions[i]})
+            true_jacobian = replace(jacobian, {seudo_state: model.state_functions[i]})
             ste_pbs.append(
                 create_nonlinear_solver(
-                    comm, true_weak_form, bcs, true_jacobian, ste_fcs[i], ini_func
+                    comm, true_weak_form, bcs, true_jacobian, model.state_functions[i], ini_func
                 )
             )
         elif model.ini_linear:
@@ -3588,10 +3588,10 @@ def runDP(
             factor, nbr_newton_steps = factor_pars
             true_factor = const(domain, 0.0)
             true_weak_form = replace(
-                weak_form, {seudo_state: ste_fcs[i], factor: true_factor}
+                weak_form, {seudo_state: model.state_functions[i], factor: true_factor}
             )
             true_jacobian = replace(
-                jacobian, {seudo_state: ste_fcs[i], factor: true_factor}
+                jacobian, {seudo_state: model.state_functions[i], factor: true_factor}
             )
             ste_pbs.append(
                 create_nonlinear_solver_with_ini_linear_and_factor(
@@ -3599,7 +3599,7 @@ def runDP(
                     true_weak_form,
                     bcs,
                     true_jacobian,
-                    ste_fcs[i],
+                    model.state_functions[i],
                     ini_linear,
                     true_factor,
                     nbr_newton_steps,
@@ -3611,10 +3611,10 @@ def runDP(
             factor, nbr_newton_steps = factor_pars
             true_factor = const(domain, 0.0)
             true_weak_form = replace(
-                weak_form, {seudo_state: ste_fcs[i], factor: true_factor}
+                weak_form, {seudo_state: model.state_functions[i], factor: true_factor}
             )
             true_jacobian = replace(
-                jacobian, {seudo_state: ste_fcs[i], factor: true_factor}
+                jacobian, {seudo_state: model.state_functions[i], factor: true_factor}
             )
             ste_pbs.append(
                 create_nonlinear_solver_with_factor(
@@ -3622,7 +3622,7 @@ def runDP(
                     true_weak_form,
                     bcs,
                     true_jacobian,
-                    ste_fcs[i],
+                    model.state_functions[i],
                     ini_func,
                     true_factor,
                     nbr_newton_steps,
@@ -3630,7 +3630,7 @@ def runDP(
             )
 
     # Adjoint equations/functions
-    adj_eqs = model.adjoint(phi, ste_fcs)
+    adj_eqs = model.adjoint(phi, model.state_functions)
     nbr_adj = len(adj_eqs)
     if nbr_adj > 0:
         adj_fcs = [Function(model.space) for _ in range(nbr_adj)]
@@ -3661,20 +3661,20 @@ def runDP(
         qs_names = []
 
         for name, fc in model._to_eval["quantity"].items():
-            to_ev_qs.append(form(fc(model, phi, ste_fcs, adj_fcs)))
+            to_ev_qs.append(form(fc(model, phi, model.state_functions, adj_fcs)))
             qs_names.append(name)
 
         if rank == 0:
             tosave.add_qtty_names(qs_names)
 
     # Cost functional
-    J = form(model.cost(phi, ste_fcs))
+    J = form(model.cost(phi, model.state_functions))
     # Derivative components
-    S0_cts, S1_cts = model.derivative(phi, ste_fcs, adj_fcs)
+    S0_cts, S1_cts = model.derivative(phi, model.state_functions, adj_fcs)
     S0 = S0_cts[0]
     S1 = S1_cts[0]
     # Equality constraints
-    eq_ctrs = model.constraint(phi, ste_fcs)
+    eq_ctrs = model.constraint(phi, model.state_functions)
     nbr_ctr = len(eq_ctrs)
     if nbr_ctr > 0:
         # Compilation of the constraints
@@ -3724,7 +3724,7 @@ def runDP(
         [
             fc.interpolate(
                 L2_interpolation(
-                    domain, sp_lset, func(model, phi, ste_fcs, adj_fcs), diam2
+                    domain, sp_lset, func(model, phi, model.state_functions, adj_fcs), diam2
                 )
             )
             for fc, func in zip(fcs_to_eval, model._to_eval["function"].values())
@@ -3767,12 +3767,12 @@ def runDP(
         xdmf.write_function(phi, 0)
 
         if degree_space == 1:
-            for f in ste_fcs:
+            for f in model.state_functions:
                 xdmf.write_function(f, 0)
             for f in adj_fcs:
                 xdmf.write_function(f, 0)
         else:
-            ste_fcsP1 = interpolate(ste_fcs, spaceP1, name="u")
+            ste_fcsP1 = interpolate(model.state_functions, spaceP1, name="u")
             adj_fcsP1 = interpolate(adj_fcs, spaceP1, name="p")
             for f in ste_fcsP1:
                 xdmf.write_function(f, 0)
@@ -3816,7 +3816,7 @@ def runDP(
                 [
                     fc.interpolate(
                         L2_interpolation(
-                            domain, sp_lset, func(model, phi, ste_fcs, adj_fcs), diam2
+                            domain, sp_lset, func(model, phi, model.state_functions, adj_fcs), diam2
                         )
                     )
                     for fc, func in zip(
@@ -3840,12 +3840,12 @@ def runDP(
 
             xdmf.write_function(phi, iter)
             if degree_space == 1:
-                for f in ste_fcs:
+                for f in model.state_functions:
                     xdmf.write_function(f, iter)
                 for f in adj_fcs:
                     xdmf.write_function(f, iter)
             else:
-                ste_fcsP1 = interpolate(ste_fcs, spaceP1, name="u")
+                ste_fcsP1 = interpolate(model.state_functions, spaceP1, name="u")
                 adj_fcsP1 = interpolate(adj_fcs, spaceP1, name="p")
                 for f in ste_fcsP1:
                     xdmf.write_function(f, iter)

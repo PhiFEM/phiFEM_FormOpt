@@ -1,17 +1,22 @@
 from formopt import Model
 
 from ufl import (
+    avg,
     TrialFunction,
+    TrialFunctions,
     TestFunction,
+    TestFunctions,
     FacetNormal,
     Identity,
     Measure,
     SpatialCoordinate,
+    CellDiameter,
     Coefficient,
     conditional,
     indices,
     as_vector,
     inner,
+    jump,
     outer,
     grad,
     sym,
@@ -21,12 +26,16 @@ from ufl import (
     cos,
     sqrt,
     nabla_div,
+    div,
     Constant,
     det,
     inv,
     tr,
     ln,
 )
+from dolfinx.fem import Function
+
+from phifem.mesh_scripts import compute_tags_measures  # phiFem
 
 
 """
@@ -86,6 +95,173 @@ class Compliance(Model):
 
         W = self.A(phi) * inner(su, ev) * self.dx
         W -= dot(self.g, v) * self.ds_g
+
+        return [(W, self.bc)]
+
+    def adjoint(self, phi, U):
+        return []
+
+    def cost(self, phi, U):
+
+        u = U[0]
+        su = self.sigma(u)
+        eu = self.epsilon(u)
+
+        J = self.A(phi) * (inner(su, eu)) * self.dx
+
+        return J
+
+    def constraint(self, phi, U):
+
+        C = (1.0 / self.vol) * self.chi(phi) * self.dx
+
+        return [C]
+
+    def derivative(self, phi, U, P):
+
+        u = U[0]
+        su = self.sigma(u)
+        eu = self.epsilon(u)
+
+        S0_J = self.zero_vec
+        S1_J = 2.0 * grad(u).T * su
+        S1_J -= inner(su, eu) * self.Id
+        S1_J *= self.A(phi)
+
+        S0_C = self.zero_vec
+        S1_C = (1.0 / self.vol) * self.chi(phi) * self.Id
+
+        S0 = (S0_J, [S0_C])
+        S1 = (S1_J, [S1_C])
+
+        return S0, S1
+
+    def bilinear_form(self, th, xi):
+
+        nv = FacetNormal(self.domain)
+
+        B = 0.1 * dot(th, xi) * self.dx
+        B += inner(grad(th), grad(xi)) * self.dx
+        B += 1e4 * dot(th, nv) * dot(xi, nv) * self.ds
+        for sb in self.sub:
+            B += 1e4 * sb * dot(th, xi) * self.dx
+
+        return B, False
+
+
+class PhiFEM_interface_compliance(Model):
+    """
+    Models the compliance minimization
+    problem for linear elasticity with phiFEM interface scheme.
+    """
+
+    def __init__(self, dim, domain, space, g, tags_g, dir_bcs, vol, path):
+
+        self.dim = dim
+        self.domain = domain
+        self.space = space
+        self.path = path
+
+        self.outside_factor = 1.e-4
+
+        self.ds = Measure("ds", domain=domain, subdomain_data=tags_g)
+        self.g = as_vector(g)
+        self.bc = dir_bcs
+        self.vol = vol
+        self.sub = []
+        self.normal = FacetNormal(domain)
+        self.cell_diameter = CellDiameter(domain)
+
+        E_in, nu_in = 1.0, 0.3
+        lmbda_in = E_in * nu_in / (1.0 + nu_in) / (1.0 - 2.0 * nu_in)
+        mu_in = E_in / 2.0 / (1.0 + nu_in)
+        E_out = E_in * self.outside_factor
+
+        # phiFEM parameters
+        self.detection_degree = 1
+        self.box_mode = True
+        self.single_layer_cut = True
+        self.coef_in = (E_in / (E_in + E_out)) ** 2
+        self.coef_out = (E_out / (E_in + E_out)) ** 2
+        self.coef_penalization = 1.
+        self.coef_stabilization = 1.
+
+        self.zero_vec = as_vector(dim * [0.0])
+        self.Id = Identity(dim)
+        self.epsilon = lambda w: sym(grad(w))
+        self.sigma_in = lambda w: (
+            lmbda_in * nabla_div(w) * self.Id + 2.0 * mu_in * self.epsilon(w)
+        )
+        self.sigma_out = lambda w: self.outside_factor * self.sigma_in(w)
+        self.chi = lambda w: (conditional(lt(w, 0.0), 1.0, 0.0))
+
+    def set_state_functions(self, state_number):
+        self.state_functions = [Function(self.space.sub(0).collapse()[0]) for _ in range(state_number)]
+
+    def pde(self, phi):
+        cells_tags, facets_tags, _, self.d_bdy, _ = compute_tags_measures(self.domain, phi, self.detection_degree, self.box_mode, self.single_layer_cut)
+        self.dx = Measure("dx", domain=self.domain, subdomain_data=cells_tags)
+        self.dS = Measure("dS", domain=self.domain, subdomain_data=facets_tags)
+
+        u_in, u_out, y_in, y_out, p = TrialFunctions(self.space)
+        v_in, v_out, z_in, z_out, q = TestFunctions(self.space)
+        su_in, su_out = self.sigma_in(u_in), self.sigma_out(u_out)
+        sv_in, sv_out = self.sigma_in(v_in), self.sigma_out(v_out)
+        ev_in, ev_out = self.epsilon(v_in), self.epsilon(v_out)
+
+        boundary_in = inner(dot(y_in, self.facet_normal), v_in)
+        boundary_out = inner(dot(y_out, self.facet_normal), v_out)
+
+        stiffness_in = inner(su_in, ev_in)
+        stiffness_out = inner(su_out, ev_out)
+
+        penalization = self.coef_penalization * (
+            inner(y_in + su_in, z_in + self.sigma_in(v_in)) * self.coef_out
+            + inner(y_out + su_out, z_out + self.sigma_out(v_out)) * self.coef_in
+            + self.cell_diameter ** (-2)
+            * inner(
+                dot(y_in, grad(self.phi)) - dot(y_out, grad(self.phi)),
+                dot(z_in, grad(self.phi)) - dot(z_out, grad(self.phi)),
+            )
+            + self.cell_diameter ** (-2)
+            * inner(
+                u_in - u_out + self.cell_diameter ** (-1) * p * self.phi,
+                v_in - v_out + self.cell_diameter ** (-1) * q * self.phi,
+            )
+        )
+
+        stabilization_facets_in = (
+            self.coef_stabilization
+            * avg(self.cell_diameter)
+            * inner(jump(su_in), self.normal), jump(sv_in), self.normal)
+
+        stabilization_cells_in = (
+            self.coef_stabilization * self.cell_diameter**2 * inner(div(y_in), div(z_in))
+        )
+
+        stabilization_cells_out = (
+            self.coef_stabilization * self.cell_diameter**2 * inner(div(y_out), div(z_out))
+        )
+
+        stabilization_facets_out = (
+            self.coef_stabilization
+            * avg(self.cell_diameter)
+            * inner(jump(su_out, self.normal), jump(sv_out, self.normal))
+        )
+
+        a = (
+            stiffness_in * self.dx((1, 2))
+            + stiffness_out * self.dx((2, 3))
+            + penalization * self.dx(2)
+            + stabilization_facets_in * self.dS(3)
+            + stabilization_facets_out * self.dS(4)
+            + stabilization_cells_in * self.dx(2)
+            + stabilization_cells_out * self.dx(2)
+            + boundary_in * self.d_bdy(100)
+            + boundary_out * self.d_bdy(101)
+        )
+
+        W = a - dot(self.g, v_in) * self.ds_g
 
         return [(W, self.bc)]
 
