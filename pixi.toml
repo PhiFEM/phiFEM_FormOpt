@@ -1,7 +1,7 @@
 [workspace]
-authors = ["Raphaël Bulle <raphael.bulle@inria.fr>"]
+authors = ["Raphaël Bulle <raphael.bulle@inria.fr>" ,"Josué Diaz Avalos <josue.diazavalos@uni-due.de>" ,"Louis Ducongé <louis.duconge3111@gmail.com>" ,"Michel Duprez <michel.duprez@inria.fr>" ,"Antoine Laurain <antoine.laurain@uni-due.de>"]
 channels = ["conda-forge"]
-name = "formopt"
+name = "phifem-formopt"
 platforms = ["linux-64"]
 version = "0.1.0"
 
@@ -18,14 +18,5 @@ pyvista = "0.45.2.*"
 pygmsh = "7.1.17.*"
 h5py = "3.10.0.*"
 
-[feature.phifem]
-channels = ["conda-forge", "main", "r", "msys2"]
-
-[feature.phifem.dependencies]
-pip = "*"
-
-[feature.phifem.pypi-dependencies]
+[pypi-dependencies]
 phifem = "==0.7.0"
-
-[environments]
-phifem = { features = ["phifem"]}
