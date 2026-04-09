@@ -198,7 +198,41 @@ class PhifemInterfaceCompliance(Model):
         self.chi = lambda w: (conditional(lt(w, 0.0), 1.0, 0.0))
 
     def set_state_functions(self, state_number):
-        self.state_functions = [Function(self.space.sub(0).collapse()[0]) for _ in range(state_number)]
+        self.primal_state_functions = [Function(self.space.sub(0).collapse()[0]) for _ in range(state_number)]
+        self.state_functions = [Function(self.space) for _ in range(state_number)]
+
+    def solve_state_problems(self, problems):
+        for i, p in enumerate(problems):
+            p.solve()
+            self.primal_state_functions[i].x.array[:] = self.state_functions[i].sub(0).collapse().x.array[:]
+            
+            solution_uh_in, solution_uh_out, _, _, _ = self.state_functions[i].split()
+
+            tdim = self.domain.topology.dim
+            self.domain.topology.create_connectivity(tdim, tdim)
+            dofs_to_remove_in = locate_dofs_topological(
+                self.space.sub(0), tdim, self.cells_tags.find(3)
+            )
+            dofs_cut_in = locate_dofs_topological(
+                self.space.sub(0), tdim, self.cells_tags.find(2)
+            )
+            dofs_to_remove_in = np.setdiff1d(dofs_to_remove_in, dofs_cut_in)
+
+            dofs_to_remove_out = locate_dofs_topological(
+                self.space.sub(1), tdim, self.cells_tags.find(1)
+            )
+            dofs_cut_out = locate_dofs_topological(
+                self.space.sub(1), tdim, self.cells_tags.find(2)
+            )
+            dofs_to_remove_out = np.setdiff1d(dofs_to_remove_out, dofs_cut_out)
+
+            solution_uh_out.x.array[dofs_cut_out] = solution_uh_out.x.array[dofs_cut_out] / 2.0
+            solution_uh_in.x.array[dofs_cut_in] = solution_uh_in.x.array[dofs_cut_in] / 2.0
+            solution_uh_out.x.array[dofs_to_remove_out] = 0.0
+            solution_uh_in.x.array[dofs_to_remove_in] = 0.0
+            solution_uh_out = solution_uh_out.collapse()
+            solution_uh_in = solution_uh_in.collapse()
+            self.primal_state_functions[i].x.array[:] = solution_uh_in.x.array[:] + solution_uh_out.x.array[:]
 
     def pde(self, phi):
         cells_tags, facets_tags, _, self.d_bdy, _ = compute_tags_measures(self.domain, phi, self.detection_degree, self.box_mode, self.single_layer_cut)

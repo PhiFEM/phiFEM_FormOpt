@@ -3706,7 +3706,7 @@ def runDP(
 
     phi.interpolate(model._get_initial_level())
 
-    [p.solve() for p in ste_pbs]
+    model.solve_state_problems(ste_pbs)
     comm.Barrier()
 
     cost = global_scalar(J, comm)
@@ -3793,7 +3793,7 @@ def runDP(
                 if iter % reinit_step == 0:
                     cls_rein.run(phi, rein_steps, rein_end)
 
-            [p.solve() for p in ste_pbs]
+            model.solve_state_problems(ste_pbs)
             comm.barrier()
 
             cost = global_scalar(J, comm)
