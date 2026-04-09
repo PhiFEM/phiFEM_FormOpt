@@ -1,20 +1,37 @@
-# FormOpt: A FEniCSx toolbox for level set-based shape optimization supporting parallel computing
+# phiFEM-FormOpt
 
-`FormOpt` is a toolbox for two- and three-dimensional shape with parallel computing capabilities,
-built on the `FEniCSx` software framework. 
-The numerical shape modeling relies on a level set method, whose evolution is driven by a descent direction computed from the shape derivative.
-Geometric constraints are treated accurately through a Proximal-Perturbed Lagrangian approach.
-`FormOpt` leverages the powerful features of `FEniCSx`, particularly its support for weak formulations of partial differential equations, diverse finite element types, and scalable parallelism.
-The implementation supports three different parallel computing modes: data parallelism, task parallelism, and a mixed mode. Data parallelism exploits `FEniCSx`'s mesh partitioning features, and we implement a task parallelism mode which is useful for problems governed by a set of partial differential equations with varying parameters. The mixed mode conveniently combines both strategies to achieve efficient utilization of computational resources.
+An implementation of the $\varphi$-FEM schemes in [FormOpt](https://github.com/JD26/FormOpt).
 
-[API reference](https://jd26.github.io/FormOpt/)
+## Installation
 
-Toolbox paper: [preprint](https://arxiv.org/abs/2601.05709)
+### Conda
 
-## Contact:
+1. Download and install [Anaconda](https://www.anaconda.com/) for Windows, Linux, or macOS.
+2. Create an Anaconda environment from the `explicit-env.txt` file:
+   ```bash
+   conda create -n phifem-formopt -f explicit-env.txt
+   ```
+3. Activate the environment:
+   ```bash
+   conda activate phifem-formopt
+   ```
+
+### Pixi
+
+1. Download and install [Pixi](https://pixi.prefix.dev/latest/installation/).
+2. Create and activate Pixi's workspace:
+   ```bash
+   pixi shell
+   ```
+
+## Contact
+
 If you have any questions, suggestions, or need assistance with this project, feel free to reach out:
-- **Josué:** josue.diazavalos@uni-due.de  
-- **Antoine:** antoine.laurain@uni-due.de
+- **Raphaël Bulle:** raphael.bulle@inria.fr
+- **Josué Diaz Avalos:** josue.diazavalos@uni-due.de
+- **Louis Ducongé:** louis.duconge3111@gmail.com
+- **Michel Duprez:** michel.duprez@inria.fr
+- **Antoine Laurain:** antoine.laurain@uni-due.de
 
 ## Repository structure
 
@@ -31,45 +48,11 @@ If you have any questions, suggestions, or need assistance with this project, fe
 ├── results/    		# Directory structure for numerical results
 └── docs/       		# Markdown documentation files
 ```
-## Installation
 
-Currently, `FormOpt` runs under FEniCSx 0.9 (we are working in a version for FEniCSx 0.10).
+## License
 
-1. Download and install [Anaconda](https://www.anaconda.com/) for Windows, Linux, or macOS.
-2. Create a Anaconda environment and install some basic packages:
-	```bash
-	conda create -n fenicsx09
-	```
-	```bash
-	conda activate fenicsx09
-	```
-	```bash
-	conda install -c conda-forge python=3.11.10 numpy=1.26.3 scipy=1.12.0 matplotlib=3.8.3
-	```
-3. Install FEniCSx and its core dependencies:
-	```bash
-	conda install -c conda-forge fenics-dolfinx=0.9.0
-	```
-	```bash
-	conda install mpich=4.3.0
-	```
-	```bash
-	conda install pyvista=0.45.2
-	```
-4. Install additional packages (for mesh generation and working with HDF5 files):
-	```bash
-	conda install -c conda-forge pygmsh=7.1.17 h5py=3.10.0
-	```
+`phiFEM-FormOpt` is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 
-## Example: Heat conduction
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more details.
 
-![Initial distribution](tex/heat1_0.png)
-
-![Optimal distribution](tex/heat1_1.png)
-
-## Example: Inverse elasticity
-
-![Initial guess](tex/inv2_0.png)
-
-![Recovered inclusions](tex/inv2_1.png)
-
+You should have received a copy of the GNU Lesser General Public License along with `phiFEM-FormOpt`. If not, see [http://www.gnu.org/licenses/](http://www.gnu.org/licenses/).
