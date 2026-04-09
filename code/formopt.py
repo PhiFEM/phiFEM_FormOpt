@@ -3561,7 +3561,7 @@ def runDP(
     nbr_ste = len(ste_eqs)
     model.set_state_functions(nbr_ste)
     for i in range(nbr_ste):
-        model.state_functions[i].name = "u" + str(i)
+        model.primal_state_functions[i].name = "u" + str(i)
 
     # Solvers creation
     ste_pbs = []
@@ -3661,20 +3661,20 @@ def runDP(
         qs_names = []
 
         for name, fc in model._to_eval["quantity"].items():
-            to_ev_qs.append(form(fc(model, phi, model.state_functions, adj_fcs)))
+            to_ev_qs.append(form(fc(model, phi, model.primal_state_functions, adj_fcs)))
             qs_names.append(name)
 
         if rank == 0:
             tosave.add_qtty_names(qs_names)
 
     # Cost functional
-    J = form(model.cost(phi, model.state_functions))
+    J = form(model.cost(phi, model.primal_state_functions))
     # Derivative components
-    S0_cts, S1_cts = model.derivative(phi, model.state_functions, adj_fcs)
+    S0_cts, S1_cts = model.derivative(phi, model.primal_state_functions, adj_fcs)
     S0 = S0_cts[0]
     S1 = S1_cts[0]
     # Equality constraints
-    eq_ctrs = model.constraint(phi, model.state_functions)
+    eq_ctrs = model.constraint(phi, model.primal_state_functions)
     nbr_ctr = len(eq_ctrs)
     if nbr_ctr > 0:
         # Compilation of the constraints
@@ -3724,7 +3724,7 @@ def runDP(
         [
             fc.interpolate(
                 L2_interpolation(
-                    domain, sp_lset, func(model, phi, model.state_functions, adj_fcs), diam2
+                    domain, sp_lset, func(model, phi, model.primal_state_functions, adj_fcs), diam2
                 )
             )
             for fc, func in zip(fcs_to_eval, model._to_eval["function"].values())
@@ -3767,12 +3767,12 @@ def runDP(
         xdmf.write_function(phi, 0)
 
         if degree_space == 1:
-            for f in model.state_functions:
+            for f in model.primal_state_functions:
                 xdmf.write_function(f, 0)
             for f in adj_fcs:
                 xdmf.write_function(f, 0)
         else:
-            ste_fcsP1 = interpolate(model.state_functions, spaceP1, name="u")
+            ste_fcsP1 = interpolate(model.primal_state_functions, spaceP1, name="u")
             adj_fcsP1 = interpolate(adj_fcs, spaceP1, name="p")
             for f in ste_fcsP1:
                 xdmf.write_function(f, 0)
@@ -3816,7 +3816,7 @@ def runDP(
                 [
                     fc.interpolate(
                         L2_interpolation(
-                            domain, sp_lset, func(model, phi, model.state_functions, adj_fcs), diam2
+                            domain, sp_lset, func(model, phi, model.primal_state_functions, adj_fcs), diam2
                         )
                     )
                     for fc, func in zip(
@@ -3840,12 +3840,12 @@ def runDP(
 
             xdmf.write_function(phi, iter)
             if degree_space == 1:
-                for f in model.state_functions:
+                for f in model.primal_state_functions:
                     xdmf.write_function(f, iter)
                 for f in adj_fcs:
                     xdmf.write_function(f, iter)
             else:
-                ste_fcsP1 = interpolate(model.state_functions, spaceP1, name="u")
+                ste_fcsP1 = interpolate(model.primal_state_functions, spaceP1, name="u")
                 adj_fcsP1 = interpolate(adj_fcs, spaceP1, name="p")
                 for f in ste_fcsP1:
                     xdmf.write_function(f, iter)

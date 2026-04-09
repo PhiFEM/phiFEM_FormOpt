@@ -33,7 +33,9 @@ from ufl import (
     tr,
     ln,
 )
-from dolfinx.fem import Function
+from dolfinx.fem import Function, locate_dofs_topological
+
+import numpy as np
 
 from phifem.mesh_scripts import compute_tags_measures  # phiFem
 
@@ -149,7 +151,7 @@ class Compliance(Model):
         return B, False
 
 
-class PhiFEM_interface_compliance(Model):
+class PhifemInterfaceCompliance(Model):
     """
     Models the compliance minimization
     problem for linear elasticity with phiFEM interface scheme.
@@ -169,7 +171,7 @@ class PhiFEM_interface_compliance(Model):
         self.bc = dir_bcs
         self.vol = vol
         self.sub = []
-        self.normal = FacetNormal(domain)
+        self.facet_normal = FacetNormal(domain)
         self.cell_diameter = CellDiameter(domain)
 
         E_in, nu_in = 1.0, 0.3
