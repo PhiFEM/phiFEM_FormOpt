@@ -66,6 +66,112 @@ test_43 : Symmetric cantilever 3D - Data Parallelism (2 process)
 test_44 : Symmetric cantilever 3D - Data Parallelism (4 process)
 """
 
+def test_00():
+    """
+    phiFEM - Symmetric Cantilever 2D - Data Parallelism
+
+    Run `python test.py 00`.
+
+    To save the output, append `> ../results/t01/out.txt`.
+    To delete the images, enter `rm ../results/t01/*.png`.
+    """
+
+    test_name = "Symmetric Cantilever 2D - Data Parallelism"
+    test_path = Path("../results/t00/")
+    dim = 2
+    mesh_size = 0.015
+
+    vertices = np.array(
+        [(0.0, 0.0), (2.0, 0.0), (2.0, 0.45), (2.0, 0.55), (2.0, 1.0), (0.0, 1.0)]
+    )
+
+    dir_idx, dir_mkr = [6], 1
+    neu_idx, neu_mkr = [3], 2
+    boundary_parts = [(dir_idx, dir_mkr, "dir"), (neu_idx, neu_mkr, "neu")]
+
+    # Create gmsh domain for Data Parallelism
+    output = fop.create_domain_2d_DP(
+        vertices, boundary_parts, mesh_size, path=test_path, plot=False
+    )
+
+    domain, nbr_tri, boundary_tags = output
+
+    if rank == 0:
+        print("\n\t" + test_name + "\n")
+        print(f"> Path = {test_path}")
+        print(f"> Nbr of triangles = {nbr_tri}")
+
+    # Space for the PDE solution
+    gdim = domain.geometry.dim
+    cell_name = domain.topology.cell_name()
+    primal_element = element("Lagrange", cell_name, 1, shape=(gdim,))
+    flux_element = element("Lagrange", cell_name, 1, shape=(gdim, gdim))
+    auxiliary_element = element("Lagrange", cell_name, 1, shape=(gdim,))
+
+    mixd_element = mixed_element(
+        [primal_element, primal_element, flux_element, flux_element, auxiliary_element]
+    )
+    primal_space = functionspace(domain, primal_element)
+    space = functionspace(domain, mixd_element)
+
+    # Dirichlet condition
+    u_dbc_in = Function(primal_space)
+
+    bc_in_dofs = locate_dofs_topological(
+        (space.sub(0), primal_space), gdim - 1, boundary_tags.find(3)
+    )
+    dbc_in = dirichletbc(u_dbc_in, bc_in_dofs, space.sub(0))
+    dirichlet_bcs = [dbc_in]
+
+    area = 1.0
+    g = (0.0, -2.0)
+    # Create the model
+    md = PhifemInterfaceCompliance(dim, domain, space, g, boundary_tags, dirichlet_bcs, area, test_path)
+
+    @fop.region_of(domain)
+    def sub_domain(x):
+        # 0.42 < x[1] < 0.58
+        # 1.95 < x[0]
+        ineqs = [x[1] - 0.42, 0.58 - x[1], x[0] - 1.90]
+        return ineqs
+
+    md.sub = [sub_domain.expression()]
+
+    # Initial guess: centers and radii
+
+    # First set of centers (for example in manuscript):
+    centers = [(2.0, 0.35), (2.0, 0.65), (2.0, 0.0), (2.0, 1.0)]
+    centers += [(0.0, 0.25), (0.0, 0.5), (0.0, 0.75)]
+    centers += [(0.3 + i * 0.7, 0.0) for i in range(3)]
+    centers += [(0.65 + i * 0.7, 0.25) for i in range(2)]
+    centers += [(0.3 + i * 0.7, 0.5) for i in range(3)]
+    centers += [(0.65 + i * 0.7, 0.75) for i in range(2)]
+    centers += [(0.3 + i * 0.7, 1.0) for i in range(3)]
+
+    # Second set of centers:
+    # centers = [(0.0, 0.5), (2.0, 0.35), (2.0, 0.65)]
+    # centers += [((1 + i) * 0.25, 0.0) for i in range(8)]
+    # centers += [(i * 0.5, 0.25) for i in range(5)]
+    # centers += [(0.25 + i * 0.5, 0.5) for i in range(4)]
+    # centers += [(i * 0.5, 0.75) for i in range(5)]
+    # centers += [((1 + i) * 0.25, 1.0) for i in range(8)]
+
+    centers = np.array(centers)
+    radii = np.repeat(0.1, centers.shape[0])
+
+    # Create the initial level set function
+    md.create_initial_level(centers, radii)
+    # Save as initial.xdmf
+    md.save_initial_level(comm)
+
+    md.runDP(
+        ctrn_tol=1e-3,
+        dfactor=1e-1,
+        reinit_step=4,
+        reinit_pars=(20, 0.1),
+        smooth=True,
+    )
+
 
 def test_01():
     """
@@ -4445,6 +4551,7 @@ def test_44():
 
 
 test_functions = {
+    "00": test_00,
     "01": test_01,
     "02": test_02,
     "03": test_03,
