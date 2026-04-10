@@ -3240,6 +3240,19 @@ def phifem_run(
     else:
         adj_fcs = []
 
+    # to be evaluated: quantities
+    nbr_to_ev_qs = len(model._to_eval["quantity"])
+    if nbr_to_ev_qs > 0:
+        to_ev_qs = []
+        qs_names = []
+
+        for name, fc in model._to_eval["quantity"].items():
+            to_ev_qs.append(form(fc(model, phi, ste_fcs, adj_fcs)))
+            qs_names.append(name)
+
+        if rank == 0:
+            tosave.add_qtty_names(qs_names)
+
     # Derivative components
     S0_cts, S1_cts = model.derivative(phi, ste_fcs, adj_fcs)
     S0 = S0_cts[0]
@@ -3258,9 +3271,6 @@ def phifem_run(
             S1 += L[i] * S1_cts[1][i]
     # Derivative norm
     nDJ = form((model.bilinear_form(tht, tht))[0])
-
-    # To calculate the velocity field
-    cls_vlty = Velocity(dim, domain, sp_vlty, model.bilinear_form, S0, S1)
 
     # To calculate the level set function
     cls_lset = Level(domain, sp_lset, phi, tht, diam2, smooth)
@@ -3286,6 +3296,8 @@ def phifem_run(
     model.dS = Measure("dS", domain=domain, subdomain_data=facets_tags)
 
     #######################################################################
+    # To calculate the velocity field
+    cls_vlty = Velocity(dim, domain, sp_vlty, model.bilinear_form, S0, S1)
 
     cls_smt = Smooth(domain, sp_lset, phi, diam2)
     cls_smt.run(phi)
@@ -3314,6 +3326,9 @@ def phifem_run(
             phifem_solve_mixed(nbr_adj, adj_eqs, adj_fcs, model.map)
         comm.barrier()
 
+    if nbr_to_ev_qs > 0:
+        qs_eval = global_scalar_list(to_ev_qs, comm)
+
     cls_vlty.run(tht)  # model.dx
     nder = global_scalar(nDJ, comm, np.sqrt)
 
@@ -3332,7 +3347,8 @@ def phifem_run(
         else:
             print1(0, cost, nder, 0)
         tosave.add(cost, nder)
-
+        if nbr_to_ev_qs > 0:
+            tosave.add_quantities(qs_eval)
     # ====================================================
     spaceP1 = None
     degree_space = model.space.ufl_element().degree
@@ -3411,6 +3427,9 @@ def phifem_run(
                     phifem_solve_mixed(nbr_adj, adj_eqs, adj_fcs, model.map)
                 comm.barrier()
 
+            if nbr_to_ev_qs > 0:
+                qs_eval = global_scalar_list(to_ev_qs, comm)
+
             cls_vlty.run(tht)  # model.dx
 
             nder = global_scalar(nDJ, comm, np.sqrt)
@@ -3444,6 +3463,8 @@ def phifem_run(
                 else:
                     print1(iter, cost, nder, lset_steps)
                 tosave.add(cost, nder)
+                if nbr_to_ev_qs > 0:
+                    tosave.add_quantities(qs_eval)
 
                 if iter > start_to_check:
                     if nbr_ctr > 0:
