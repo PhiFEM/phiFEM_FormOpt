@@ -3556,12 +3556,15 @@ def runDP(
     sp_lset = create_space(domain, "CG", 1)
     phi = Function(sp_lset)
     phi.name = "phi"
+    phi.interpolate(model._get_initial_level())
+
     # Velocity field
     sp_vlty = create_space(domain, "CG", dim)
     tht = Function(sp_vlty)
     tht.name = "tht"
 
     # State equations/functions
+    model.update_measures_and_tags(phi)
     ste_eqs = model.pde(phi)
     nbr_ste = len(ste_eqs)
     model.set_state_functions(nbr_ste)
@@ -3709,8 +3712,6 @@ def runDP(
     # Iteration i = 0 =======
     start_solve = MPI.Wtime()
 
-    phi.interpolate(model._get_initial_level())
-
     model.solve_state_problems(ste_pbs)
     comm.Barrier()
 
@@ -3798,6 +3799,7 @@ def runDP(
                 if iter % reinit_step == 0:
                     cls_rein.run(phi, rein_steps, rein_end)
 
+            model.update_measures_and_tags(phi)
             model.solve_state_problems(ste_pbs)
             comm.barrier()
 

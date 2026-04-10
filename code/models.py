@@ -88,6 +88,18 @@ class Compliance(Model):
         self.A = lambda w: (conditional(lt(w, 0.0), 1.0, 1e-4))
         self.chi = lambda w: (conditional(lt(w, 0.0), 1.0, 0.0))
 
+    def update_measures_and_tags(self, phi):
+        return
+
+    def set_state_functions(self, state_number):
+        self.primal_state_functions = [Function(self.space) for _ in range(state_number)]
+        self.state_functions = [Function(self.space) for _ in range(state_number)]
+
+    def solve_state_problems(self, problems):
+            for i, p in enumerate(problems):
+                p.solve()
+                self.primal_state_functions[i].x.array[:] = self.state_functions[i].x.array[:]
+        
     def pde(self, phi):
 
         u = TrialFunction(self.space)
@@ -157,7 +169,7 @@ class PhifemInterfaceCompliance(Model):
     problem for linear elasticity with phiFEM interface scheme.
     """
 
-    def __init__(self, dim, domain, space, g, tags_g, dir_bcs, vol, path):
+    def __init__(self, dim, domain, space, g, ds_g, dir_bcs, vol, path):
 
         self.dim = dim
         self.domain = domain
@@ -166,7 +178,8 @@ class PhifemInterfaceCompliance(Model):
 
         self.outside_factor = 1.e-4
 
-        self.ds = Measure("ds", domain=domain, subdomain_data=tags_g)
+        self.ds = Measure("ds", domain=domain)
+        self.ds_g = ds_g
         self.g = as_vector(g)
         self.bc = dir_bcs
         self.vol = vol
@@ -200,6 +213,11 @@ class PhifemInterfaceCompliance(Model):
     def set_state_functions(self, state_number):
         self.primal_state_functions = [Function(self.space.sub(0).collapse()[0]) for _ in range(state_number)]
         self.state_functions = [Function(self.space) for _ in range(state_number)]
+
+    def update_measures_and_tags(self, phi):
+        self.cells_tags, self.facets_tags, _, self.d_bdy, _ = compute_tags_measures(self.domain, phi, self.detection_degree, self.box_mode, self.single_layer_cut)
+        self.dx = Measure("dx", domain=self.domain, subdomain_data=self.cells_tags)
+        self.dS = Measure("dS", domain=self.domain, subdomain_data=self.facets_tags)
 
     def solve_state_problems(self, problems):
         for i, p in enumerate(problems):
@@ -235,10 +253,6 @@ class PhifemInterfaceCompliance(Model):
             self.primal_state_functions[i].x.array[:] = solution_uh_in.x.array[:] + solution_uh_out.x.array[:]
 
     def pde(self, phi):
-        self.cells_tags, self.facets_tags, _, self.d_bdy, _ = compute_tags_measures(self.domain, phi, self.detection_degree, self.box_mode, self.single_layer_cut)
-        self.dx = Measure("dx", domain=self.domain, subdomain_data=self.cells_tags)
-        self.dS = Measure("dS", domain=self.domain, subdomain_data=self.facets_tags)
-
         u_in, u_out, y_in, y_out, p = TrialFunctions(self.space)
         v_in, v_out, z_in, z_out, q = TestFunctions(self.space)
         su_in, su_out = self.sigma_in(u_in), self.sigma_out(u_out)
@@ -297,7 +311,7 @@ class PhifemInterfaceCompliance(Model):
             + boundary_out * self.d_bdy(101)
         )
 
-        W = a - dot(self.g, v_in) * self.ds
+        W = a - dot(self.g, v_in) * self.ds_g
 
         return [(W, self.bc)]
 
