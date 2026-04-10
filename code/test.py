@@ -111,22 +111,31 @@ def test_00():
     mixd_element = mixed_element(
         [primal_element, primal_element, flux_element, flux_element, auxiliary_element]
     )
-    primal_space = functionspace(domain, primal_element)
     space = functionspace(domain, mixd_element)
 
     # Dirichlet condition
-    u_dbc_in = Function(primal_space)
+    u_dbc = Function(space)
+    u_dbc_in, u_dbc_out, _, _, _ = u_dbc.split()
 
-    bc_in_dofs = locate_dofs_topological(
-        (space.sub(0), primal_space), gdim - 1, boundary_tags.find(3)
+    fdim = gdim - 1
+    dofs_dirichlet_in = locate_dofs_topological(
+        space.sub(0), fdim, boundary_tags.find(dir_mkr)
     )
-    dbc_in = dirichletbc(u_dbc_in, bc_in_dofs, space.sub(0))
-    dirichlet_bcs = [dbc_in]
+    bc_in = dirichletbc(u_dbc_in, dofs_dirichlet_in)
+    dofs_dirichlet_out = locate_dofs_topological(
+        space.sub(1), fdim, boundary_tags.find(dir_mkr)
+    )
+    bc_out = dirichletbc(u_dbc_out, dofs_dirichlet_out)
+
+    dirichlet_bcs = [bc_in, bc_out]
+    
+    # Boundary to force application
+    ds_g = fop.marked_ds(domain, boundary_tags, [neu_mkr])
 
     area = 1.0
     g = (0.0, -2.0)
     # Create the model
-    md = PhifemInterfaceCompliance(dim, domain, space, g, boundary_tags, dirichlet_bcs, area, test_path)
+    md = PhifemInterfaceCompliance(dim, domain, space, g, ds_g[0], dirichlet_bcs, area, test_path)
 
     @fop.region_of(domain)
     def sub_domain(x):

@@ -2429,9 +2429,14 @@ def homogeneous_dirichlet(
         dofs = locate_dofs_topological(
             space,
             domain.geometry.dim - 1,
-            boundary_tags.indices[boundary_tags.values == mk],
+            boundary_tags.find(mk),
         )
-        bcs.append(dirichletbc(u_zero, dofs, space))
+        if isinstance(space, tuple):
+            u_zero = Function(space[0].collapse()[0])
+            bcs.append(dirichletbc(u_zero, dofs, space[0]))
+        else:
+            bcs.append(dirichletbc(u_zero, dofs, space))
+
     return bcs
 
 
