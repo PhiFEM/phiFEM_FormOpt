@@ -60,7 +60,7 @@ class ComplianceElasticity(Model):
         )
         self.chi = lambda w: conditional(lt(w, 0.0), 1.0, 0.0)
         self.vol = volume
-        self.factor = 25.0
+        self.factor = 1.0
 
     @qtty_to_eval("Volume")
     def Volume(self, phi, U, P):
@@ -76,10 +76,10 @@ class ComplianceElasticity(Model):
         yp = dot(y, grad(phi)) + (p * phi / hT)
         zq = dot(z, grad(phi)) + (q * phi / hT)
 
-        gamma_u = 1.0
-        gamma_p = 1.0
-        sigma_D = 20.0
-        gamma_div = 1.0
+        gamma_u = 0.01
+        gamma_p = 0.01
+        sigma_D = 0.1
+        gamma_div = 0.1
 
         su, sv = self.sigma(u), self.sigma(v)
         ev = self.epsilon(v)
@@ -91,7 +91,7 @@ class ComplianceElasticity(Model):
         wf += gamma_p * (hT**-2) * dot(yp, zq) * self.dx(2)
 
         # Estabilization
-        wf += sigma_D * avg(hT) * inner(jump(su, nf), jump(sv, nf)) * self.dS((2, 3))
+        wf += sigma_D * avg(hT) * inner(jump(su, nf), jump(sv, nf)) * self.dS(3)
         wf += gamma_div * inner(div(y), div(z)) * self.dx(2)
 
         # Force application

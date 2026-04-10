@@ -76,7 +76,7 @@ def test_02():
     # Boundary to force application
     dsg = fop.marked_ds(domain, boundary_tags, [neu_mkr])[0]
 
-    volume, g = 1.0, (0.0, -0.8)
+    volume, g = 1.0, (0.0, -2.0)
 
     md = ComplianceElasticity(
         dim,
@@ -109,11 +109,11 @@ def test_02():
     md.create_initial_level(centers, radii)
 
     md.phifem_run(
-        niter=150,
+        niter=250,
         ctrn_tol=1e-3,
-        dfactor=1e-2,
+        dfactor=1e-1,
         reinit_step=4,
-        reinit_pars=(10, 0.001),
+        reinit_pars=(16, 0.01),
         smooth=True,
     )
 

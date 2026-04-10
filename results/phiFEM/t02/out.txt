@@ -1,0 +1,77 @@
+Info    : Reading '../results/phiFEM/t02/domain.msh'...
+Info    : 13 entities
+Info    : 23463 nodes
+Info    : 46434 elements
+Info    : Done reading '../results/phiFEM/t02/domain.msh'
+> Nbr of triangles = 46324
+> Iterations:
+i =   0 | cost = 2.4770 | cstr = 1.6007 | nder = 4.7250 | steps =  0 | lagr = 2.4770 | lm = 0.0000 | mu = 0.0000 | 
+i =   1 | cost = 2.1045 | cstr = 1.6236 | nder = 2.8097 | steps = 14 | lagr = 2.4930 | lm = 1.2459 | mu = 0.0000 | 
+i =   2 | cost = 1.8910 | cstr = 1.6369 | nder = 1.8848 | steps = 14 | lagr = 2.4515 | lm = 1.5163 | mu = 0.2438 | 
+i =   3 | cost = 1.8024 | cstr = 1.6424 | nder = 1.3320 | steps = 14 | lagr = 2.5270 | lm = 1.7697 | mu = 0.4863 | 
+i =   4 | cost = 1.7300 | cstr = 1.6369 | nder = 1.1632 | steps = 15 | lagr = 2.5988 | lm = 2.0005 | mu = 0.7279 | 
+i =   5 | cost = 1.6706 | cstr = 1.6208 | nder = 1.0459 | steps = 16 | lagr = 2.6578 | lm = 2.2103 | mu = 0.9699 | 
+i =   6 | cost = 1.7097 | cstr = 1.5908 | nder = 1.0998 | steps = 15 | lagr = 2.7750 | lm = 2.3934 | mu = 1.2130 | 
+i =   7 | cost = 1.7161 | cstr = 1.5584 | nder = 1.1629 | steps = 16 | lagr = 2.8418 | lm = 2.5738 | mu = 1.4581 | 
+i =   8 | cost = 1.7458 | cstr = 1.5198 | nder = 1.2433 | steps = 16 | lagr = 2.9020 | lm = 2.7435 | mu = 1.7049 | 
+i =   9 | cost = 1.6846 | cstr = 1.4767 | nder = 1.3513 | steps = 15 | lagr = 2.8424 | lm = 2.9051 | mu = 1.9527 | 
+i =  10 | cost = 1.8543 | cstr = 1.4293 | nder = 1.4127 | steps = 16 | lagr = 2.9831 | lm = 3.0580 | mu = 2.2002 | 
+i =  11 | cost = 1.9125 | cstr = 1.3841 | nder = 1.4868 | steps = 16 | lagr = 2.9989 | lm = 3.2122 | mu = 2.4448 | 
+i =  12 | cost = 1.9514 | cstr = 1.3370 | nder = 1.5610 | steps = 16 | lagr = 2.9692 | lm = 3.3569 | mu = 2.6836 | 
+i =  13 | cost = 1.8863 | cstr = 1.2907 | nder = 1.6479 | steps = 15 | lagr = 2.8173 | lm = 3.4933 | mu = 2.9125 | 
+i =  14 | cost = 1.9485 | cstr = 1.2418 | nder = 1.6878 | steps = 16 | lagr = 2.7632 | lm = 3.6101 | mu = 3.1269 | 
+i =  15 | cost = 2.0220 | cstr = 1.1931 | nder = 1.7236 | steps = 14 | lagr = 2.7001 | lm = 3.7057 | mu = 3.3200 | 
+i =  16 | cost = 2.0489 | cstr = 1.1455 | nder = 1.7392 | steps = 15 | lagr = 2.5772 | lm = 3.7761 | mu = 3.4854 | 
+i =  17 | cost = 2.0944 | cstr = 1.0994 | nder = 1.7388 | steps = 16 | lagr = 2.4638 | lm = 3.8158 | mu = 3.6173 | 
+i =  18 | cost = 2.1408 | cstr = 1.0537 | nder = 1.6941 | steps = 16 | lagr = 2.3431 | lm = 3.8185 | mu = 3.7112 | 
+i =  19 | cost = 2.2148 | cstr = 1.0150 | nder = 1.6710 | steps = 15 | lagr = 2.2715 | lm = 3.7933 | mu = 3.7633 | 
+i =  20 | cost = 2.2949 | cstr = 0.9774 | nder = 1.6026 | steps = 15 | lagr = 2.2101 | lm = 3.7329 | mu = 3.7780 | 
+i =  21 | cost = 2.3407 | cstr = 0.9440 | nder = 1.5542 | steps = 16 | lagr = 2.1335 | lm = 3.6440 | mu = 3.7559 | 
+i =  22 | cost = 2.3682 | cstr = 0.9148 | nder = 1.5092 | steps = 16 | lagr = 2.0602 | lm = 3.5316 | mu = 3.7018 | 
+i =  23 | cost = 2.4044 | cstr = 0.8896 | nder = 1.4521 | steps = 15 | lagr = 2.0168 | lm = 3.4003 | mu = 3.6209 | 
+i =  24 | cost = 2.4560 | cstr = 0.8713 | nder = 1.4143 | steps = 15 | lagr = 2.0199 | lm = 3.2611 | mu = 3.5181 | 
+i =  25 | cost = 2.4183 | cstr = 0.8592 | nder = 1.4163 | steps = 16 | lagr = 1.9593 | lm = 3.1191 | mu = 3.4004 | 
+i =  26 | cost = 2.4196 | cstr = 0.8508 | nder = 1.4100 | steps = 15 | lagr = 1.9535 | lm = 2.9752 | mu = 3.2733 | 
+i =  27 | cost = 2.4169 | cstr = 0.8459 | nder = 1.4115 | steps = 15 | lagr = 1.9567 | lm = 2.8320 | mu = 3.1399 | 
+i =  28 | cost = 2.4204 | cstr = 0.8466 | nder = 1.3459 | steps = 16 | lagr = 1.9833 | lm = 2.6966 | mu = 3.0030 | 
+i =  29 | cost = 2.3905 | cstr = 0.8504 | nder = 1.3176 | steps = 16 | lagr = 1.9841 | lm = 2.5680 | mu = 2.8668 | 
+i =  30 | cost = 2.3691 | cstr = 0.8555 | nder = 1.2455 | steps = 15 | lagr = 1.9950 | lm = 2.4449 | mu = 2.7336 | 
+i =  31 | cost = 2.2995 | cstr = 0.8625 | nder = 1.2149 | steps = 16 | lagr = 1.9603 | lm = 2.3296 | mu = 2.6043 | 
+i =  32 | cost = 2.2110 | cstr = 0.8670 | nder = 1.0907 | steps = 16 | lagr = 1.8988 | lm = 2.2147 | mu = 2.4805 | 
+i =  33 | cost = 2.2772 | cstr = 0.8698 | nder = 1.1295 | steps = 15 | lagr = 1.9868 | lm = 2.1001 | mu = 2.3603 | 
+i =  34 | cost = 2.2084 | cstr = 0.8784 | nder = 1.0062 | steps = 16 | lagr = 1.9505 | lm = 1.9994 | mu = 2.2424 | 
+i =  35 | cost = 2.2448 | cstr = 0.8885 | nder = 1.0522 | steps = 16 | lagr = 2.0196 | lm = 1.9088 | mu = 2.1315 | 
+i =  36 | cost = 2.2116 | cstr = 0.9002 | nder = 0.9879 | steps = 16 | lagr = 2.0190 | lm = 1.8297 | mu = 2.0291 | 
+i =  37 | cost = 2.1973 | cstr = 0.9133 | nder = 0.9432 | steps = 16 | lagr = 2.0369 | lm = 1.7634 | mu = 1.9366 | 
+i =  38 | cost = 2.1696 | cstr = 0.9261 | nder = 0.9144 | steps = 15 | lagr = 2.0380 | lm = 1.7080 | mu = 1.8555 | 
+i =  39 | cost = 2.1321 | cstr = 0.9376 | nder = 0.8553 | steps = 16 | lagr = 2.0245 | lm = 1.6613 | mu = 1.7860 | 
+i =  40 | cost = 2.1340 | cstr = 0.9481 | nder = 0.8376 | steps = 15 | lagr = 2.0471 | lm = 1.6233 | mu = 1.7270 | 
+i =  41 | cost = 2.1851 | cstr = 0.9589 | nder = 0.8790 | steps = 16 | lagr = 2.1178 | lm = 1.5956 | mu = 1.6777 | 
+i =  42 | cost = 2.1543 | cstr = 0.9716 | nder = 0.8258 | steps = 15 | lagr = 2.1086 | lm = 1.5818 | mu = 1.6385 | 
+i =  43 | cost = 2.1819 | cstr = 0.9805 | nder = 0.8139 | steps = 16 | lagr = 2.1508 | lm = 1.5724 | mu = 1.6114 | 
+i =  44 | cost = 2.1180 | cstr = 0.9920 | nder = 0.7653 | steps = 16 | lagr = 2.1054 | lm = 1.5769 | mu = 1.5928 | 
+i =  45 | cost = 2.0224 | cstr = 0.9982 | nder = 0.7471 | steps = 16 | lagr = 2.0196 | lm = 1.5816 | mu = 1.5852 | 
+i =  46 | cost = 2.0731 | cstr = 0.9994 | nder = 0.7233 | steps = 16 | lagr = 2.0721 | lm = 1.5822 | mu = 1.5835 | 
+i =  47 | cost = 2.0282 | cstr = 1.0040 | nder = 0.7327 | steps = 16 | lagr = 2.0346 | lm = 1.5909 | mu = 1.5829 | 
+i =  48 | cost = 2.0306 | cstr = 1.0057 | nder = 0.6975 | steps = 16 | lagr = 2.0396 | lm = 1.5981 | mu = 1.5867 | 
+i =  49 | cost = 2.0217 | cstr = 1.0063 | nder = 0.6832 | steps = 16 | lagr = 2.0318 | lm = 1.6047 | mu = 1.5921 | 
+i =  50 | cost = 2.0355 | cstr = 1.0070 | nder = 0.6872 | steps = 16 | lagr = 2.0467 | lm = 1.6120 | mu = 1.5981 | 
+i =  51 | cost = 2.0377 | cstr = 1.0070 | nder = 0.6892 | steps = 16 | lagr = 2.0489 | lm = 1.6186 | mu = 1.6047 | 
+i =  52 | cost = 2.0371 | cstr = 1.0062 | nder = 0.6886 | steps = 16 | lagr = 2.0471 | lm = 1.6236 | mu = 1.6113 | 
+i =  53 | cost = 2.0381 | cstr = 1.0070 | nder = 0.6749 | steps = 16 | lagr = 2.0495 | lm = 1.6311 | mu = 1.6171 | 
+i =  54 | cost = 2.0424 | cstr = 1.0073 | nder = 0.7048 | steps = 16 | lagr = 2.0543 | lm = 1.6383 | mu = 1.6238 | 
+i =  55 | cost = 2.0384 | cstr = 1.0075 | nder = 0.7033 | steps = 15 | lagr = 2.0507 | lm = 1.6457 | mu = 1.6306 | 
+i =  56 | cost = 2.0354 | cstr = 1.0066 | nder = 0.7285 | steps = 16 | lagr = 2.0463 | lm = 1.6510 | mu = 1.6377 | 
+i =  57 | cost = 2.0407 | cstr = 1.0053 | nder = 0.6927 | steps = 16 | lagr = 2.0496 | lm = 1.6547 | mu = 1.6440 | 
+i =  58 | cost = 2.0471 | cstr = 1.0051 | nder = 0.7258 | steps = 16 | lagr = 2.0556 | lm = 1.6592 | mu = 1.6490 | 
+i =  59 | cost = 2.0378 | cstr = 1.0047 | nder = 0.7069 | steps = 16 | lagr = 2.0457 | lm = 1.6633 | mu = 1.6538 | 
+i =  60 | cost = 2.0409 | cstr = 1.0038 | nder = 0.6955 | steps = 16 | lagr = 2.0471 | lm = 1.6659 | mu = 1.6583 | 
+i =  61 | cost = 2.0443 | cstr = 1.0026 | nder = 0.6994 | steps = 16 | lagr = 2.0487 | lm = 1.6672 | mu = 1.6619 | 
+i =  62 | cost = 2.0510 | cstr = 1.0029 | nder = 0.7192 | steps = 16 | lagr = 2.0559 | lm = 1.6702 | mu = 1.6644 | 
+i =  63 | cost = 2.0458 | cstr = 1.0014 | nder = 0.6998 | steps = 16 | lagr = 2.0481 | lm = 1.6698 | mu = 1.6671 | 
+i =  64 | cost = 2.0513 | cstr = 1.0013 | nder = 0.6766 | steps = 15 | lagr = 2.0534 | lm = 1.6709 | mu = 1.6684 | 
+i =  65 | cost = 2.0300 | cstr = 1.0008 | nder = 0.6834 | steps = 16 | lagr = 2.0313 | lm = 1.6711 | mu = 1.6695 | 
+i =  66 | cost = 2.0453 | cstr = 0.9997 | nder = 0.7043 | steps = 16 | lagr = 2.0447 | lm = 1.6696 | mu = 1.6703 | 
+> Stopping condition reached!
+> Assembly time = 3.785437516000002 s
+> Resolution time = 321.11924075700017 s
