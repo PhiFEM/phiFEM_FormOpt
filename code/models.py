@@ -322,9 +322,11 @@ class PhifemInterfaceCompliance(Model):
 
         u = U[0]
         su_in = self.sigma_in(u)
+        su_out = self.sigma_out(u)
         eu = self.epsilon(u)
 
         J = inner(su_in, eu) * self.dx(1)
+        J = inner(su_out, eu) * self.dx((2,3))
 
         return J
 

@@ -21,6 +21,7 @@ from pathlib import Path  # To manage where results are saved
 from basix.ufl import element, mixed_element
 from dolfinx.fem import functionspace, Function, dirichletbc, locate_dofs_topological
 
+from petsc4py import PETSc
 # Necessary for all parallelism modes
 from mpi4py import MPI
 
@@ -72,8 +73,8 @@ def test_00():
 
     Run `python test.py 00`.
 
-    To save the output, append `> ../results/t01/out.txt`.
-    To delete the images, enter `rm ../results/t01/*.png`.
+    To save the output, append `> ../results/t00/out.txt`.
+    To delete the images, enter `rm ../results/t00/*.png`.
     """
 
     test_name = "Symmetric Cantilever 2D - Data Parallelism"
@@ -128,7 +129,7 @@ def test_00():
     bc_out = dirichletbc(u_dbc_out, dofs_dirichlet_out)
 
     dirichlet_bcs = [bc_in, bc_out]
-    
+
     # Boundary to force application
     ds_g = fop.marked_ds(domain, boundary_tags, [neu_mkr])
 
