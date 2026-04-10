@@ -1,4 +1,8 @@
-from formopt import Model
+from basix.ufl import element
+from dolfinx.fem import functionspace, Function
+from dolfinx.io import XDMFFile
+
+from formopt import Model, Velocity_Mixed
 
 from ufl import (
     avg,
@@ -209,6 +213,7 @@ class PhifemInterfaceCompliance(Model):
         )
         self.sigma_out = lambda w: self.outside_factor * self.sigma_in(w)
         self.chi = lambda w: (conditional(lt(w, 0.0), 1.0, 0.0))
+        self.Velocity = Velocity_Mixed
 
     def set_state_functions(self, state_number):
         self.primal_state_functions = [Function(self.space.sub(0).collapse()[0]) for _ in range(state_number)]

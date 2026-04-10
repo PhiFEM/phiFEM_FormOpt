@@ -2017,7 +2017,6 @@ class Velocity_Mixed:
 
         th = TrialFunction(space)
         xi = TestFunction(space)
-        dx = Measure("dx", domain=domain)
 
         b, dirbc = biform(th, xi)
 
