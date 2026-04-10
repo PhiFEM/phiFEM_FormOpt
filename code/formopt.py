@@ -2036,9 +2036,7 @@ class Velocity_Mixed:
         Solves the velocity equation.
         Only the linear part must be updated.
         """
-        liform = form(
-            -(dot(self.S0, self.xi) + inner(self.S1, grad(self.xi))) * dx((1, 2))
-        )
+        liform = form(-(dot(self.S0, self.xi) + inner(self.S1, grad(self.xi))) * dx(1))
         basic_solver(self.biform, liform, self.bc, theta)
 
 
@@ -3697,7 +3695,7 @@ def runDP(
     nDJ = form((model.bilinear_form(tht, tht))[0])
 
     # To calculate the velocity field
-    cls_vlty = Velocity(dim, domain, sp_vlty, model.bilinear_form, S0, S1)
+    cls_vlty = model.Velocity(dim, domain, sp_vlty, model.bilinear_form, S0, S1)
 
     # To calculate the level set function
     cls_lset = Level(domain, sp_lset, phi, tht, diam2, smooth)
@@ -3739,7 +3737,7 @@ def runDP(
     if nbr_to_ev_qs > 0:
         qs_eval = global_scalar_list(to_ev_qs, comm)
 
-    cls_vlty.run(tht)
+    cls_vlty.run(tht, model.dx)
     nder = global_scalar(nDJ, comm, np.sqrt)
 
     if rank == 0:
@@ -3834,7 +3832,7 @@ def runDP(
             if nbr_to_ev_qs:
                 qs_eval = global_scalar_list(to_ev_qs, comm)
 
-            cls_vlty.run(tht)
+            cls_vlty.run(tht, model.dx)
 
             nder = global_scalar(nDJ, comm, np.sqrt)
 

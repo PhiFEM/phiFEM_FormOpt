@@ -311,7 +311,7 @@ class PhifemInterfaceCompliance(Model):
             + boundary_out * self.d_bdy(101)
         )
 
-        W = a - dot(self.g, v_in) * self.ds_g
+        W = a - dot(self.g, v_in) * self.ds_g - dot(self.g, v_out) * self.ds_g
 
         return [(W, self.bc)]
 
@@ -355,12 +355,9 @@ class PhifemInterfaceCompliance(Model):
         return S0, S1
 
     def bilinear_form(self, th, xi):
-
-        nv = FacetNormal(self.domain)
-
         B = 0.1 * dot(th, xi) * self.dx
         B += inner(grad(th), grad(xi)) * self.dx
-        B += 1e4 * dot(th, nv) * dot(xi, nv) * self.ds
+        B += 1e4 * dot(th, self.facet_normal) * dot(xi, self.facet_normal) * self.ds
         for sb in self.sub:
             B += 1e4 * sb * dot(th, xi) * self.dx
 
