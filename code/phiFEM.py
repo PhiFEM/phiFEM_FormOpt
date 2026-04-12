@@ -3,7 +3,7 @@ from pathlib import Path
 from mpi4py import MPI
 
 import formopt as fop
-from phiFEM_models import LaplacianEnergy, ComplianceElasticity
+from phiFEM_models import LaplacianEnergy, ComplianceVolConstraint, ComplianceVolPenalty
 
 
 def test_01():
@@ -78,7 +78,7 @@ def test_02():
 
     volume, g = 1.0, (0.0, -2.0)
 
-    md = ComplianceElasticity(
+    md = ComplianceVolConstraint(
         dim,
         domain,
         mix_space,
@@ -89,6 +89,8 @@ def test_02():
         dir_bc,
         volume,
     )
+
+    md.biform_coefs = (0.1, 1.0)
 
     @fop.region_of(domain)
     def sub_domain(x):
@@ -118,9 +120,97 @@ def test_02():
     )
 
 
+def test_03():
+    test_path = Path("../results/phiFEM/t03/")
+
+    # Domain
+    dim, rank_dim, mesh_size = 2, 2, 0.01
+    vertices = np.array(
+        [(0.0, 0.0), (2.0, 0.0), (2.0, 0.46), (2.0, 0.54), (2.0, 1.0), (0.0, 1.0)]
+    )
+
+    dir_idx, dir_mkr = [6], 1
+    neu_idx, neu_mkr = [3], 2
+    boundary_parts = [(dir_idx, dir_mkr, "dir"), (neu_idx, neu_mkr, "neu")]
+
+    output = fop.create_domain_2d_DP(
+        vertices, boundary_parts, mesh_size, path=test_path, plot=False
+    )
+
+    domain, nbr_tri, boundary_tags = output
+    print(f"> Nbr of triangles = {nbr_tri}")
+
+    mix_space = fop.create_mixed_space(
+        domain,
+        ["CG", "CG", "DG"],
+        [(rank_dim,), (rank_dim, rank_dim), (rank_dim,)],
+        [1, 1, 0],
+    )
+
+    # Homogeneous Dirichlet boundary condition for the first subspace
+    dir_bc = fop.homogeneous_dirichlet_mixed(
+        domain, mix_space.sub(0), boundary_tags, [dir_mkr]
+    )
+
+    # Boundary to force application
+    dsg = fop.marked_ds(domain, boundary_tags, [neu_mkr])[0]
+
+    alpha, g = 0.2, (0.0, -10.0)
+
+    md = ComplianceVolPenalty(
+        dim,
+        domain,
+        mix_space,
+        test_path,
+        rank_dim,
+        g,
+        dsg,
+        dir_bc,
+        alpha,
+    )
+
+    md.biform_coefs = (1.0, 0.1)
+
+    @fop.region_of(domain)
+    def sub_domain(x):
+        return [x[1] - 0.44, 0.56 - x[1], x[0] - 1.9]
+
+    md.sub = [sub_domain.expression()]
+
+    h = 1.4 / 2.0
+    centers = [(2.0, 0.35), (2.0, 0.65), (2.0, 0.0), (2.0, 1.0)]
+    centers += [(0.0, 0.25), (0.0, 0.5), (0.0, 0.75)]
+    centers += [(0.3 + i * h, 0.0) for i in range(3)]
+    centers += [(0.3 + h / 2.0 + i * h, 0.25) for i in range(2)]
+    centers += [(0.3 + i * h, 0.5) for i in range(3)]
+    centers += [(0.3 + h / 2.0 + i * h, 0.75) for i in range(2)]
+    centers += [(0.3 + i * h, 1.0) for i in range(3)]
+
+    centers = np.array(centers)
+    radii = np.repeat(0.08, centers.shape[0])
+    md.create_initial_level(centers, radii)
+
+    md.phifem_run(
+        niter=250,
+        dfactor=1e-2,
+        lv_iter=(10, 20),
+        lv_time=(1e-3, 0.1),
+        cost_tol=1e-3,
+        reinit_step=4,
+        reinit_pars=(6, 0.01),
+        smooth=True,
+    )
+
+
+def test_04():
+    test_path = Path("../results/phiFEM/t04/")
+
+
 test_functions = {
     "01": test_01,
     "02": test_02,
+    "03": test_03,
+    "04": test_04,
 }
 
 
