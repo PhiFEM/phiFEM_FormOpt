@@ -101,11 +101,12 @@ import numpy.typing as npt
 from typing import List, Tuple, Callable, Sequence, final
 from ufl.core.expr import Expr
 
-from plots import plot_domain
-
 from mesh_scripts import compute_tags_measures  # phiFem
 
 from basix.ufl import element, mixed_element
+
+import pyvista as pvt
+from dolfinx.plot import vtk_mesh
 
 comm = MPI.COMM_WORLD
 rank = comm.rank
@@ -489,6 +490,15 @@ class Model(ABC):
             prev,
             random_pars,
         )
+
+def plot_domain(domain, title=None):
+    plotter = pvt.Plotter()
+    domain_parts = vtk_mesh(functionspace(domain, ("CG", 1)))
+    grid = pvt.UnstructuredGrid(*domain_parts)
+    plotter.add_mesh(grid, color="gray", show_edges=True)
+    if title:
+        plotter.add_title(title)
+    plotter.show()
 
 
 def _register(kind, name):

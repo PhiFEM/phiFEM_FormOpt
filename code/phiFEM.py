@@ -155,7 +155,7 @@ def test_03():
     # Boundary to force application
     dsg = fop.marked_ds(domain, boundary_tags, [neu_mkr])[0]
 
-    alpha, g = 0.2, (0.0, -10.0)
+    alpha, g = 1.663, (0.0, -2.0)
 
     md = ComplianceVolPenalty(
         dim,
@@ -169,7 +169,7 @@ def test_03():
         alpha,
     )
 
-    md.biform_coefs = (1.0, 0.1)
+    md.biform_coefs = (0.1, 1.0)
 
     @fop.region_of(domain)
     def sub_domain(x):
@@ -192,12 +192,10 @@ def test_03():
 
     md.phifem_run(
         niter=250,
-        dfactor=1e-2,
-        lv_iter=(10, 20),
-        lv_time=(1e-3, 0.1),
-        cost_tol=1e-3,
+        cost_tol=1e-2,
+        dfactor=1e-1,
         reinit_step=4,
-        reinit_pars=(6, 0.01),
+        reinit_pars=(16, 0.01),
         smooth=True,
     )
 

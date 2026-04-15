@@ -144,5 +144,5 @@ i = 135 | cost = -0.6305 | cstr = 1.0068 | nder = 0.0494 | steps = 16 | lagr = -
 i = 136 | cost = -0.6252 | cstr = 1.0025 | nder = 0.0477 | steps = 16 | lagr = -0.6222 | lm = 1.1776 | mu = 1.1726 | 
 i = 137 | cost = -0.6220 | cstr = 0.9999 | nder = 0.0461 | steps = 15 | lagr = -0.6221 | lm = 1.1746 | mu = 1.1748 | 
 > Stopping condition reached!
-> Assembly time = 3.595006398999999 s
-> Resolution time = 463.81677473 s
+> Assembly time = 5.876368590999846 s
+> Resolution time = 472.3733138140001 s
