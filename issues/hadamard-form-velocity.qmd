@@ -43,7 +43,7 @@ For $\bullet = 1,2$, let $V_{h,0}^{\bullet}$ be vectorial Lagrange FE spaces on 
 We denote by $(u_{1,h}, u_{2,h}) \in V_{h,0}^1 \times V_{h,0}^2$ the displacement solutions computed during the primal problem solve.
 In addition, we denote by $\mathcal G_h = (S(u_h)n)\cdot n$ where $n$ is the outward pointing unit normal to $\Omega_0$.
 
-The $\varphi$-FEM discretization of @eq-hadamard-velocity reads: find $W_h = (\theta_{1,h}, \theta_{2,h}, \Xi_{1,h}, \Xi_{2,h}, \rho_h) \in V_{h,0}^1 \times V_{h,0}^2 \times Z_h \times Z_h \times Q_h \times Q_h$ such that for all $Z_h = (\xi_{1,h}, \xi_{2,h}, \Upsilon_{1,h}, \Upsilon_{2,h}, \eta_h) \in V_{h,0}^1 \times V_{h,0}^2 \times Z_h \times Z_h \times Q_h \times Q_h$ we have
+The $\varphi$-FEM discretization of @eq-hadamard-velocity reads: find $W_h = (\theta_{1,h}, \theta_{2,h}, \Xi_{1,h}, \Xi_{2,h}, \rho_h) \in V_{h,0}^1 \times V_{h,0}^2 \times Z_h \times Z_h \times Q_h$ such that for all $Z_h = (\xi_{1,h}, \xi_{2,h}, \Upsilon_{1,h}, \Upsilon_{2,h}, \eta_h) \in V_{h,0}^1 \times V_{h,0}^2 \times Z_h \times Z_h \times Q_h$ we have
 $$
   \mathcal B_h(W_h; Z_h) = l_h(Z_h),
 $$
@@ -52,7 +52,7 @@ $$
   \begin{align}
   \mathcal B_h (W_h; Z_h)
   & =
-  \int_{\Omega_h} (\nabla \theta_{1, h} : \nabla \xi_{1, h} + \theta_{1, h} \cdot \xi_{1, h})  
+  \int_{\Omega_h^1} (\nabla \theta_{1, h} : \nabla \xi_{1, h} + \theta_{1, h} \cdot \xi_{1, h})  
   + 
   \int_{\partial \Omega_h^1} \Xi_{1, h} n \cdot \xi_{1, h} \notag\\
   & + 
@@ -66,7 +66,7 @@ $$
   & + 
   \gamma h^{-2} \int_{\Omega_h^{\Gamma}} (\Xi_{1, h} \nabla \varphi_h - \Xi_{2, h} \nabla \varphi_h) \cdot (\Upsilon_{1, h} \nabla \varphi_h - \Upsilon_{2, h} \nabla \varphi_h) \notag\\
   & + 
-  \sigma h \sum_{i=1}^2 \int_{\partial \Omega_h^i} [\nabla\theta_{i, h}n]  [\nabla\xi_{i, h}n] \notag\\
+  \sigma h \sum_{i=1}^2 \int_{\partial \Omega_h^i \setminus \partial \mathcal D} [\nabla\theta_{i, h}n]  [\nabla\xi_{i, h}n] \notag\\
   & + 
   \sigma  \sum_{i=1}^2 \int_{\Omega_h^{\Gamma}} (\mathrm{div} (\Xi_{i, h}) + \theta_{i, h})  (\mathrm{div} (\Upsilon_{i, h}) + \xi_{i, h}) \notag,\\
 \end{align}
