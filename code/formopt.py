@@ -491,6 +491,7 @@ class Model(ABC):
             random_pars,
         )
 
+
 def plot_domain(domain, title=None):
     plotter = pvt.Plotter()
     domain_parts = vtk_mesh(functionspace(domain, ("CG", 1)))
@@ -2785,7 +2786,20 @@ def read_level_set_function(path: Path, domain: Mesh, niter: int) -> Function:
     return None
 
 
-def phifem_solver_mixed(a, L, bcs, uh, map0):
+def wrapper_phifem(domain: Mesh, phi: Function, degree: int = 1):
+    """
+    Last version of phifem. Note `new_ds_out(100)`.
+    """
+    cells_tags, facets_tags, _, new_ds_out, _ = compute_tags_measures(
+        domain, phi, degree, box_mode=True
+    )
+    new_dx = Measure("dx", domain=domain, subdomain_data=cells_tags)
+    new_dS = Measure("dS", domain=domain, subdomain_data=facets_tags)
+
+    return new_dx, new_dS, new_ds_out(100)
+
+
+def phifem_solver_mixed(a, L, bcs, uh, map):
     problem = LinearProblem(
         a,
         L,
@@ -2800,7 +2814,7 @@ def phifem_solver_mixed(a, L, bcs, uh, map0):
         },
     )
     w = problem.solve()
-    uh.x.array[:] = w.x.array[map0]
+    uh.x.array[:] = w.x.array[map]
 
 
 def phifem_solver(
@@ -2810,29 +2824,28 @@ def phifem_solver(
     uh: Function,
     phi: Function,
     rank_dim: int,
-    comm: MPI.Comm,
 ) -> None:
     """
     This function was created to use phiFem method in formopt.
     It solves the linear system using LU and compute the phiFem
     solution.
     """
-    A = assemble_matrix(form(a), bcs=bcs)
-    A.assemble()
-    b = assemble_vector(form(L))
+    problem = LinearProblem(
+        a,
+        L,
+        bcs=bcs,
+        u=uh,  # reuse provided function (important!)
+        petsc_options={
+            "ksp_type": "preonly",
+            "pc_type": "lu",
+            "pc_factor_mat_solver_type": "mumps",
+            "ksp_error_if_not_converged": True,
+            "mat_mumps_icntl_24": 1,
+            "mat_mumps_icntl_25": 0,
+        },
+    )
 
-    ksp = PETSc.KSP().create(comm)
-    ksp.setOperators(A)
-    ksp.setType("preonly")
-    pc = ksp.getPC()
-    pc.setType("lu")
-    pc.setFactorSolverType("mumps")
-    pc.setFactorSetUpSolverType()
-    F = pc.getFactorMatrix()
-    F.setMumpsIcntl(icntl=24, ival=1)
-    F.setMumpsIcntl(icntl=25, ival=0)
-    ksp.solve(b, uh.x.petsc_vec)
-    ksp.destroy()
+    problem.solve()
 
     uh.x.scatter_forward()
     for i in range(rank_dim):
@@ -2854,7 +2867,7 @@ def phifem_solve(
     for i in range(nbr_eq):
         weak_form, bcs = equations[i]
         bi, li = system(weak_form)
-        phifem_solver(bi, li, bcs, solutions[i], phi, rank_dim, comm)
+        phifem_solver(bi, li, bcs, solutions[i], phi, rank_dim)
 
 
 def phifem_solve_mixed(
@@ -3034,15 +3047,11 @@ def phifem_run(
 
     phi.interpolate(model._get_initial_level())
 
-    #######################################################################
+    ##############################################################
     # Update model.dx, model.dS, model.ds_out
-    cells_tags, facets_tags, _, model.ds_out, _, _ = compute_tags_measures(
-        domain, phi, 1, box_mode=True
-    )
-    model.dx = Measure("dx", domain=domain, subdomain_data=cells_tags)
-    model.dS = Measure("dS", domain=domain, subdomain_data=facets_tags)
+    model.dx, model.dS, model.ds_out = wrapper_phifem(domain, phi)
+    ##############################################################
 
-    #######################################################################
     # To calculate the velocity field
     cls_vlty = Velocity(dim, domain, sp_vlty, model.bilinear_form, S0, S1)
 
@@ -3132,15 +3141,10 @@ def phifem_run(
                 if iter % reinit_step == 0:
                     cls_rein.run(phi, rein_steps, rein_end)
 
-            #######################################################################
+            ##############################################################
             # Update model.dx, model.dS, model.ds_out
-            cells_tags, facets_tags, _, model.ds_out, _, _ = compute_tags_measures(
-                domain, phi, 1, box_mode=True
-            )
-            model.dx = Measure("dx", domain=domain, subdomain_data=cells_tags)
-            model.dS = Measure("dS", domain=domain, subdomain_data=facets_tags)
-
-            #######################################################################
+            model.dx, model.dS, model.ds_out = wrapper_phifem(domain, phi)
+            ##############################################################
 
             # cls_smt.run(phi) # smooth
 

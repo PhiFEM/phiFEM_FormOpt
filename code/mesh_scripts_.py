@@ -95,15 +95,6 @@ def _reference_square_boundary_points(N: int) -> npt.NDArray[np.float64]:
 def _compute_detection_vector(
     mesh: Mesh, discrete_levelset: Function, detection_measure: ufl.Measure
 ):
-    """Computes the detection vector used to discriminate inside from cut from outside cells.
-
-    Args:
-        mesh: the mesh on which the detection is performed.
-        discrete_levelset: the levelset used for the detection.
-        detection_measure: the integration measure used to evaluate the levelset on the cells.
-
-    Return: the detection vector as a numpy array.
-    """
     # We localize at each cell via a DG0 test function.
     dg_0_element = element("DG", mesh.topology.cell_name(), 0)
     dg_0_space = dfx.fem.functionspace(mesh, dg_0_element)
@@ -134,17 +125,18 @@ def _compute_detection_vector(
     return detection_vector
 
 
-def _compute_integration_entities(
+def _one_sided_edge_measure(
     mesh: Mesh, integration_cells: list[int], integration_facets: list[int], ind: int
 ) -> ufl.Measure:
-    """Compute the integration entities in order to build a one-sided integral over a set of given edges. This script is inspired from https://github.com/jorgensd/dolfinx-tutorial/issues/158.
+    """Compute a one-sided integral over a set of given edges. This script is inspired from https://github.com/jorgensd/dolfinx-tutorial/issues/158.
 
     Args:
         mesh: the mesh on which we compute the measure.
         integration_cells: list of cells indices from which the integral is computed.
         integration_facets: list of facets indices on which the integral is computed.
         ind: index used in the measure.
-    Returns: the integration entities.
+    Returns:
+        measure: the integration measure of the one-sided integral.
     """
     cdim = mesh.topology.dim
     fdim = cdim - 1
@@ -189,7 +181,11 @@ def _compute_integration_entities(
         np.column_stack((right_side_cells_rep, local_indices))
     ).astype(np.int32)
 
-    return [(ind, integration_entities)]
+    # We compute the one-sided measure
+    measure = ufl.Measure(
+        "ds", domain=mesh, subdomain_data=[(ind, integration_entities)]
+    )
+    return measure(ind)
 
 
 def _reshape_map(connect: AdjacencyList_int32) -> npt.NDArray[np.int32]:
@@ -363,15 +359,15 @@ def _tag_cells(
         if len(cut_indices) == 0:
             print("WARNING: no cut cells computed in the partition.")
 
-        assert np.logical_not(
-            np.isin(exterior_indices, cut_indices).any()
-        ), "The sets of outside cells and cut cells have a non-empty intersection"
-        assert np.logical_not(
-            np.isin(interior_indices, cut_indices).any()
-        ), "The sets of inside cells and cut cells have a non-empty intersection"
-        assert np.logical_not(
-            np.isin(exterior_indices, interior_indices).any()
-        ), "The sets of outside cells and inside cells have a non-empty intersection"
+        assert np.logical_not(np.isin(exterior_indices, cut_indices).any()), (
+            "The sets of outside cells and cut cells have a non-empty intersection"
+        )
+        assert np.logical_not(np.isin(interior_indices, cut_indices).any()), (
+            "The sets of inside cells and cut cells have a non-empty intersection"
+        )
+        assert np.logical_not(np.isin(exterior_indices, interior_indices).any()), (
+            "The sets of outside cells and inside cells have a non-empty intersection"
+        )
 
     # Create the meshtags from the indices.
     indices = np.hstack([exterior_indices, interior_indices, cut_indices]).astype(
@@ -568,7 +564,8 @@ def compute_tags_measures(
     MeshTags,
     MeshTags,
     Mesh | None,
-    ufl.Measure,
+    ufl.Measure | None,
+    ufl.Measure | None,
     list[npt.NDArray[np.int32]] | None,
 ]:
     """Compute the mesh (cells and facets) tags as well as the discrete boundary measures.
@@ -584,7 +581,8 @@ def compute_tags_measures(
         The mesh/submesh cells tags.
         The mesh/submesh facets tags.
         The mesh/submesh (input mesh if box_mode is True).
-        The boundaries measure.
+        The one-sided measure from inside.
+        The one-sided measure from outside.
         Submesh c-map, v-map and n-map.
     """
     cells_tags = _tag_cells(
@@ -595,19 +593,12 @@ def compute_tags_measures(
     if box_mode:
         submesh = None
         integration_cells = np.union1d(cells_tags.find(2), cells_tags.find(1))
-        integration_entities_outside = _compute_integration_entities(
+        d_boundary_outside = _one_sided_edge_measure(
             mesh, integration_cells, facets_tags.find(4), 100
         )
         integration_cells = np.union1d(cells_tags.find(2), cells_tags.find(3))
-        integration_entities_inside = _compute_integration_entities(
+        d_boundary_inside = _one_sided_edge_measure(
             mesh, integration_cells, facets_tags.find(3), 101
-        )
-        combined_integration_entities = (
-            integration_entities_outside + integration_entities_inside
-        )
-
-        boundaries_measure = ufl.Measure(
-            "ds", domain=mesh, subdomain_data=combined_integration_entities
         )
         submesh_maps = None
     else:
@@ -619,13 +610,15 @@ def compute_tags_measures(
 
         cells_tags = _transfer_tags(cells_tags, submesh, c_map)
         facets_tags = _transfer_tags(facets_tags, submesh, c_map, source_mesh=mesh)
-        boundaries_measure = ufl.Measure("ds", domain=submesh)
+        d_boundary_outside = None
+        d_boundary_inside = None
         submesh_maps = [c_map, v_map, n_map]
 
     return (
         cells_tags,
         facets_tags,
         submesh,
-        boundaries_measure,
+        d_boundary_outside,
+        d_boundary_inside,
         submesh_maps,
     )

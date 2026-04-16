@@ -164,7 +164,7 @@ class ComplianceVolConstraint(Model):
         wf += gamma_p * (hT**-2) * dot(yp, zq) * self.dx(2)
 
         # Estabilization
-        wf += sigma_D * avg(hT) * inner(jump(su, nf), jump(sv, nf)) * self.dS((2,3))
+        wf += sigma_D * avg(hT) * inner(jump(su, nf), jump(sv, nf)) * self.dS(3)
         wf += gamma_div * inner(div(y), div(z)) * self.dx(2)
 
         # Force application
@@ -278,7 +278,7 @@ class ComplianceVolPenalty(Model):
         wf += gamma_p * (hT**-2) * dot(yp, zq) * self.dx(2)
 
         # Estabilization
-        wf += sigma_D * avg(hT) * inner(jump(su, nf), jump(sv, nf)) * self.dS((2, 3))
+        wf += sigma_D * avg(hT) * inner(jump(su, nf), jump(sv, nf)) * self.dS(3)
         wf += gamma_div * inner(div(y), div(z)) * self.dx(2)
 
         # Force application
