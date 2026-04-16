@@ -1,0 +1,81 @@
+---
+title: "$\\varphi$-FEM discretization of Hadamard's form of the velocity problem"
+author: "Raphaël Bulle"
+date: today
+from: markdown+emoji
+format:
+  html:
+    html-math-method: mathjax
+    embed-resources: true
+---
+
+### Hadamard's shape derivative
+
+Let
+$$
+    S (u) := - \left((\nabla u)^T \sigma (u) - 0.5 \sigma (u) : \varepsilon (u) I + G' (|\Omega_0|) I\right)\mathbf{1}_{\Omega_0},
+$$
+and
+$$
+    \mathcal G = (S(u)n)\cdot n.
+$$
+Hadamard's form of the shape derivative of $\Omega_0$ reads
+$$
+    d\mathcal J_{\Omega_0}(\xi) = -\int_{\partial \Omega_0} \mathcal G \theta \cdot n.
+$$
+
+### Velocity problem weak formulation
+
+Find $\theta \in \Theta$ such that
+$$
+  \int_{\mathcal D} \nabla \theta : \nabla \xi + \delta \int_{\mathcal D} \theta \cdot \xi = d\mathcal J_{\Omega_0}(\xi),
+$${#eq-hadamard-velocity}
+given $\delta \in \mathbb R$.
+
+### $\varphi$-FEM discretization
+
+Let us denote by $\mathcal T_h^1 = \{T \in \mathcal T_h,\ T \cap \{\varphi < 0\} \neq \varnothing\}$ and $\mathcal T_h^2 = \{T \in \mathcal T_h,\ T \cap \{\varphi > 0\} \neq \varnothing\}$ as well as
+$$
+  \Omega_h^{\bullet} = \underset{T \in \mathcal T_h^{\bullet}}{\bigcup} \overline T\quad \forall \bullet = 1,2.
+$$
+For $\bullet = 1,2$, let $V_{h,0}^{\bullet}$ be vectorial Lagrange FE spaces on $\mathcal T_h^{\bullet}$ of functions vanishing on $\partial \mathcal D$, $Z_h$ be a tensorial Lagrange FE space on $\mathcal T_h^{\Gamma}$ and $Q_h$ be a scalar Lagrange FE space on $\mathcal T_h^{\Gamma}$.
+
+We denote by $(u_{1,h}, u_{2,h}) \in V_{h,0}^1 \times V_{h,0}^2$ the displacement solutions computed during the primal problem solve.
+In addition, we denote by $\mathcal G_h = (S(u_h)n)\cdot n$ where $n$ is the outward pointing unit normal to $\Omega_0$.
+
+The $\varphi$-FEM discretization of @eq-hadamard-velocity reads: find $W_h = (\theta_{1,h}, \theta_{2,h}, \Xi_{1,h}, \Xi_{2,h}, \rho_h) \in V_{h,0}^1 \times V_{h,0}^2 \times Z_h \times Z_h \times Q_h \times Q_h$ such that for all $Z_h = (\xi_{1,h}, \xi_{2,h}, \Upsilon_{1,h}, \Upsilon_{2,h}, \eta_h) \in V_{h,0}^1 \times V_{h,0}^2 \times Z_h \times Z_h \times Q_h \times Q_h$ we have
+$$
+  \mathcal B_h(W_h; Z_h) = l_h(Z_h),
+$$
+with
+$$
+  \begin{align}
+  \mathcal B_h (W_h; Z_h)
+  & =
+  \int_{\Omega_h} (\nabla \theta_{1, h} : \nabla \xi_{1, h} + \theta_{1, h} \cdot \xi_{1, h})  
+  + 
+  \int_{\partial \Omega_h^1} \Xi_{1, h} n \cdot \xi_{1, h} \notag\\
+  & + 
+  \int_{\Omega_h^2} (\nabla \theta_{2, h} : \nabla \xi_{2, h} + \theta_{2, h} \cdot \xi_{2, h}) 
+  + 
+  \int_{\partial \Omega_h^2} \Upsilon_{2, h} n \cdot \xi_{2, h} \notag\\
+  & + 
+  \gamma  \sum_{i=1}^2 \int_{\Omega_h^{\Gamma}} (\Xi_{i, h} + \nabla \theta_{i, h}) \cdot (\Upsilon_{i, h} + \nabla \xi_{i, h}) \notag\\
+  & + 
+  \gamma h^{-2}  \int_{\Omega_h^{\Gamma}} \left( \theta_{1, h} - \theta_{2, h} - h^{-1} \rho_h \varphi_h \right) \cdot \left( \xi_{1, h} - \xi_{2, h} - h^{-1} \eta_h \varphi_h \right) \notag\\
+  & + 
+  \gamma h^{-2} \int_{\Omega_h^{\Gamma}} (\Xi_{1, h} \nabla \varphi_h - \Xi_{2, h} \nabla \varphi_h) \cdot (\Upsilon_{1, h} \nabla \varphi_h - \Upsilon_{2, h} \nabla \varphi_h) \notag\\
+  & + 
+  \sigma h \sum_{i=1}^2 \int_{\partial \Omega_h^i} [\nabla\theta_{i, h}n]  [\nabla\xi_{i, h}n] \notag\\
+  & + 
+  \sigma  \sum_{i=1}^2 \int_{\Omega_h^{\Gamma}} (\mathrm{div} (\Xi_{i, h}) + \theta_{i, h})  (\mathrm{div} (\Upsilon_{i, h}) + \xi_{i, h}) \notag,\\
+\end{align}
+$$
+and
+$$
+\begin{align}
+  l(Z_h)
+  &=
+  \gamma h^{-2} \int_{\Omega_h^{\Gamma}} \mathcal G_h n \cdot (\Upsilon_{1, h} \nabla \varphi_h - \Upsilon_{2, h} \nabla \varphi_h).
+\end{align}
+$$
