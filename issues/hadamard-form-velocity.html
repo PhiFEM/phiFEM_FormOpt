@@ -2364,7 +2364,7 @@ window.Quarto = {
   \Omega_h^{\bullet} = \underset{T \in \mathcal T_h^{\bullet}}{\bigcup} \overline T\quad \forall \bullet = 1,2.
 \]</span> For <span class="math inline">\(\bullet = 1,2\)</span>, let <span class="math inline">\(V_{h,0}^{\bullet}\)</span> be vectorial Lagrange FE spaces on <span class="math inline">\(\mathcal T_h^{\bullet}\)</span> of functions vanishing on <span class="math inline">\(\partial \mathcal D\)</span>, <span class="math inline">\(Z_h\)</span> be a tensorial Lagrange FE space on <span class="math inline">\(\mathcal T_h^{\Gamma}\)</span> and <span class="math inline">\(Q_h\)</span> be a vectorial Lagrange FE space on <span class="math inline">\(\mathcal T_h^{\Gamma}\)</span>.</p>
 <p>We denote by <span class="math inline">\((u_{1,h}, u_{2,h}) \in V_{h,0}^1 \times V_{h,0}^2\)</span> the displacement solutions computed during the primal problem solve. In addition, we denote by <span class="math inline">\(\mathcal G_h = |\nabla \varphi_h|^{-2} (S(u_h) \nabla \varphi_h)\cdot \nabla \varphi_h\)</span> where <span class="math inline">\(n\)</span> is the outward pointing unit normal to <span class="math inline">\(\Omega_0\)</span>.</p>
-<p>The <span class="math inline">\(\varphi\)</span>-FEM discretization of <a href="#eq-hadamard-velocity" class="quarto-xref">Equation 1</a> reads: find <span class="math inline">\(W_h = (\theta_{1,h}, \theta_{2,h}, \Xi_{1,h}, \Xi_{2,h}, \rho_h, \zeta_h) \in V_{h,0}^1 \times V_{h,0}^2 \times Z_h \times Z_h \times Q_h \times Q_h\)</span> such that for all <span class="math inline">\(Z_h = (\xi_{1,h}, \xi_{2,h}, \Upsilon_{1,h}, \Upsilon_{2,h}, \eta_h, \tau_h) \in V_{h,0}^1 \times V_{h,0}^2 \times Z_h \times Z_h \times Q_h \times Q_h\)</span> we have <span class="math display">\[
+<p>The <span class="math inline">\(\varphi\)</span>-FEM discretization of <a href="#eq-hadamard-velocity" class="quarto-xref">Equation 1</a> reads: find <span class="math inline">\(W_h = (\theta_{1,h}, \theta_{2,h}, \Xi_{1,h}, \Xi_{2,h}, \rho_h) \in V_{h,0}^1 \times V_{h,0}^2 \times Z_h \times Z_h \times Q_h\)</span> such that for all <span class="math inline">\(Z_h = (\xi_{1,h}, \xi_{2,h}, \Upsilon_{1,h}, \Upsilon_{2,h}, \eta_h) \in V_{h,0}^1 \times V_{h,0}^2 \times Z_h \times Z_h \times Q_h\)</span> we have <span class="math display">\[
   \mathcal B_h(W_h; Z_h) = l_h(Z_h),
 \]</span> with <span class="math display">\[
   \begin{align}
@@ -2382,7 +2382,7 @@ window.Quarto = {
   &amp; +
   \gamma h^{-2}  \int_{\Omega_h^{\Gamma}} \left( \theta_{1, h} - \theta_{2, h} - h^{-1} \rho_h \varphi_h \right) \cdot \left( \xi_{1, h} - \xi_{2, h} - h^{-1} \eta_h \varphi_h \right) \notag\\
   &amp; +
-  \gamma h^{-2} \int_{\Omega_h^{\Gamma}} (\Xi_{1, h} \nabla \varphi_h - \Xi_{2, h} \nabla \varphi_h - h^{-1} \zeta_h \varphi_h) \cdot (\Upsilon_{1, h} \nabla \varphi_h - \Upsilon_{2, h} \nabla \varphi_h - h^{-1} \tau_h \varphi_h) \notag\\
+  \gamma h^{-2} \int_{\Omega_h^{\Gamma}} (\Xi_{1, h} \nabla \varphi_h - \Xi_{2, h} \nabla \varphi_h) \cdot (\Upsilon_{1, h} \nabla \varphi_h - \Upsilon_{2, h} \nabla \varphi_h) \notag\\
   &amp; +
   \sigma h \sum_{i=1}^2 \int_{\partial \Omega_h^i \setminus \partial \mathcal D} [\nabla\theta_{i, h}n]  [\nabla\xi_{i, h}n] \notag\\
   &amp; +
@@ -2392,7 +2392,7 @@ window.Quarto = {
 \begin{align}
   l(Z_h)
   &amp;=
-  \gamma h^{-2} \int_{\Omega_h^{\Gamma}} \mathcal G_h \nabla \varphi_h \cdot (\Upsilon_{1, h} \nabla \varphi_h - \Upsilon_{2, h} \nabla \varphi_h - h^{-1} \tau_h \varphi_h).
+  \gamma h^{-2} \int_{\Omega_h^{\Gamma}} \mathcal G_h \nabla \varphi_h \cdot (\Upsilon_{1, h} \nabla \varphi_h - \Upsilon_{2, h} \nabla \varphi_h).
 \end{align}
 \]</span></p>
 </section>
