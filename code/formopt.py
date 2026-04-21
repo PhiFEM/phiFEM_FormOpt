@@ -2813,7 +2813,7 @@ def wrapper_phifem(domain: Mesh, phi: Function, degree: int = 1):
     new_dx = Measure("dx", domain=domain, subdomain_data=cells_tags)
     new_dS = Measure("dS", domain=domain, subdomain_data=facets_tags)
 
-    return new_dx, new_dS, new_ds_out(100), cells_tags
+    return new_dx, new_dS, new_ds_out, cells_tags
 
 
 def phifem_solve(
@@ -3010,7 +3010,7 @@ def phifem_run(
 
     ##############################################################
     # Update model.dx, model.dS, model.ds_out
-    model.dx, model.dS, model.ds_out = wrapper_phifem(domain, phi)
+    model.dx, model.dS, model.ds_out, model.cells_tags = wrapper_phifem(domain, phi)
     ##############################################################
 
     # To calculate the velocity field
@@ -3102,7 +3102,7 @@ def phifem_run(
 
             ##############################################################
             # Update model.dx, model.dS, model.ds_out
-            model.dx, model.dS, model.ds_out = wrapper_phifem(domain, phi)
+            model.dx, model.dS, model.ds_out, model.cells_tags = wrapper_phifem(domain, phi)
             ##############################################################
 
             # cls_smt.run(phi) # smooth

@@ -41,7 +41,7 @@ def _laplacian_direct_dirichlet(space, phi, meas):
     phiv = phi * v
 
     a = inner(grad(phiw), grad(phiv)) * meas["dx"]((1, 2))
-    a -= inner(grad(phiw), nv) * phiv * meas["ds_out"]
+    a -= inner(grad(phiw), nv) * phiv * meas["ds_out"](100)
     Ga = (h_T**2) * div(grad(phiw)) * div(grad(phiv)) * meas["dx"](2)
     Ga += avg(h_T) * jump(grad(phiw), nv) * jump(grad(phiv), nv) * meas["dS"]((2, 3))
 
@@ -70,7 +70,7 @@ def _elasticity_neumann(mixed_space, sigma, epsilon, phi, g, meas):
 
     # Weak formulation
     wf = inner(su, ev) * meas["dx"]((1, 2))
-    wf += dot(dot(y, nf), v) * meas["ds_out"]
+    wf += dot(dot(y, nf), v) * meas["ds_out"](100)
     wf += gamma_u * inner(y + su, z + sv) * meas["dx"](2)
     wf += gamma_p * (hT**-2) * dot(yp, zq) * meas["dx"](2)
 
@@ -144,8 +144,8 @@ def _elasticity_interface(mixed_space, sigmas, epsilon, coefs, phi, g, meas):
         + stabilization_facets_out * meas["dS"](4)
         + stabilization_cells_in * meas["dx"](2)
         + stabilization_cells_out * meas["dx"](2)
-        + boundary_in * meas["d_bdy"](100)
-        + boundary_out * meas["d_bdy"](101)
+        + boundary_in * meas["ds_out"](100)
+        + boundary_out * meas["ds_out"](101)
     )
 
     W = a - dot(g, v_in) * meas["dsg"] - dot(g, v_out) * meas["dsg"]
@@ -502,7 +502,7 @@ class ComplianceVolPenalty(Model):
                 "dS": self.dS,
                 "dsg": self.dsg}
 
-        wf = _elasticity_neumann(self.mixed_space, self.sigma, self.epsilon, phi, meas)
+        wf = _elasticity_neumann(self.mixed_space, self.sigma, self.epsilon, phi, self.g, meas)
 
         return [(wf, self.bcs)]
 
