@@ -2813,61 +2813,7 @@ def wrapper_phifem(domain: Mesh, phi: Function, degree: int = 1):
     new_dx = Measure("dx", domain=domain, subdomain_data=cells_tags)
     new_dS = Measure("dS", domain=domain, subdomain_data=facets_tags)
 
-    return new_dx, new_dS, new_ds_out(100)
-
-
-def phifem_solver_mixed(a, L, bcs, uh, map):
-    problem = LinearProblem(
-        a,
-        L,
-        bcs=bcs,
-        petsc_options={
-            "ksp_type": "preonly",
-            "pc_type": "lu",
-            "pc_factor_mat_solver_type": "mumps",
-            "ksp_error_if_not_converged": True,
-            "mat_mumps_icntl_24": 1,
-            "mat_mumps_icntl_25": 0,
-        },
-    )
-    w = problem.solve()
-    uh.x.array[:] = w.x.array[map]
-
-
-def phifem_solver(
-    a: Expr,
-    L: Expr,
-    bcs: Sequence[DirichletBC],
-    uh: Function,
-    phi: Function,
-    rank_dim: int,
-) -> None:
-    """
-    This function was created to use phiFem method in formopt.
-    It solves the linear system using LU and compute the phiFem
-    solution.
-    """
-    problem = LinearProblem(
-        a,
-        L,
-        bcs=bcs,
-        u=uh,  # reuse provided function (important!)
-        petsc_options={
-            "ksp_type": "preonly",
-            "pc_type": "lu",
-            "pc_factor_mat_solver_type": "mumps",
-            "ksp_error_if_not_converged": True,
-            "mat_mumps_icntl_24": 1,
-            "mat_mumps_icntl_25": 0,
-        },
-    )
-
-    problem.solve()
-
-    uh.x.scatter_forward()
-    for i in range(rank_dim):
-        uh.x.array[i::rank_dim] *= phi.x.array[:]
-    uh.x.scatter_forward()
+    return new_dx, new_dS, new_ds_out(100), cells_tags
 
 
 def phifem_solve(
