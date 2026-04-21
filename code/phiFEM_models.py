@@ -26,6 +26,61 @@ from ufl import (
     dot,
 )
 
+def _laplacian_direct_dirichlet(space, phi, meas):
+    stab_par = 1.0
+
+    domain = space.mesh
+
+    h_T = CellDiameter(domain)
+    nv = FacetNormal(domain)
+    w = TrialFunction(space)
+    phiw = phi * w
+    v = TestFunction(space)
+    phiv = phi * v
+
+    a = inner(grad(phiw), grad(phiv)) * meas["dx"]((1, 2))
+    a -= inner(grad(phiw), nv) * phiv * meas["ds_out"]
+    Ga = (h_T**2) * div(grad(phiw)) * div(grad(phiv)) * meas["dx"](2)
+    Ga += avg(h_T) * jump(grad(phiw), nv) * jump(grad(phiv), nv) * meas["dS"]((2, 3))
+
+    l = phiv * meas["dx"]((1, 2))
+    Gl = -(h_T**2) * div(grad(phiv)) * meas["dx"](2)
+    return a - l + stab_par * (Ga - Gl)
+
+def _elasticity_neumann(mixed_space, sigma, epsilon, phi, meas):
+    (u, y, p) = TrialFunctions(mixed_space)
+    (v, z, q) = TestFunctions(mixed_space)
+    domain = mixed_space.mesh
+
+    hT = CellDiameter(domain)
+    nf = FacetNormal(domain)
+
+    yp = dot(y, grad(phi)) + (p * phi / hT)
+    zq = dot(z, grad(phi)) + (q * phi / hT)
+
+    gamma_u = 0.01
+    gamma_p = 0.01
+    sigma_D = 0.1
+    gamma_div = 0.1
+
+    su, sv = sigma(u), sigma(v)
+    ev = epsilon(v)
+
+    # Weak formulation
+    wf = inner(su, ev) * meas["dx"]((1, 2))
+    wf += dot(dot(y, nf), v) * meas["ds_out"]
+    wf += gamma_u * inner(y + su, z + sv) * meas["dx"](2)
+    wf += gamma_p * (hT**-2) * dot(yp, zq) * meas["dx"](2)
+
+    # Estabilization
+    wf += sigma_D * avg(hT) * inner(jump(su, nf), jump(sv, nf)) * meas["dS"]((2,3))
+    wf += gamma_div * inner(div(y), div(z)) * meas["dx"](2)
+
+    # Force application
+    wf -= dot(g, v) * meas["dsg"]
+
+    return wf
+
 
 class LaplacianEnergy(Model):
 
@@ -49,26 +104,15 @@ class LaplacianEnergy(Model):
         self.Id = Identity(dim)
         self.chi = lambda w: conditional(lt(w, 0.0), 1.0, 0.0)
         self.factor = 0.025
-        self.stab_par = 1.0
 
     def pde(self, phi):
+        meas = {"dx": self.dx,
+                "ds_out": self.ds_out,
+                "dS": self.dS}
 
-        h_T = CellDiameter(self.domain)
-        nv = FacetNormal(self.domain)
-        w = TrialFunction(self.space)
-        phiw = phi * w
-        v = TestFunction(self.space)
-        phiv = phi * v
+        wf = _laplacian_direct_dirichlet(self.space, phi, meas)
 
-        a = inner(grad(phiw), grad(phiv)) * self.dx((1, 2))
-        a -= inner(grad(phiw), nv) * phiv * self.ds_out
-        Ga = (h_T**2) * div(grad(phiw)) * div(grad(phiv)) * self.dx(2)
-        Ga += avg(h_T) * jump(grad(phiw), nv) * jump(grad(phiv), nv) * self.dS((2, 3))
-
-        l = phiv * self.dx((1, 2))
-        Gl = -(h_T**2) * div(grad(phiv)) * self.dx(2)
-
-        return [(a - l + self.stab_par * (Ga - Gl), [])]
+        return [(wf, [])]
 
     def adjoint(self, phi, U):
         return []
@@ -140,35 +184,12 @@ class ComplianceVolConstraint(Model):
         return self.chi(phi) * self.dx
 
     def pde(self, phi):
-        (u, y, p) = TrialFunctions(self.mixed_space)
-        (v, z, q) = TestFunctions(self.mixed_space)
+        meas = {"dx": self.dx,
+                "ds_out": self.ds_out,
+                "dS": self.dS,
+                "dsg": self.dsg}
 
-        hT = CellDiameter(self.domain)
-        nf = FacetNormal(self.domain)
-
-        yp = dot(y, grad(phi)) + (p * phi / hT)
-        zq = dot(z, grad(phi)) + (q * phi / hT)
-
-        gamma_u = 0.01
-        gamma_p = 0.01
-        sigma_D = 0.1
-        gamma_div = 0.1
-
-        su, sv = self.sigma(u), self.sigma(v)
-        ev = self.epsilon(v)
-
-        # Weak formulation
-        wf = inner(su, ev) * self.dx((1, 2))
-        wf += dot(dot(y, nf), v) * self.ds_out
-        wf += gamma_u * inner(y + su, z + sv) * self.dx(2)
-        wf += gamma_p * (hT**-2) * dot(yp, zq) * self.dx(2)
-
-        # Estabilization
-        wf += sigma_D * avg(hT) * inner(jump(su, nf), jump(sv, nf)) * self.dS(3)
-        wf += gamma_div * inner(div(y), div(z)) * self.dx(2)
-
-        # Force application
-        wf -= dot(self.g, v) * self.dsg
+        wf = _elasticity_neumann(self.mixed_space, self.sigma, self.epsilon, phi, meas)
 
         return [(wf, self.bcs)]
 
@@ -254,35 +275,12 @@ class ComplianceVolPenalty(Model):
         return self.chi(phi) * self.dx
 
     def pde(self, phi):
-        (u, y, p) = TrialFunctions(self.mixed_space)
-        (v, z, q) = TestFunctions(self.mixed_space)
+        meas = {"dx": self.dx,
+                "ds_out": self.ds_out,
+                "dS": self.dS,
+                "dsg": self.dsg}
 
-        hT = CellDiameter(self.domain)
-        nf = FacetNormal(self.domain)
-
-        yp = dot(y, grad(phi)) + (p * phi / hT)
-        zq = dot(z, grad(phi)) + (q * phi / hT)
-
-        gamma_u = 0.01
-        gamma_p = 0.01
-        sigma_D = 0.1
-        gamma_div = 0.1
-
-        su, sv = self.sigma(u), self.sigma(v)
-        ev = self.epsilon(v)
-
-        # Weak formulation
-        wf = inner(su, ev) * self.dx((1, 2))
-        wf += dot(dot(y, nf), v) * self.ds_out
-        wf += gamma_u * inner(y + su, z + sv) * self.dx(2)
-        wf += gamma_p * (hT**-2) * dot(yp, zq) * self.dx(2)
-
-        # Estabilization
-        wf += sigma_D * avg(hT) * inner(jump(su, nf), jump(sv, nf)) * self.dS(3)
-        wf += gamma_div * inner(div(y), div(z)) * self.dx(2)
-
-        # Force application
-        wf -= dot(self.g, v) * self.dsg
+        wf = _elasticity_neumann(self.mixed_space, self.sigma, self.epsilon, phi, meas)
 
         return [(wf, self.bcs)]
 
