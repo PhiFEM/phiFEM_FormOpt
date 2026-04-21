@@ -105,6 +105,13 @@ class LaplacianEnergy(Model):
         self.chi = lambda w: conditional(lt(w, 0.0), 1.0, 0.0)
         self.factor = 0.025
 
+
+    def postprocess(self, ws: List[Function], ste_fcs: List[Function], phi: Function | None) -> None:
+        for w, ste_fc in zip(ws, ste_fcs):
+            for i in range(self.rank_dim):
+                ste_fc.x.array[i::self.rank_dim] = w.x.array[i::self.rank_dim] * phi.x.array[:]
+            ste_fc.x.scatter_forward()
+
     def pde(self, phi):
         meas = {"dx": self.dx,
                 "ds_out": self.ds_out,
@@ -182,6 +189,11 @@ class ComplianceVolConstraint(Model):
     @qtty_to_eval("Volume")
     def Volume(self, phi, U, P):
         return self.chi(phi) * self.dx
+
+    def postprocess(self, ws: List[Function], ste_fcs: List[Function], phi: Function | None) -> None:
+        map = self.maps[0]
+        for w, ste_fc in zip(ws, ste_fcs):
+            ste_fc.x.array[:] = w.x.array[map]
 
     def pde(self, phi):
         meas = {"dx": self.dx,
@@ -273,6 +285,11 @@ class ComplianceVolPenalty(Model):
     @qtty_to_eval("Volume")
     def Volume(self, phi, U, P):
         return self.chi(phi) * self.dx
+
+    def postprocess(self, ws: List[Function], ste_fcs: List[Function], phi: Function | None) -> None:
+        map = self.maps[0]
+        for w, ste_fc in zip(ws, ste_fcs):
+            ste_fc.x.array[:] = w.x.array[map]
 
     def pde(self, phi):
         meas = {"dx": self.dx,

@@ -336,6 +336,23 @@ class Model(ABC):
         """
         pass
 
+    @abstractmethod
+    def postprocess(self, ws: List[Function], ste_fcs: List[Function], phi: Function | None) -> None:
+        """
+        Postprocessing of the state equations solution.
+
+        Parameters
+        ----------
+        ws : List[Function]
+            List of solutions of the state equations.
+        ste_fcs: List[Function]
+            List of states solutions.
+        phi: Function | None
+            Levelset.
+        """
+        pass
+
+
     def __verification(self, required_attrs: List[str]) -> None:
         for attr in required_attrs:
             if not hasattr(self, attr):
@@ -2856,33 +2873,31 @@ def phifem_solver(
 def phifem_solve(
     nbr_eq: int,
     equations: List[Tuple[Expr, Sequence[DirichletBC]]],
-    solutions: List[Function],
-    phi: Function,
-    rank_dim: int,
-    comm: MPI.Comm,
 ):
     """
     This function was created to use phiFem method in formopt.
     """
+    ws = []
     for i in range(nbr_eq):
         weak_form, bcs = equations[i]
         bi, li = system(weak_form)
-        phifem_solver(bi, li, bcs, solutions[i], phi, rank_dim)
-
-
-def phifem_solve_mixed(
-    nbr_eq: int,
-    equations: List[Tuple[Expr, Sequence[DirichletBC]]],
-    solutions: List[Function],
-    map,
-):
-    """
-    This function was created to use phiFem method in formopt.
-    """
-    for i in range(nbr_eq):
-        weak_form, bcs = equations[i]
-        bi, li = system(weak_form)
-        phifem_solver_mixed(bi, li, bcs, solutions[i], map)
+        problem = LinearProblem(
+            bi,
+            li,
+            bcs=bcs,
+            petsc_options={
+                "ksp_type": "preonly",
+                "pc_type": "lu",
+                "pc_factor_mat_solver_type": "mumps",
+                "ksp_error_if_not_converged": True,
+                "mat_mumps_icntl_24": 1,
+                "mat_mumps_icntl_25": 0,
+            },
+        )
+        w = problem.solve()
+        w.x.scatter_forward()
+        ws.append(w)
+    return ws
 
 
 def get_initial_level(
@@ -3059,10 +3074,9 @@ def phifem_run(
     cls_smt.run(phi)
 
     ste_eqs = model.pde(phi)
-    if not model.mixed_space:
-        phifem_solve(nbr_ste, ste_eqs, ste_fcs, phi, rank_dim, comm)
-    else:
-        phifem_solve_mixed(nbr_ste, ste_eqs, ste_fcs, model.map)
+
+    ws = phifem_solve(nbr_ste, ste_eqs)
+    model.postprocess(ws, ste_fcs, phi)
 
     comm.barrier()
 
@@ -3076,10 +3090,9 @@ def phifem_run(
 
     if nbr_adj > 0:
         adj_eqs = model.adjoint(phi, ste_fcs)
-        if not model.mixed_space:
-            phifem_solve(nbr_adj, adj_eqs, adj_fcs, phi, rank_dim, comm)
-        else:
-            phifem_solve_mixed(nbr_adj, adj_eqs, adj_fcs, model.map)
+        adj_ws = phifem_solve(nbr_adj, adj_eqs)
+        for adj_w, adj_fc in zip(adj_ws, adj_fcs):
+            adj_fc.x.array[:] = adj_w.x.array[:]
         comm.barrier()
 
     if nbr_to_ev_qs > 0:
@@ -3149,10 +3162,8 @@ def phifem_run(
             # cls_smt.run(phi) # smooth
 
             ste_eqs = model.pde(phi)
-            if not model.mixed_space:
-                phifem_solve(nbr_ste, ste_eqs, ste_fcs, phi, rank_dim, comm)
-            else:
-                phifem_solve_mixed(nbr_ste, ste_eqs, ste_fcs, model.map)
+            ws = phifem_solve(nbr_ste, ste_eqs)
+            model.postprocess(ws, ste_fcs, phi)
 
             comm.barrier()
 
@@ -3172,10 +3183,9 @@ def phifem_run(
 
             if nbr_adj > 0:
                 adj_eqs = model.adjoint(phi, ste_fcs)
-                if not model.mixed_space:
-                    phifem_solve(nbr_adj, adj_eqs, adj_fcs, phi, rank_dim, comm)
-                else:
-                    phifem_solve_mixed(nbr_adj, adj_eqs, adj_fcs, model.map)
+                adj_ws = phifem_solve(nbr_adj, adj_eqs)
+                for adj_w, adj_fc in zip(adj_ws, adj_fcs):
+                    adj_fc.x.array[:] = adj_w.x.array[:]
                 comm.barrier()
 
             if nbr_to_ev_qs > 0:
