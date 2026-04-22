@@ -271,7 +271,7 @@ def test_04():
     md.create_initial_level(centers, radii)
 
     md.phifem_run(
-        niter=150,
+        niter=250,
         cost_tol=1e-2,
         dfactor=10.0,
         reinit_step=4,
@@ -355,7 +355,7 @@ def test_05():
     md.create_initial_level(centers, radii)
 
     md.phifem_run(
-        niter=250,
+        niter=150,
         ctrn_tol=1e-3,
         dfactor=1e-1,
         reinit_step=4,
