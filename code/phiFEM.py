@@ -371,6 +371,16 @@ test_functions = {
     "05": test_05,
 }
 
+"""
+| Test | Model                            | Scheme            | alpha/volume | g        |
+|-----:|:---------------------------------|:------------------|:------------:|:--------:|
+| 01   | LaplacianEnergy                  | Direct Dirichlet  |              |          |
+| 02   | ComplianceVolConstraint          | Penalised Neumann | 1.0          | (0,-2)   |
+| 03   | ComplianceVolPenalty             | Penalised Neumann | 1.663        | (0,-2)   |
+| 04   | ComplianceVolPenalty             | Penalised Neumann | 40.0         | (0,-5.6) |
+| 05   | InterfaceComplianceVolConstraint | Interface         | 1.0          | (0,-2)   |
+"""
+
 
 def main():
 
