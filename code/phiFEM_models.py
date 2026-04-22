@@ -364,36 +364,9 @@ class InterfaceComplianceVolConstraint(Model):
         return self.chi(phi) * self.dx
 
     def postprocess(self, ws: List[Function], ste_fcs: List[Function], phi: Function | None) -> None:
+        map = self.maps[0]
         for w, ste_fc in zip(ws, ste_fcs):
-            mixed_space = w.function_space
-            w_in, w_out = w.split()[:2]
-
-            domain = w_in.function_space.mesh
-            tdim = domain.topology.dim
-            domain.topology.create_connectivity(tdim, tdim)
-            dofs_to_remove_in = locate_dofs_topological(
-                mixed_space.sub(0), tdim, self.cells_tags.find(3)
-            )
-            dofs_cut_in = locate_dofs_topological(
-                mixed_space.sub(0), tdim, self.cells_tags.find(2)
-            )
-            dofs_to_remove_in = np.setdiff1d(dofs_to_remove_in, dofs_cut_in)
-
-            dofs_to_remove_out = locate_dofs_topological(
-                mixed_space.sub(1), tdim, self.cells_tags.find(1)
-            )
-            dofs_cut_out = locate_dofs_topological(
-                mixed_space.sub(1), tdim, self.cells_tags.find(2)
-            )
-            dofs_to_remove_out = np.setdiff1d(dofs_to_remove_out, dofs_cut_out)
-
-            w_out.x.array[dofs_cut_out] = w_out.x.array[dofs_cut_out] / 2.0
-            w_in.x.array[dofs_cut_in] = w_in.x.array[dofs_cut_in] / 2.0
-            w_out.x.array[dofs_to_remove_out] = 0.0
-            w_in.x.array[dofs_to_remove_in] = 0.0
-            w_out = w_out.collapse()
-            w_in = w_in.collapse()
-            ste_fc.x.array[:] = w_in.x.array[:] + w_out.x.array[:]
+            ste_fc.x.array[:] = w.x.array[map]
 
     def pde(self, phi):
         meas = {"dx": self.dx,

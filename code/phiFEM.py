@@ -281,7 +281,7 @@ def test_04():
 
 def test_05():
 
-    test_path = Path("../results/phiFEM/t02/")
+    test_path = Path("../results/phiFEM/t05/")
 
     # Domain
     dim, rank_dim, mesh_size = 2, 2, 0.01
