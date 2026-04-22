@@ -230,7 +230,7 @@ class ComplianceVolConstraint(Model):
         self.dim = dim
         self.domain = domain
         self.space, map_in = mixed_space.sub(0).collapse()
-        self.maps = (map_in)
+        self.maps = [map_in]
         self.path = path
         self.rank_dim = rank_dim
 
@@ -327,7 +327,7 @@ class InterfaceComplianceVolConstraint(Model):
         self.domain = domain
         self.space, map_in = mixed_space.sub(0).collapse()
         map_out = mixed_space.sub(1).collapse()[1]
-        self.maps = (map_in, map_out)
+        self.maps = [map_in, map_out]
         self.path = path
         self.rank_dim = rank_dim
 
@@ -459,7 +459,7 @@ class ComplianceVolPenalty(Model):
         self.dim = dim
         self.domain = domain
         self.space, map_in = mixed_space.sub(0).collapse()
-        self.maps = (map_in)
+        self.maps = [map_in]
         self.path = path
         self.rank_dim = rank_dim
 

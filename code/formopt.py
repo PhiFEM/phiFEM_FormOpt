@@ -3023,7 +3023,6 @@ def phifem_run(
 
     ws = phifem_solve(nbr_ste, ste_eqs)
     model.postprocess(ws, ste_fcs, phi)
-
     comm.barrier()
 
     cost = global_scalar(form(model.cost(phi, ste_fcs)), comm)
