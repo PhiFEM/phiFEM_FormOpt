@@ -3,7 +3,7 @@ from pathlib import Path
 from mpi4py import MPI
 
 import formopt as fop
-from phiFEM_models import LaplacianEnergy, ComplianceVolConstraint, ComplianceVolPenalty
+from phiFEM_models import LaplacianEnergy, ComplianceVolConstraint, ComplianceVolPenalty, InterfaceComplianceVolConstraint
 
 
 def test_01():
@@ -111,7 +111,7 @@ def test_02():
     md.create_initial_level(centers, radii)
 
     md.phifem_run(
-        niter=250,
+        niter=150,
         ctrn_tol=1e-3,
         dfactor=1e-1,
         reinit_step=4,
@@ -191,7 +191,7 @@ def test_03():
     md.create_initial_level(centers, radii)
 
     md.phifem_run(
-        niter=250,
+        niter=150,
         cost_tol=1e-2,
         dfactor=1e-1,
         reinit_step=4,
@@ -279,13 +279,107 @@ def test_04():
         smooth=True,
     )
 
+def test_05():
+
+    test_path = Path("../results/phiFEM/t05/")
+
+    # Domain
+    dim, rank_dim, mesh_size = 2, 2, 0.01
+    vertices = np.array(
+        [(0.0, 0.0), (2.0, 0.0), (2.0, 0.45), (2.0, 0.55), (2.0, 1.0), (0.0, 1.0)]
+    )
+
+    dir_idx, dir_mkr = [6], 1
+    neu_idx, neu_mkr = [3], 2
+    boundary_parts = [(dir_idx, dir_mkr, "dir"), (neu_idx, neu_mkr, "neu")]
+
+    output = fop.create_domain_2d_DP(
+        vertices, boundary_parts, mesh_size, path=test_path, plot=False
+    )
+
+    domain, nbr_tri, boundary_tags = output
+    print(f"> Nbr of triangles = {nbr_tri}")
+
+    mix_space = fop.create_mixed_space(
+        domain,
+        ["CG", "CG", "CG", "CG", "DG"],
+        [(rank_dim,), (rank_dim,), (rank_dim, rank_dim), (rank_dim, rank_dim), (rank_dim,)],
+        [1, 1, 1, 1, 0],
+    )
+
+    # Homogeneous Dirichlet boundary condition for the first subspace
+    dir_bc_in = fop.homogeneous_dirichlet_mixed(
+        domain, mix_space.sub(0), boundary_tags, [dir_mkr]
+    )
+    dir_bc_out = fop.homogeneous_dirichlet_mixed(
+        domain, mix_space.sub(0), boundary_tags, [dir_mkr]
+    )
+
+    dir_bc = dir_bc_in + dir_bc_out
+
+    # Boundary to force application
+    dsg = fop.marked_ds(domain, boundary_tags, [neu_mkr])[0]
+
+    volume, g = 1.0, (0.0, -2.0)
+
+    md = InterfaceComplianceVolConstraint(
+        dim,
+        domain,
+        mix_space,
+        test_path,
+        rank_dim,
+        g,
+        dsg,
+        dir_bc,
+        volume,
+    )
+
+    md.biform_coefs = (0.1, 1.0)
+
+    @fop.region_of(domain)
+    def sub_domain(x):
+        return [x[1] - 0.42, 0.58 - x[1], x[0] - 1.90]
+
+    md.sub = [sub_domain.expression()]
+
+    centers = [(2.0, 0.35), (2.0, 0.65), (2.0, 0.0), (2.0, 1.0)]
+    centers += [(0.0, 0.25), (0.0, 0.5), (0.0, 0.75)]
+    centers += [(0.3 + i * 0.7, 0.0) for i in range(3)]
+    centers += [(0.65 + i * 0.7, 0.25) for i in range(2)]
+    centers += [(0.3 + i * 0.7, 0.5) for i in range(3)]
+    centers += [(0.65 + i * 0.7, 0.75) for i in range(2)]
+    centers += [(0.3 + i * 0.7, 1.0) for i in range(3)]
+
+    centers = np.array(centers)
+    radii = np.repeat(0.1, centers.shape[0])
+    md.create_initial_level(centers, radii)
+
+    md.phifem_run(
+        niter=150,
+        ctrn_tol=1e-3,
+        dfactor=1e-1,
+        reinit_step=4,
+        reinit_pars=(16, 0.01),
+        smooth=True,
+    )
 
 test_functions = {
     "01": test_01,
     "02": test_02,
     "03": test_03,
     "04": test_04,
+    "05": test_05,
 }
+
+"""
+| Test | Model                            | Scheme            | alpha/volume | g        |
+|-----:|:---------------------------------|:------------------|:------------:|:--------:|
+| 01   | LaplacianEnergy                  | Direct Dirichlet  |              |          |
+| 02   | ComplianceVolConstraint          | Penalised Neumann | 1.0          | (0,-2)   |
+| 03   | ComplianceVolPenalty             | Penalised Neumann | 1.663        | (0,-2)   |
+| 04   | ComplianceVolPenalty             | Penalised Neumann | 40.0         | (0,-5.6) |
+| 05   | InterfaceComplianceVolConstraint | Interface         | 1.0          | (0,-2)   |
+"""
 
 
 def main():
