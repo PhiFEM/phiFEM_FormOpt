@@ -44,6 +44,8 @@ from dolfinx.mesh import (
     locate_entities_boundary,
     exterior_facet_indices,
     meshtags,
+    create_cell_partitioner,
+    GhostMode
 )
 
 from dolfinx.fem.petsc import (
@@ -86,9 +88,6 @@ from ufl import (
     dot,
     sqrt,
     gt,
-    lt,
-    MixedFunctionSpace,
-    extract_blocks,
 )
 
 from ufl.argument import Argument
@@ -101,7 +100,7 @@ import numpy.typing as npt
 from typing import List, Tuple, Callable, Sequence, final
 from ufl.core.expr import Expr
 
-from mesh_scripts import compute_tags_measures  # phiFem
+from phifem.mesh_scripts import compute_tags_measures  # phiFem
 
 from basix.ufl import element, mixed_element
 
@@ -1293,7 +1292,8 @@ def read_gmsh(
     facet_tags : MeshTags_int32
         Integer tags associated with mesh facets (co-dimension 1 entities).
     """
-    return gmshio.read_from_msh(filename, comm=comm, gdim=dim)
+    partitioner = create_cell_partitioner(GhostMode(1))
+    return gmshio.read_from_msh(filename, comm=comm, gdim=dim, partitioner=partitioner)
 
 
 def create_domain_2d_DP(

@@ -334,7 +334,7 @@ def test_05():
         volume,
     )
 
-    md.biform_coefs = (0.1, 1.0)
+    md.biform_coefs = (1.0, 6.0)
 
     @fop.region_of(domain)
     def sub_domain(x):
